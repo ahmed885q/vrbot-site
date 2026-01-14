@@ -1,0 +1,9 @@
+{
+  "bot.title": "Bot Dashboard",
+  "bot.status": "Status",
+  "bot.start": "Start",
+  "bot.stop": "Stop",
+  "bot.logs": "Logs",
+  "bot.noLogs": "No logs yet",
+  "error.unauthorized": "Unauthorized"
+}
