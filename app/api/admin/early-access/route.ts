@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase-server'
-import { validateSession, getUserRole } from '@/lib/session'
+import { validateSession } from '@/lib/session'
 
 
 export async function GET(req: NextRequest) {

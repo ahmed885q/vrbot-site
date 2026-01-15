@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '../../../../lib/stripe'
-import { validateSession, getUserRole } from '@/lib/session'
+import { validateSession } from '@/lib/session'
 
 
 export async function POST(req: NextRequest) {

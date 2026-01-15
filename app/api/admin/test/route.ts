@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateSession, getUserRole } from '@/lib/session'
+import { validateSession } from '@/lib/session'
 
 
 export async function GET(req: NextRequest) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { validateSession, getUserRole } from '@/lib/session'
+import { validateSession} from '@/lib/session'
 import { supabaseAdmin } from '../../../../lib/supabase-server'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const userId = sessionData.user_id
+  const userId = sessionData.userId
 
   // 2️⃣ إنشاء Stripe Checkout
   const checkout = await stripe.checkout.sessions.create({

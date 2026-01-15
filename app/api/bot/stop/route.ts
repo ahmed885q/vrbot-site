@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateSession, getUserRole } from '@/lib/session'
+import { validateSession } from '@/lib/session'
 import { stopRunner } from '../../../../lib/bot/runner'
 
 export async function POST(req: NextRequest) {
