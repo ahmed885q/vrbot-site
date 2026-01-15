@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   let query = supabaseAdmin
     .from('bot_logs')
     .select('*')
-    .eq('user_id', session.user_id)
+    .eq('user_id', session.userId)
     .order('created_at', { ascending: true })
     .limit(100)
 

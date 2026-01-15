@@ -19,7 +19,7 @@ export async function requireRole(
     return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   }
 
-  const userRole = await getUserRole(session.user_id)
+  const userRole = await getUserRole(session.userId)
   if (userRole !== role) {
     return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
   }

@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing/success`,
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing/cancel`,
     metadata: {
-      userId: session.user_id,
+      userId: session.userId,
     },
   })
 

@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  await stopRunner(session.user_id)
+  await stopRunner(session.userId)
 
   return NextResponse.json({ success: true })
 }

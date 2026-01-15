@@ -17,6 +17,6 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
-    running: isRunnerRunning(session.user_id),
+    running: isRunnerRunning(session.userId),
   })
 }

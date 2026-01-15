@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await startBot(session.user_id)
+    const result = await startBot(session.userId)
     return NextResponse.json(result)
   } catch {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

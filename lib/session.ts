@@ -1,8 +1,11 @@
 import { cookies } from 'next/headers'
 
-/**
- * إنشاء Session
- */
+export type SessionUser = {
+  userId: string
+  role: 'admin' | 'user'
+  email?: string
+}
+
 export async function createSession(token: string) {
   cookies().set('session_token', token, {
     httpOnly: true,
@@ -13,33 +16,36 @@ export async function createSession(token: string) {
 }
 
 /**
- * التحقق من وجود Session
+ * Validate session from cookies
  */
-export async function validateSession(): Promise<{ userId: string } | null> {
+export async function validateSession(): Promise<SessionUser | null> {
   const token = cookies().get('session_token')?.value
-
   if (!token) return null
 
-  // مؤقتًا: نعتبر التوكن هو userId
+  // 🔴 مؤقتًا (Mock)
   // لاحقًا نربطه بقاعدة البيانات أو JWT
-  return { userId: token }
+  return {
+    userId: token,
+    role: 'admin',
+    email: 'admin@example.com',
+  }
 }
 
 /**
- * جلب دور المستخدم
+ * Guards
  */
-export async function getUserRole(): Promise<'admin' | 'user'> {
+export async function requireSession(): Promise<SessionUser> {
   const session = await validateSession()
-  if (!session) return 'user'
-
-  // مؤقتًا: كل من لديه session هو admin
-  // لاحقًا نربطه بقاعدة البيانات
-  return 'admin'
+  if (!session) {
+    throw new Error('UNAUTHORIZED')
+  }
+  return session
 }
 
-/**
- * حذف Session (Logout)
- */
-export async function destroySession() {
-  cookies().delete('session_token')
+export async function requireAdmin(): Promise<SessionUser> {
+  const session = await requireSession()
+  if (session.role !== 'admin') {
+    throw new Error('FORBIDDEN')
+  }
+  return session
 }
