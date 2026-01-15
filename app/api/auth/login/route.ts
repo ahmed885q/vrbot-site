@@ -1,51 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server'
-import crypto from 'crypto'
-import { supabaseAdmin } from '../../../../lib/supabase-server'
-import { createSession } from '../../../../lib/session'
+import { NextResponse } from 'next/server'
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { email } = body as { email?: string }
+    const { email, password } = body
 
-    // ✅ تحقق أساسي
-    if (!email || typeof email !== 'string') {
+    // تحقق بسيط مؤقت (بدون قاعدة بيانات)
+    if (!email || !password) {
       return NextResponse.json(
-        { error: 'Invalid email' },
+        { error: 'Email and password are required' },
         { status: 400 }
       )
     }
 
-    // ✅ جلب المستخدم
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single()
-
-    if (error || !user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 401 }
-      )
-    }
-
-    // ✅ إنشاء Session حقيقي
-    const session = await createSession({
-      userId: user.id,
-      ip: req.headers.get('x-forwarded-for') ?? 'unknown',
-      userAgent: req.headers.get('user-agent') ?? 'unknown',
-    })
-
-    // ✅ استجابة نهائية
+    // ✅ نجاح تسجيل الدخول (مؤقت)
     return NextResponse.json({
       success: true,
-      token: session.token,
+      message: 'Login successful (temporary)',
+      user: {
+        email,
+      },
     })
-  } catch (err) {
-    console.error('LOGIN_ERROR', err)
+  } catch (error) {
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Invalid request' },
       { status: 500 }
     )
   }
