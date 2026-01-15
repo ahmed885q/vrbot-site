@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateSession } from'../../../..//lib/session'
+import { validateSession, getUserRole } from '@/lib/session'
+
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
