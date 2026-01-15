@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const token = authHeader?.replace('Bearer ', '')
 
   // 1️⃣ تحقق من الجلسة
-  const session = await validateSession(token || '')
+  const session = await validateSession()
 
   if (!session) {
     return NextResponse.json(

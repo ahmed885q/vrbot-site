@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '')
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const session = await validateSession(token)
+  const session = await validateSession()
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
 
   const { data, error } = await supabaseAdmin

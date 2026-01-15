@@ -12,7 +12,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/login', req.url))
   }
 
-  const session = await validateSession(token)
+  const session = await validateSession()
   if (!session || session.role !== 'admin') {
     return NextResponse.redirect(new URL('/login', req.url))
   }

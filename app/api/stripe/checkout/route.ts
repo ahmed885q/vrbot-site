@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const sessionData = await validateSession(token)
+  const sessionData = await validateSession()
   if (!sessionData) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

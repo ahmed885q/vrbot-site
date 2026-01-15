@@ -14,7 +14,7 @@ export async function requireRole(
     return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   }
 
-  const session = await validateSession(token)
+  const session = await validateSession()
   if (!session) {
     return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   }
