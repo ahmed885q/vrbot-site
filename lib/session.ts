@@ -7,9 +7,6 @@ export type SessionData = {
   email?: string
 }
 
-/**
- * إنشاء session (عند تسجيل الدخول)
- */
 export async function createSession(token: string) {
   cookies().set('session_token', token, {
     httpOnly: true,
@@ -19,28 +16,16 @@ export async function createSession(token: string) {
   })
 }
 
-/**
- * التحقق من الجلسة (بدون arguments)
- */
 export async function validateSession(): Promise<SessionData> {
   const token = cookies().get('session_token')?.value
-
-  if (!token) {
-    throw new Error('No session token')
-  }
+  if (!token) throw new Error('No session')
 
   const { data, error } = await supabaseAdmin.auth.getUser(token)
-
-  if (error || !data.user) {
-    throw new Error('Invalid session')
-  }
-
-  const role =
-    (data.user.app_metadata?.role as 'admin' | 'user') ?? 'user'
+  if (error || !data.user) throw new Error('Invalid session')
 
   return {
     userId: data.user.id,
-    role,
+    role: (data.user.app_metadata?.role as 'admin' | 'user') ?? 'user',
     email: data.user.email ?? undefined,
   }
 }
