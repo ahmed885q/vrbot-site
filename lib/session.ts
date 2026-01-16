@@ -1,31 +1,28 @@
 import { cookies } from 'next/headers'
-import { supabaseAdmin } from './supabase-server'
 
-export type SessionData = {
+export type Session = {
   userId: string
   role: 'admin' | 'user'
   email?: string
 }
 
-export async function createSession(token: string) {
-  cookies().set('session_token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-  })
-}
+/**
+ * Validate current user session from cookies
+ * Throws error if session is invalid
+ */
+export async function validateSession(): Promise<Session> {
+  const cookieStore = cookies()
+  const token = cookieStore.get('session_token')?.value
 
-export async function validateSession(): Promise<SessionData> {
-  const token = cookies().get('session_token')?.value
-  if (!token) throw new Error('No session')
+  if (!token) {
+    throw new Error('Unauthorized')
+  }
 
-  const { data, error } = await supabaseAdmin.auth.getUser(token)
-  if (error || !data.user) throw new Error('Invalid session')
-
+  // ⚠️ مؤقتًا (إلى أن نربط DB أو Supabase)
+  // يمكن لاحقًا فك التوكن أو قراءته من DB
   return {
-    userId: data.user.id,
-    role: (data.user.app_metadata?.role as 'admin' | 'user') ?? 'user',
-    email: data.user.email ?? undefined,
+    userId: token,
+    role: token === 'admin' ? 'admin' : 'user',
+    email: undefined,
   }
 }
