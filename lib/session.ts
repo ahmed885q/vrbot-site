@@ -3,26 +3,34 @@ import { cookies } from 'next/headers'
 export type Session = {
   userId: string
   role: 'admin' | 'user'
-  email?: string
 }
 
 /**
- * Validate current user session from cookies
- * Throws error if session is invalid
+ * إنشاء جلسة (تستخدم عند تسجيل الدخول)
  */
-export async function validateSession(): Promise<Session> {
-  const cookieStore = cookies()
-  const token = cookieStore.get('session_token')?.value
+export async function createSession(token: string) {
+  cookies().set('session_token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+  })
+}
 
-  if (!token) {
-    throw new Error('Unauthorized')
+/**
+ * التحقق من الجلسة (يُستخدم في middleware و API)
+ */
+export async function validateSession(token?: string): Promise<Session | null> {
+  if (!token) return null
+
+  // 🔹 مؤقتًا (DEV)
+  // لاحقًا نربطه بقاعدة البيانات أو Supabase
+  if (token === 'admin-token') {
+    return {
+      userId: 'admin',
+      role: 'admin',
+    }
   }
 
-  // ⚠️ مؤقتًا (إلى أن نربط DB أو Supabase)
-  // يمكن لاحقًا فك التوكن أو قراءته من DB
-  return {
-    userId: token,
-    role: token === 'admin' ? 'admin' : 'user',
-    email: undefined,
-  }
+  return null
 }
