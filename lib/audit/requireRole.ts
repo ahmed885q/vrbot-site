@@ -1,28 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { validateSession } from '../session'
-import { getUserRole } from './roles'
+import { validateSession } from '@/lib/session'
 
-export async function requireRole(
-  req: NextRequest,
-  role: 'admin' | 'user'
-) {
-  const token =
-    req.cookies.get('session_token')?.value ||
-    req.headers.get('authorization')?.replace('Bearer ', '')
-
-  if (!token) {
-    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  }
-
+export async function requireRole(requiredRole: 'admin' | 'user') {
   const session = await validateSession()
-  if (!session) {
-    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+
+  if (session.role !== requiredRole) {
+    throw new Error('Forbidden')
   }
 
-  const userRole = await getUserRole(session.userId)
-  if (userRole !== role) {
-    return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  }
-
-  return { session }
+  return session
 }

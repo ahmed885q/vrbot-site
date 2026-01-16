@@ -1,24 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { validateSession } from '@/lib/session'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { validateSession } from './lib/session'
 
 export async function middleware(req: NextRequest) {
   if (!req.nextUrl.pathname.startsWith('/admin')) {
     return NextResponse.next()
   }
 
-  try {
-    const session = await validateSession()
+  const session = await validateSession()
 
-    if (session.role !== 'admin') {
-      return NextResponse.redirect(new URL('/login', req.url))
-    }
-
-    return NextResponse.next()
-  } catch {
+  if (session.role !== 'admin') {
     return NextResponse.redirect(new URL('/login', req.url))
   }
-}
 
-export const config = {
-  matcher: ['/admin/:path*'],
+  return NextResponse.next()
 }

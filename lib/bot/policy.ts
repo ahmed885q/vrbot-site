@@ -1,6 +1,7 @@
-import { getUserRole } from '../session'
+import { validateSession } from '../session'
 
-export async function canRunBot(userId: string): Promise<boolean> {
-  const role = await getUserRole(userId)
-  return role === 'admin'
+export async function canRunBot() {
+  const session = await validateSession()
+
+  return session.role === 'admin'
 }

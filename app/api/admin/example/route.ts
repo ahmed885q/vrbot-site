@@ -4,9 +4,16 @@ import { validateSession } from '@/lib/session'
 export async function GET(req: NextRequest) {
   const session = await validateSession()
 
- return {
-  user: {
-    id: 'admin',
-    role: 'admin',
-  },
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  return NextResponse.json({
+    success: true,
+    user: {
+      id: session.userId,
+      role: session.role,
+    },
+  })
 }
+
