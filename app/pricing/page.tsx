@@ -1,61 +1,57 @@
+'use client'
+
 export default function PricingPage() {
+  const handleUpgrade = async () => {
+    const res = await fetch('/api/stripe/checkout', {
+      method: 'POST',
+    })
+
+    const data = await res.json()
+    if (data.url) {
+      window.location.href = data.url
+    }
+  }
+
   return (
-    <div className="min-h-screen p-8 text-center">
-      <h1 className="text-3xl font-bold mb-8">
-        Pricing
-      </h1>
+    <div style={{ padding: 40 }}>
+      <h1>Pricing</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-        <Plan
-          name="Free"
-          price="$0"
-          features={[
-            'Early Access',
-            'Limited Automation',
-          ]}
-        />
+      <h2>Free</h2>
+      <p>$0</p>
+      <ul>
+        <li>✓ Early Access</li>
+        <li>✓ Limited Automation</li>
+      </ul>
 
-        <Plan
-          name="Pro"
-          price="$19 / month"
-          features={[
-            'Unlimited Farming',
-            'Auto Upgrades',
-            'Priority Support',
-          ]}
-        />
+      <h2>Pro</h2>
+      <p>$19 / month</p>
+      <ul>
+        <li>✓ Unlimited Farming</li>
+        <li>✓ Auto Upgrades</li>
+        <li>✓ Priority Support</li>
+      </ul>
 
-        <Plan
-          name="Enterprise"
-          price="Custom"
-          features={[
-            'Alliance Support',
-            'Advanced AI',
-            'Custom Features',
-          ]}
-        />
-      </div>
-    </div>
-  )
-}
+      {/* ✅ الزر الحقيقي */}
+      <button
+        onClick={handleUpgrade}
+        style={{
+          marginTop: 12,
+          padding: '10px 20px',
+          background: 'black',
+          color: 'white',
+          borderRadius: 6,
+          cursor: 'pointer',
+        }}
+      >
+        Upgrade to Pro
+      </button>
 
-function Plan({
-  name,
-  price,
-  features,
-}: {
-  name: string
-  price: string
-  features: string[]
-}) {
-  return (
-    <div className="border rounded p-6">
-      <h2 className="text-xl font-bold mb-2">{name}</h2>
-      <p className="text-2xl mb-4">{price}</p>
-      <ul className="space-y-2 text-sm">
-        {features.map((f) => (
-          <li key={f}>✓ {f}</li>
-        ))}
+      <h2 style={{ marginTop: 40 }}>Enterprise</h2>
+      <p>Custom</p>
+      <ul>
+        <li>✓ Alliance Support</li>
+        <li>✓ Advanced AI</li>
+        <li>✓ Custom Features</li>
       </ul>
     </div>
   )

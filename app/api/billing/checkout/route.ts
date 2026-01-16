@@ -1,37 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { stripe } from '../../../../lib/stripe'
-import { validateSession } from '@/lib/session'
+import Stripe from 'stripe'
+import { NextResponse } from 'next/server'
 
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
-export async function POST(req: NextRequest) {
-  const token =
-    req.cookies.get('session_token')?.value ||
-    req.headers.get('authorization')?.replace('Bearer ', '')
+export async function POST() {
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: process.env.STRIPE_PRICE_PRO!,
+          quantity: 1,
+        },
+      ],
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=1`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?canceled=1`,
+    })
 
-  if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ url: session.url })
+  } catch (err) {
+    console.error(err)
+    return NextResponse.json(
+      { error: 'Stripe checkout failed' },
+      { status: 500 }
+    )
   }
-
-  const session = await validateSession()
-  if (!session) {
-    return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
-  }
-
-  const checkout = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    payment_method_types: ['card'],
-    line_items: [
-      {
-        price: process.env.STRIPE_PRICE_PRO!,
-        quantity: 1,
-      },
-    ],
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing/success`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing/cancel`,
-    metadata: {
-      userId: session.userId,
-    },
-  })
-
-  return NextResponse.json({ url: checkout.url })
 }
