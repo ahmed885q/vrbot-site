@@ -1,17 +1,12 @@
 import { canRunBot } from './policy'
-import { startRunner, stopRunner } from './runner'
 
-export async function startBot(userId: string) {
-  const allowed = await canRunBot(userId)
+export async function startBot()
+ {
+  const allowed = await canRunBot()
+
   if (!allowed) {
     throw new Error('BOT_NOT_ALLOWED')
   }
 
-  startRunner(userId)
-  return { status: 'running' }
-}
-
-export async function stopBot(userId: string) {
-  stopRunner(userId)
-  return { status: 'stopped' }
+  // هنا منطق تشغيل البوت لاحقًا
 }

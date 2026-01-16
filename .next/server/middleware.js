@@ -17,7 +17,7 @@ module.exports = require("node:buffer");
 
 /***/ }),
 
-/***/ 673:
+/***/ 889:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -33,7 +33,6 @@ __webpack_require__.d(__webpack_exports__, {
 var middleware_namespaceObject = {};
 __webpack_require__.r(middleware_namespaceObject);
 __webpack_require__.d(middleware_namespaceObject, {
-  config: () => (config),
   middleware: () => (middleware)
 });
 
@@ -1373,7 +1372,7 @@ class ReflectAdapter {
         throw new ReadonlyHeadersError();
     }
 }
-class headers_HeadersAdapter extends Headers {
+class HeadersAdapter extends Headers {
     constructor(headers){
         // We've already overridden the methods that would be called, so we're just
         // calling the super constructor to ensure that the instanceof check works.
@@ -1468,7 +1467,7 @@ class headers_HeadersAdapter extends Headers {
    * @returns a headers instance
    */ static from(headers) {
         if (headers instanceof Headers) return headers;
-        return new headers_HeadersAdapter(headers);
+        return new HeadersAdapter(headers);
     }
     append(name, value) {
         const existing = this.headers[name];
@@ -1683,7 +1682,7 @@ class MutableRequestCookiesAdapter {
     return res;
 }
 function checkIsOnDemandRevalidate(req, previewProps) {
-    const headers = headers_HeadersAdapter.from(req.headers);
+    const headers = HeadersAdapter.from(req.headers);
     const previewModeId = headers.get(PRERENDER_REVALIDATE_HEADER);
     const isOnDemandRevalidate = previewModeId === previewProps.previewModeId;
     const revalidateOnlyGenerated = headers.has(PRERENDER_REVALIDATE_ONLY_GENERATED_HEADER);
@@ -1841,18 +1840,18 @@ class DraftModeProvider {
 
 
 function getHeaders(headers) {
-    const cleaned = headers_HeadersAdapter.from(headers);
+    const cleaned = HeadersAdapter.from(headers);
     for (const param of FLIGHT_PARAMETERS){
         cleaned.delete(param.toString().toLowerCase());
     }
-    return headers_HeadersAdapter.seal(cleaned);
+    return HeadersAdapter.seal(cleaned);
 }
 function getCookies(headers) {
-    const cookies = new _edge_runtime_cookies.RequestCookies(headers_HeadersAdapter.from(headers));
+    const cookies = new _edge_runtime_cookies.RequestCookies(HeadersAdapter.from(headers));
     return RequestCookiesAdapter.seal(cookies);
 }
 function getMutableCookies(headers, onUpdateCookies) {
-    const cookies = new _edge_runtime_cookies.RequestCookies(headers_HeadersAdapter.from(headers));
+    const cookies = new _edge_runtime_cookies.RequestCookies(HeadersAdapter.from(headers));
     return MutableRequestCookiesAdapter.wrap(cookies, onUpdateCookies);
 }
 const RequestAsyncStorageWrapper = {
@@ -1940,7 +1939,7 @@ function createAsyncLocalStorage() {
 
 ;// CONCATENATED MODULE: ./node_modules/next/dist/esm/client/components/request-async-storage.external.js
 
-const request_async_storage_external_requestAsyncStorage = createAsyncLocalStorage(); //# sourceMappingURL=request-async-storage.external.js.map
+const requestAsyncStorage = createAsyncLocalStorage(); //# sourceMappingURL=request-async-storage.external.js.map
 
 ;// CONCATENATED MODULE: ./node_modules/next/dist/esm/server/lib/trace/constants.js
 /**
@@ -2396,7 +2395,7 @@ async function adapter(params) {
         // we only care to make async storage available for middleware
         const isMiddleware = params.page === "/middleware" || params.page === "/src/middleware";
         if (isMiddleware) {
-            return RequestAsyncStorageWrapper.wrap(request_async_storage_external_requestAsyncStorage, {
+            return RequestAsyncStorageWrapper.wrap(requestAsyncStorage, {
                 req: request,
                 renderOpts: {
                     onUpdateCookies: (cookies)=>{
@@ -2504,167 +2503,11 @@ async function adapter(params) {
 // This file is for modularized imports for next/server to get fully-treeshaking.
  //# sourceMappingURL=next-response.js.map
 
-;// CONCATENATED MODULE: ./node_modules/next/dist/esm/client/components/action-async-storage.external.js
-
-const actionAsyncStorage = createAsyncLocalStorage(); //# sourceMappingURL=action-async-storage.external.js.map
-
-;// CONCATENATED MODULE: ./node_modules/next/dist/esm/client/components/hooks-server-context.js
-const DYNAMIC_ERROR_CODE = "DYNAMIC_SERVER_USAGE";
-class DynamicServerError extends Error {
-    constructor(description){
-        super("Dynamic server usage: " + description);
-        this.description = description;
-        this.digest = DYNAMIC_ERROR_CODE;
-    }
-}
-function isDynamicServerError(err) {
-    if (typeof err !== "object" || err === null || !("digest" in err) || typeof err.digest !== "string") {
-        return false;
-    }
-    return err.digest === DYNAMIC_ERROR_CODE;
-} //# sourceMappingURL=hooks-server-context.js.map
-
-;// CONCATENATED MODULE: ./node_modules/next/dist/esm/client/components/static-generation-async-storage.external.js
-
-const staticGenerationAsyncStorage = createAsyncLocalStorage(); //# sourceMappingURL=static-generation-async-storage.external.js.map
-
-;// CONCATENATED MODULE: ./node_modules/next/dist/esm/client/components/static-generation-bailout.js
-
-
-const NEXT_STATIC_GEN_BAILOUT = "NEXT_STATIC_GEN_BAILOUT";
-class StaticGenBailoutError extends Error {
-    constructor(...args){
-        super(...args);
-        this.code = NEXT_STATIC_GEN_BAILOUT;
-    }
-}
-function isStaticGenBailoutError(error) {
-    if (typeof error !== "object" || error === null || !("code" in error)) {
-        return false;
-    }
-    return error.code === NEXT_STATIC_GEN_BAILOUT;
-}
-function formatErrorMessage(reason, opts) {
-    const { dynamic, link } = opts || {};
-    const suffix = link ? " See more info here: " + link : "";
-    return "Page" + (dynamic ? ' with `dynamic = "' + dynamic + '"`' : "") + " couldn't be rendered statically because it used `" + reason + "`." + suffix;
-}
-const static_generation_bailout_staticGenerationBailout = (reason, param)=>{
-    let { dynamic, link } = param === void 0 ? {} : param;
-    const staticGenerationStore = staticGenerationAsyncStorage.getStore();
-    if (!staticGenerationStore) return false;
-    if (staticGenerationStore.forceStatic) {
-        return true;
-    }
-    if (staticGenerationStore.dynamicShouldError) {
-        throw new StaticGenBailoutError(formatErrorMessage(reason, {
-            link,
-            dynamic: dynamic != null ? dynamic : "error"
-        }));
-    }
-    const message = formatErrorMessage(reason, {
-        dynamic,
-        // this error should be caught by Next to bail out of static generation
-        // in case it's uncaught, this link provides some additional context as to why
-        link: "https://nextjs.org/docs/messages/dynamic-server-error"
-    });
-    // If postpone is available, we should postpone the render.
-    staticGenerationStore.postpone == null ? void 0 : staticGenerationStore.postpone.call(staticGenerationStore, reason);
-    // As this is a bailout, we don't want to revalidate, so set the revalidate
-    // to 0.
-    staticGenerationStore.revalidate = 0;
-    if (staticGenerationStore.isStaticGeneration) {
-        const err = new DynamicServerError(message);
-        staticGenerationStore.dynamicUsageDescription = reason;
-        staticGenerationStore.dynamicUsageStack = err.stack;
-        throw err;
-    }
-    return false;
-}; //# sourceMappingURL=static-generation-bailout.js.map
-
-;// CONCATENATED MODULE: ./node_modules/next/dist/esm/client/components/draft-mode.js
-
-class draft_mode_DraftMode {
-    get isEnabled() {
-        return this._provider.isEnabled;
-    }
-    enable() {
-        if (staticGenerationBailout("draftMode().enable()")) {
-            return;
-        }
-        return this._provider.enable();
-    }
-    disable() {
-        if (staticGenerationBailout("draftMode().disable()")) {
-            return;
-        }
-        return this._provider.disable();
-    }
-    constructor(provider){
-        this._provider = provider;
-    }
-} //# sourceMappingURL=draft-mode.js.map
-
-;// CONCATENATED MODULE: ./node_modules/next/dist/esm/client/components/headers.js
-
-
-
-
-
-
-
-function headers() {
-    if (staticGenerationBailout("headers", {
-        link: "https://nextjs.org/docs/app/building-your-application/rendering/static-and-dynamic#dynamic-rendering"
-    })) {
-        return HeadersAdapter.seal(new Headers({}));
-    }
-    const requestStore = requestAsyncStorage.getStore();
-    if (!requestStore) {
-        throw new Error("Invariant: headers() expects to have requestAsyncStorage, none available.");
-    }
-    return requestStore.headers;
-}
-function cookies() {
-    if (static_generation_bailout_staticGenerationBailout("cookies", {
-        link: "https://nextjs.org/docs/app/building-your-application/rendering/static-and-dynamic#dynamic-rendering"
-    })) {
-        return RequestCookiesAdapter.seal(new _edge_runtime_cookies.RequestCookies(new Headers({})));
-    }
-    const requestStore = request_async_storage_external_requestAsyncStorage.getStore();
-    if (!requestStore) {
-        throw new Error("Invariant: cookies() expects to have requestAsyncStorage, none available.");
-    }
-    const asyncActionStore = actionAsyncStorage.getStore();
-    if (asyncActionStore && (asyncActionStore.isAction || asyncActionStore.isAppRoute)) {
-        // We can't conditionally return different types here based on the context.
-        // To avoid confusion, we always return the readonly type here.
-        return requestStore.mutableCookies;
-    }
-    return requestStore.cookies;
-}
-function draftMode() {
-    const requestStore = requestAsyncStorage.getStore();
-    if (!requestStore) {
-        throw new Error("Invariant: draftMode() expects to have requestAsyncStorage, none available.");
-    }
-    return new DraftMode(requestStore.draftMode);
-} //# sourceMappingURL=headers.js.map
-
-;// CONCATENATED MODULE: ./node_modules/next/dist/esm/api/headers.js
- //# sourceMappingURL=headers.js.map
-
 ;// CONCATENATED MODULE: ./lib/session.ts
-
 async function validateSession() {
-    const token = cookies().get("session_token")?.value;
-    if (!token) {
-        throw new Error("No session");
-    }
-    // 🔐 مؤقت (إلى أن نربطه بقاعدة البيانات)
     return {
-        userId: token,
-        role: token === "admin" ? "admin" : "user"
+        userId: "admin",
+        role: "admin"
     };
 }
 
@@ -2675,23 +2518,14 @@ async function middleware(req) {
     if (!req.nextUrl.pathname.startsWith("/admin")) {
         return NextResponse.next();
     }
-    try {
-        const session = await validateSession();
-        if (session.role !== "admin") {
-            return NextResponse.redirect(new URL("/login", req.url));
-        }
-        return NextResponse.next();
-    } catch  {
+    const session = await validateSession();
+    if (session.role !== "admin") {
         return NextResponse.redirect(new URL("/login", req.url));
     }
+    return NextResponse.next();
 }
-const config = {
-    matcher: [
-        "/admin/:path*"
-    ]
-};
 
-;// CONCATENATED MODULE: ./node_modules/next/dist/build/webpack/loaders/next-middleware-loader.js?absolutePagePath=private-next-root-dir%2Fmiddleware.ts&page=%2Fmiddleware&rootDir=%2Fworkspaces%2Fvrbot-site&matchers=W3sicmVnZXhwIjoiXig%2FOlxcLyhfbmV4dFxcL2RhdGFcXC9bXi9dezEsfSkpP1xcL2FkbWluKD86XFwvKCg%2FOlteXFwvI1xcP10rPykoPzpcXC8oPzpbXlxcLyNcXD9dKz8pKSopKT8oLmpzb24pP1tcXC8jXFw%2FXT8kIiwib3JpZ2luYWxTb3VyY2UiOiIvYWRtaW4vOnBhdGgqIn1d&preferredRegion=&middlewareConfig=eyJtYXRjaGVycyI6W3sicmVnZXhwIjoiXig%2FOlxcLyhfbmV4dFxcL2RhdGFcXC9bXi9dezEsfSkpP1xcL2FkbWluKD86XFwvKCg%2FOlteXFwvI1xcP10rPykoPzpcXC8oPzpbXlxcLyNcXD9dKz8pKSopKT8oLmpzb24pP1tcXC8jXFw%2FXT8kIiwib3JpZ2luYWxTb3VyY2UiOiIvYWRtaW4vOnBhdGgqIn1dfQ%3D%3D!
+;// CONCATENATED MODULE: ./node_modules/next/dist/build/webpack/loaders/next-middleware-loader.js?absolutePagePath=private-next-root-dir%2Fmiddleware.ts&page=%2Fmiddleware&rootDir=%2Fworkspaces%2Fvrbot-site&matchers=&preferredRegion=&middlewareConfig=e30%3D!
 
 
 // Import the userland code.
@@ -4959,7 +4793,7 @@ function wrapRequestHandler(handler) {
 },
 /******/ __webpack_require__ => { // webpackRuntimeModules
 /******/ var __webpack_exec__ = (moduleId) => (__webpack_require__(__webpack_require__.s = moduleId))
-/******/ var __webpack_exports__ = (__webpack_exec__(673));
+/******/ var __webpack_exports__ = (__webpack_exec__(889));
 /******/ (_ENTRIES = typeof _ENTRIES === "undefined" ? {} : _ENTRIES).middleware_middleware = __webpack_exports__;
 /******/ }
 ]);

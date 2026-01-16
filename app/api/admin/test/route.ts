@@ -29,9 +29,8 @@ export async function GET(req: NextRequest) {
     success: true,
     message: 'Welcome Admin',
     user: {
-      id: session.userId,
-      email: session.email,
-      role: session.role,
-    },
-  })
+    id: session.userId,
+    role: session.role,
+  },
+})
 }
