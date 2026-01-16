@@ -4,7 +4,6 @@ export type Session = {
 }
 
 export async function validateSession(): Promise<Session> {
-  // مؤقتًا Session ثابتة
   return {
     userId: 'admin',
     role: 'admin',
