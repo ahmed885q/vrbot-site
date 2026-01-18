@@ -1,9 +1,15 @@
+import { headers } from 'next/headers'
+
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const res = await fetch('/api/subscription/status', {
-    cache: 'no-store',
-  })
+  const host = headers().get('host')
+  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
+
+  const res = await fetch(
+    `${protocol}://${host}/api/subscription/status`,
+    { cache: 'no-store' }
+  )
 
   if (!res.ok) {
     return <div>Failed to load subscription</div>
