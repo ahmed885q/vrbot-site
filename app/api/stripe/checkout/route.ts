@@ -13,7 +13,7 @@ const session = await stripe.checkout.sessions.create({
       quantity: 1,
     },
   ],
-success_url: `${process.env.NEXT_PUBLIC_APP_URL}/test-success`,
+success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/test-success`,
 })
 
 
