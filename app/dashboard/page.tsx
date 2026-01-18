@@ -2,10 +2,9 @@ export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL}/api/subscription/status`,
-      { cache: 'no-store' }
-    )
+   const res = await fetch('/api/subscription/status', {
+  cache: 'no-store',
+})
 
     if (!res.ok) {
       return (
