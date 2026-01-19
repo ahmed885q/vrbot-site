@@ -49,14 +49,6 @@
       "static/chunks/main-app-082e5f8aedf07ad1.js",
       "static/chunks/app/early-access/page-7c65f534df5b585f.js"
     ],
-    "/login/page": [
-      "static/chunks/webpack-5e9bedb58c3695d7.js",
-      "static/chunks/fd9d1056-9e625e8be9cf6216.js",
-      "static/chunks/69-cceabd1c6ad33c86.js",
-      "static/chunks/main-app-082e5f8aedf07ad1.js",
-      "static/chunks/479-dcff369be35b8794.js",
-      "static/chunks/app/login/page-46baea2557beef42.js"
-    ],
     "/test-success/page": [
       "static/chunks/webpack-5e9bedb58c3695d7.js",
       "static/chunks/fd9d1056-9e625e8be9cf6216.js",
@@ -64,12 +56,13 @@
       "static/chunks/main-app-082e5f8aedf07ad1.js",
       "static/chunks/app/test-success/page-ef68e93e1589e8b2.js"
     ],
-    "/dashboard/page": [
+    "/signup/page": [
       "static/chunks/webpack-5e9bedb58c3695d7.js",
       "static/chunks/fd9d1056-9e625e8be9cf6216.js",
       "static/chunks/69-cceabd1c6ad33c86.js",
       "static/chunks/main-app-082e5f8aedf07ad1.js",
-      "static/chunks/app/dashboard/page-a5a4865302366c71.js"
+      "static/chunks/479-dcff369be35b8794.js",
+      "static/chunks/app/signup/page-542b4e77b9418fce.js"
     ],
     "/page": [
       "static/chunks/webpack-5e9bedb58c3695d7.js",
@@ -85,13 +78,20 @@
       "static/chunks/main-app-082e5f8aedf07ad1.js",
       "static/chunks/app/pricing/page-b9e6b88680cd6a57.js"
     ],
-    "/signup/page": [
+    "/dashboard/page": [
+      "static/chunks/webpack-5e9bedb58c3695d7.js",
+      "static/chunks/fd9d1056-9e625e8be9cf6216.js",
+      "static/chunks/69-cceabd1c6ad33c86.js",
+      "static/chunks/main-app-082e5f8aedf07ad1.js",
+      "static/chunks/app/dashboard/page-a5a4865302366c71.js"
+    ],
+    "/login/page": [
       "static/chunks/webpack-5e9bedb58c3695d7.js",
       "static/chunks/fd9d1056-9e625e8be9cf6216.js",
       "static/chunks/69-cceabd1c6ad33c86.js",
       "static/chunks/main-app-082e5f8aedf07ad1.js",
       "static/chunks/479-dcff369be35b8794.js",
-      "static/chunks/app/signup/page-542b4e77b9418fce.js"
+      "static/chunks/app/login/page-92e747a8d8faba8d.js"
     ],
     "/admin/layout": [
       "static/chunks/webpack-5e9bedb58c3695d7.js",
