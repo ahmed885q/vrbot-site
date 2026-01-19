@@ -1,13 +1,20 @@
-export default function AdminPage() {
-  return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Admin Panel</h1>
+import { redirect } from 'next/navigation'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
-      <ul className="list-disc pl-6">
-        <li>/admin/early-access</li>
-        <li>Users (قريبًا)</li>
-        <li>Subscriptions (قريبًا)</li>
-      </ul>
-    </div>
-  )
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const supabase = createSupabaseServerClient()
+
+  const { data: authData } = await supabase.auth.getUser()
+  const user = authData?.user
+  if (!user) redirect('/admin/login')
+
+  const { data: roleRow } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!roleRow || roleRow.role !== 'admin') redirect('/dashboard')
+
+  return <>{children}</>
 }

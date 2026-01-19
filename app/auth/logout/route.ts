@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
-export async function GET() {
-  const res = NextResponse.redirect(new URL('/auth/login', process.env.NEXT_PUBLIC_SITE_URL))
-  res.cookies.set({ name: 'session', value: '', path: '/', maxAge: 0 })
-  return res
+export async function GET(req: Request) {
+  const supabase = createSupabaseServerClient()
+  await supabase.auth.signOut()
+
+  const url = new URL('/login', req.url)
+  return NextResponse.redirect(url)
 }

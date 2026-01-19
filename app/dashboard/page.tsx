@@ -1,4 +1,6 @@
 import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import UpgradeButton from '@/components/UpgradeButton'
 
 export const dynamic = 'force-dynamic'
@@ -12,6 +14,15 @@ type SubscriptionStatus = {
 }
 
 export default async function DashboardPage() {
+  // 🔐 تحقق تسجيل الدخول (قبل أي شيء)
+  const supabase = createSupabaseServerClient()
+  const { data: authData } = await supabase.auth.getUser()
+
+  if (!authData?.user) {
+    redirect('/login?next=/dashboard')
+  }
+
+  // 🔄 جلب حالة الاشتراك
   const host = headers().get('host')
   const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
 
@@ -54,22 +65,20 @@ export default async function DashboardPage() {
       </div>
 
       {/* زر الترقية */}
-      {plan !== 'pro' && data.userId ? (
+      {plan !== 'pro' ? (
         <div style={{ marginTop: 24 }}>
           <UpgradeButton />
         </div>
-      ) : null}
-
-      {/* حالة Pro */}
-      {plan === 'pro' ? (
+      ) : (
         <p style={{ marginTop: 24, color: 'green', fontWeight: 600 }}>
           ✅ Pro features are enabled
         </p>
-      ) : (
-        <p style={{ marginTop: 24, color: '#555' }}>
-          Upgrade to Pro to unlock all features
-        </p>
       )}
+
+      {/* تسجيل الخروج */}
+      <div style={{ marginTop: 24 }}>
+        <a href="/logout">Logout</a>
+      </div>
     </div>
   )
 }
