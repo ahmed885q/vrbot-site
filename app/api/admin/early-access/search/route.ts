@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '../../../../../lib/supabase-server'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireAdmin } from '../../../../../lib/admin-auth'
 import { rateLimit } from '../../../../../lib/rate-limit'
 

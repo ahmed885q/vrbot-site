@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // ✅ مسارات نسبية (بدون @)
-import { supabaseAdmin } from '../../../lib/supabase-server'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { rateLimit } from '../../../lib/rate-limit'
 import { audit } from '../../../lib/audit'
 
