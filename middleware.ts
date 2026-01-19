@@ -1,26 +1,35 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl
 
-  // ✅ استثناء مسارات Stripe
-  if (
-    pathname.startsWith('/api/stripe') ||
-    pathname.startsWith('/billing/success') ||
-    pathname.startsWith('/billing/cancel') ||
-    pathname.startsWith('/test-success')
-  ) {
+  // احمِ مسارات البوت فقط (عدّلها حسب مشروعك)
+  if (!pathname.startsWith('/api/bot')) {
     return NextResponse.next()
   }
 
-  // ⛔ باقي منطق الحماية (مثال)
-  // const session = ...
-  // if (!session) redirect
+  // استدعاء داخلي لـ status
+  const url = new URL('/api/subscription/status', req.url)
+  const res = await fetch(url, {
+    headers: {
+      cookie: req.headers.get('cookie') || '',
+    },
+    cache: 'no-store',
+  })
+
+  const data = await res.json().catch(() => null)
+  const plan = data?.plan ?? 'free'
+
+  if (plan !== 'pro') {
+    return NextResponse.json(
+      { error: 'Pro subscription required' },
+      { status: 403 }
+    )
+  }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/api/bot/:path*'],
 }
