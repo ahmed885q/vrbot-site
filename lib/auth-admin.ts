@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './supabase-server'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function requireAdmin() {
   const { data } = await supabaseAdmin.auth.getUser()

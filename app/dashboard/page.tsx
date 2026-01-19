@@ -1,7 +1,7 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
 import UpgradeButton from '@/components/UpgradeButton'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +14,7 @@ type SubscriptionStatus = {
 }
 
 export default async function DashboardPage() {
-  // 🔐 تحقق تسجيل الدخول (قبل أي شيء)
+  // 🔐 تحقق تسجيل الدخول
   const supabase = createSupabaseServerClient()
   const { data: authData } = await supabase.auth.getUser()
 
@@ -22,24 +22,14 @@ export default async function DashboardPage() {
     redirect('/login?next=/dashboard')
   }
 
-  // 🔄 جلب حالة الاشتراك
-  const host = headers().get('host')
+  // 📦 جلب حالة الاشتراك
+  const h = headers()
+  const host = h.get('host')
   const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
 
   const res = await fetch(`${protocol}://${host}/api/subscription/status`, {
     cache: 'no-store',
   })
-
-  if (!res.ok) {
-    return (
-      <div style={{ padding: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700 }}>Dashboard</h1>
-        <p style={{ marginTop: 12, color: 'red' }}>
-          Failed to load subscription status
-        </p>
-      </div>
-    )
-  }
 
   const data = (await res.json()) as SubscriptionStatus
   const plan = data.plan ?? 'free'
@@ -48,23 +38,21 @@ export default async function DashboardPage() {
     <div style={{ padding: 24 }}>
       <h1 style={{ fontSize: 28, fontWeight: 700 }}>Dashboard</h1>
 
-      {/* معلومات الاشتراك */}
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 12 }}>
         <p>
-          <strong>Subscription:</strong> {plan}
+          <strong>Plan:</strong> {plan}
         </p>
         <p>
           <strong>Status:</strong> {data.status ?? '-'}
         </p>
         <p>
-          <strong>Period End:</strong>{' '}
-          {data.currentPeriodEnd
-            ? new Date(data.currentPeriodEnd).toLocaleDateString()
-            : '-'}
+          <strong>Period End:</strong> {data.currentPeriodEnd ?? '-'}
+        </p>
+        <p>
+          <strong>Email:</strong> {data.email ?? '-'}
         </p>
       </div>
 
-      {/* زر الترقية */}
       {plan !== 'pro' ? (
         <div style={{ marginTop: 24 }}>
           <UpgradeButton />
@@ -74,11 +62,6 @@ export default async function DashboardPage() {
           ✅ Pro features are enabled
         </p>
       )}
-
-      {/* تسجيل الخروج */}
-      <div style={{ marginTop: 24 }}>
-        <a href="/logout">Logout</a>
-      </div>
     </div>
   )
 }

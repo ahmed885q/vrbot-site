@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '../supabase-server'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export type LogLevel = 'info' | 'error' | 'warn'
 

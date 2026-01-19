@@ -19,14 +19,21 @@ export default function UserRoleManager() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return users
-    return users.filter((u) => (u.email || '').toLowerCase().includes(q) || u.id.includes(q))
+    return users.filter(
+      (u) =>
+        (u.email || '').toLowerCase().includes(q) ||
+        u.id.toLowerCase().includes(q)
+    )
   }, [users, query])
 
-  async function load() {
+  async function loadUsers() {
     setLoading(true)
     setError(null)
 
-    const res = await fetch('/api/admin/users/list', { cache: 'no-store' })
+    const res = await fetch('/api/admin/users/list', {
+      cache: 'no-store',
+    })
+
     if (!res.ok) {
       const j = await res.json().catch(() => ({}))
       setError(j?.error || 'Failed to load users')
@@ -40,7 +47,7 @@ export default function UserRoleManager() {
   }
 
   useEffect(() => {
-    load()
+    loadUsers()
   }, [])
 
   async function setRole(userId: string, role: 'admin' | 'user') {
@@ -61,26 +68,35 @@ export default function UserRoleManager() {
     }
 
     setBusyId(null)
-    await load()
+    await loadUsers()
   }
 
   return (
-    <div style={{ marginTop: 24, padding: 16, border: '1px solid #ddd', borderRadius: 12 }}>
-      <h2 style={{ fontSize: 18, fontWeight: 700 }}>User Roles</h2>
+    <div
+      style={{
+        marginTop: 32,
+        padding: 16,
+        border: '1px solid #ddd',
+        borderRadius: 12,
+      }}
+    >
+      <h2 style={{ fontSize: 20, fontWeight: 700 }}>User Roles</h2>
 
-      <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
+      <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
         <input
           placeholder="Search by email or user id…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          style={{ flex: 1 }}
+          style={{ flex: 1, padding: 6 }}
         />
-        <button onClick={load} disabled={loading}>
+        <button onClick={loadUsers} disabled={loading}>
           Refresh
         </button>
       </div>
 
-      {error ? <p style={{ color: 'red', marginTop: 10 }}>{error}</p> : null}
+      {error && (
+        <p style={{ color: 'red', marginTop: 10 }}>{error}</p>
+      )}
 
       {loading ? (
         <p style={{ marginTop: 12 }}>Loading…</p>
@@ -99,21 +115,33 @@ export default function UserRoleManager() {
               }}
             >
               <div>
-                <div style={{ fontWeight: 600 }}>{u.email || '(no email)'}</div>
-                <div style={{ fontSize: 12, opacity: 0.7 }}>{u.id}</div>
+                <div style={{ fontWeight: 600 }}>
+                  {u.email || '(no email)'}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.7 }}>
+                  {u.id}
+                </div>
               </div>
 
-              <button onClick={() => setRole(u.id, 'admin')} disabled={busyId === u.id}>
+              <button
+                onClick={() => setRole(u.id, 'admin')}
+                disabled={busyId === u.id}
+              >
                 {busyId === u.id ? '...' : 'Make Admin'}
               </button>
 
-              <button onClick={() => setRole(u.id, 'user')} disabled={busyId === u.id}>
+              <button
+                onClick={() => setRole(u.id, 'user')}
+                disabled={busyId === u.id}
+              >
                 {busyId === u.id ? '...' : 'Make User'}
               </button>
             </div>
           ))}
 
-          {filtered.length === 0 ? <p style={{ marginTop: 12 }}>No users found.</p> : null}
+          {filtered.length === 0 && (
+            <p style={{ marginTop: 12 }}>No users found.</p>
+          )}
         </div>
       )}
     </div>

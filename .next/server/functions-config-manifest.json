@@ -1,0 +1,1 @@
+{"version":1,"functions":{"/api/stripe/checkout":{},"/api/subscription/status":{},"/admin/early-access":{},"/admin":{},"/dashboard":{},"/api/stripe/webhook":{}}}
