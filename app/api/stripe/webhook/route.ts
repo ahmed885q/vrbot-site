@@ -4,9 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-})
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 // ✅ Supabase admin (Service role) - لا تستخدمه في الواجهة/المتصفح أبدًا
 const supabaseAdmin = createClient(
@@ -132,7 +130,7 @@ export async function POST(req: Request) {
         if (!userId) break
 
         const status = sub.status
-        const periodEnd = toPeriodEnd(sub.current_period_end ?? null)
+        const periodEnd = toPeriodEnd((sub as any).current_period_end ?? null)
         const cancelAtPeriodEnd = !!sub.cancel_at_period_end
 
         const isActive = status === 'active' || status === 'trialing'
