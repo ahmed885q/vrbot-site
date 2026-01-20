@@ -2,7 +2,12 @@
 
 import { useState } from 'react'
 
-export default function UpgradeButton() {
+type Props = {
+  userId: string
+  email: string
+}
+
+export default function UpgradeButton({ userId, email }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -10,31 +15,44 @@ export default function UpgradeButton() {
     setLoading(true)
     setError(null)
 
-    const res = await fetch('/api/stripe/checkout', { method: 'POST' })
-    if (!res.ok) {
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, userId }),
+      })
+
       const j = await res.json().catch(() => ({}))
-      setError(j?.error || 'Failed to start checkout')
-      setLoading(false)
-      return
-    }
+      if (!res.ok) {
+        setError(j?.error || 'Failed to start checkout')
+        setLoading(false)
+        return
+      }
 
-    const j = await res.json()
-    const url = j?.url as string | undefined
-    if (!url) {
-      setError('Missing checkout url')
-      setLoading(false)
-      return
-    }
+      const url = j?.url as string | undefined
+      if (!url) {
+        setError('Missing checkout url')
+        setLoading(false)
+        return
+      }
 
-    window.location.href = url
+      window.location.href = url
+    } catch (e: any) {
+      setError(e?.message || 'Request failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div>
+    <div style={{ marginTop: 16 }}>
       <button onClick={onClick} disabled={loading}>
-        {loading ? 'Redirecting…' : 'Upgrade to Pro'}
+        {loading ? 'Loading...' : 'Upgrade to Pro'}
       </button>
-      {error ? <p style={{ color: 'red', marginTop: 8 }}>{error}</p> : null}
+
+      {error ? (
+        <p style={{ color: 'crimson', marginTop: 8 }}>{error}</p>
+      ) : null}
     </div>
   )
 }

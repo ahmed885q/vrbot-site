@@ -1,38 +1,32 @@
 import { headers } from 'next/headers'
-import { redirect } from 'next/navigation'
 import UpgradeButton from '@/components/UpgradeButton'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
-type SubscriptionStatus = {
-  plan: 'free' | 'pro'
-  status?: string | null
-  currentPeriodEnd?: string | null
-  userId?: string | null
-  email?: string | null
-}
-
 export default async function DashboardPage() {
-  // ✅ تحقق تسجيل الدخول
+  // حماية الصفحة
   const supabase = createSupabaseServerClient()
   const { data: authData } = await supabase.auth.getUser()
-  const user = authData?.user
-  if (!user) redirect('/login?next=/dashboard')
+  if (!authData?.user) redirect('/login?next=/dashboard')
 
-  // ✅ جلب بيانات الاشتراك من API مع تمرير كوكي الجلسة
-  const h = headers()
-  const host = h.get('host')
+  const host = headers().get('host')
   const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
-  const cookie = h.get('cookie') ?? ''
 
   const res = await fetch(`${protocol}://${host}/api/subscription/status`, {
     cache: 'no-store',
-    headers: { cookie },
   })
 
-  const data: SubscriptionStatus = res.ok ? await res.json() : { plan: 'free' }
+  if (!res.ok) {
+    return <div style={{ padding: 24 }}>Failed to load subscription</div>
+  }
+
+  const data = await res.json()
+
   const plan = data.plan ?? 'free'
+  const email = data.email ?? authData.user.email ?? '-'
+  const userId = data.userId ?? authData.user.id
 
   return (
     <div style={{ padding: 24 }}>
@@ -41,19 +35,11 @@ export default async function DashboardPage() {
       <p>Plan: {plan}</p>
       <p>Status: {data.status ?? '-'}</p>
       <p>Period End: {data.currentPeriodEnd ?? '-'}</p>
+      <p>Email: {email}</p>
 
-      {/* ✅ هذا هو المهم: الإيميل من جلسة Supabase مباشرة */}
-      <p>Email: {user.email ?? '-'}</p>
-
-      {plan !== 'pro' ? (
-        <div style={{ marginTop: 16 }}>
-          <UpgradeButton />
-        </div>
-      ) : (
-        <p style={{ marginTop: 16, color: 'green', fontWeight: 600 }}>
-          ✅ Pro features are enabled
-        </p>
-      )}
+      {plan !== 'pro' && userId && email ? (
+        <UpgradeButton userId={userId} email={email} />
+      ) : null}
     </div>
   )
 }
