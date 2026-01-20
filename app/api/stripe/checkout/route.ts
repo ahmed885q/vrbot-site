@@ -1,43 +1,31 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
-
-export const dynamic = 'force-dynamic'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
-export async function POST() {
-  const supabase = createSupabaseServerClient()
-  const { data: auth, error: authErr } = await supabase.auth.getUser()
+export async function POST(req: Request) {
+  try {
+    const { email, userId } = await req.json()
+    const origin = req.headers.get('origin')
 
-  if (authErr || !auth?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription', // 🔴 مهم جدًا أن تكون subscription
+      payment_method_types: ['card'],
+      customer_email: email,
+      line_items: [
+        {
+          price: process.env.STRIPE_PRICE_ID!, // 🔗 الـ Price ID اللي ضبطناه في Vercel
+          quantity: 1,
+        },
+      ],
+      success_url: `${origin}/dashboard?checkout=success`,
+      cancel_url: `${origin}/dashboard?checkout=cancel`,
+      metadata: { userId },
+    })
+
+    return NextResponse.json({ url: session.url })
+  } catch (err) {
+    console.error('Stripe checkout error', err)
+    return NextResponse.json({ error: 'Unable to create session' }, { status: 500 })
   }
-
-  const user = auth.user
-  const userId = user.id
-  const email = user.email ?? undefined
-
-  const priceId = process.env.STRIPE_PRICE_PRO
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL
-
-  if (!priceId || !appUrl) {
-    return NextResponse.json(
-      { error: 'Missing STRIPE_PRICE_PRO or NEXT_PUBLIC_APP_URL' },
-      { status: 500 }
-    )
-  }
-
-  const session = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}/dashboard?checkout=success`,
-    cancel_url: `${appUrl}/pricing?checkout=cancel`,
-    customer_email: email, // اختياري
-    client_reference_id: userId, // ✅ الربط الأساسي
-    metadata: { userId }, // ✅ احتياط
-    allow_promotion_codes: true,
-  })
-
-  return NextResponse.json({ url: session.url })
 }
