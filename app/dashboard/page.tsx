@@ -14,51 +14,43 @@ type SubscriptionStatus = {
 }
 
 export default async function DashboardPage() {
-  // 🔐 تحقق تسجيل الدخول
+  // ✅ تحقق تسجيل الدخول
   const supabase = createSupabaseServerClient()
   const { data: authData } = await supabase.auth.getUser()
+  const user = authData?.user
+  if (!user) redirect('/login?next=/dashboard')
 
-  if (!authData?.user) {
-    redirect('/login?next=/dashboard')
-  }
-
-  // 📦 جلب حالة الاشتراك
+  // ✅ جلب بيانات الاشتراك من API مع تمرير كوكي الجلسة
   const h = headers()
   const host = h.get('host')
   const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
+  const cookie = h.get('cookie') ?? ''
 
   const res = await fetch(`${protocol}://${host}/api/subscription/status`, {
     cache: 'no-store',
+    headers: { cookie },
   })
 
-  const data = (await res.json()) as SubscriptionStatus
+  const data: SubscriptionStatus = res.ok ? await res.json() : { plan: 'free' }
   const plan = data.plan ?? 'free'
 
   return (
     <div style={{ padding: 24 }}>
       <h1 style={{ fontSize: 28, fontWeight: 700 }}>Dashboard</h1>
 
-      <div style={{ marginTop: 12 }}>
-        <p>
-          <strong>Plan:</strong> {plan}
-        </p>
-        <p>
-          <strong>Status:</strong> {data.status ?? '-'}
-        </p>
-        <p>
-          <strong>Period End:</strong> {data.currentPeriodEnd ?? '-'}
-        </p>
-        <p>
-          <strong>Email:</strong> {data.email ?? '-'}
-        </p>
-      </div>
+      <p>Plan: {plan}</p>
+      <p>Status: {data.status ?? '-'}</p>
+      <p>Period End: {data.currentPeriodEnd ?? '-'}</p>
+
+      {/* ✅ هذا هو المهم: الإيميل من جلسة Supabase مباشرة */}
+      <p>Email: {user.email ?? '-'}</p>
 
       {plan !== 'pro' ? (
-        <div style={{ marginTop: 24 }}>
+        <div style={{ marginTop: 16 }}>
           <UpgradeButton />
         </div>
       ) : (
-        <p style={{ marginTop: 24, color: 'green', fontWeight: 600 }}>
+        <p style={{ marginTop: 16, color: 'green', fontWeight: 600 }}>
           ✅ Pro features are enabled
         </p>
       )}
