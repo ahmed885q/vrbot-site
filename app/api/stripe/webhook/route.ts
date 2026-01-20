@@ -40,10 +40,12 @@ export async function POST(req: Request) {
       const priceId =
         sub.items.data[0]?.price?.id ?? null
 
-      const currentPeriodEnd =
-        typeof sub.current_period_end === 'number'
-          ? new Date(sub.current_period_end * 1000).toISOString()
-          : null
+    const currentPeriodEnd =
+  typeof (sub as any).current_period_end === 'number'
+    ? new Date((sub as any).current_period_end * 1000).toISOString()
+    : null
+
+
 
       const userId = sub.metadata?.userId
 
