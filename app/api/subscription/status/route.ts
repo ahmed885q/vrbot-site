@@ -1,79 +1,118 @@
-export const dynamic = 'force-dynamic'
-
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
-
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  try {
-    const cookieStore = cookies()
+  const cookieStore = cookies()
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-          set() {
-            // لا نحتاج set هنا
-          },
-          remove() {
-            // لا نحتاج remove هنا
-          },
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
         },
-      }
-    )
-
-    // 1) جيب المستخدم الحقيقي من جلسة Supabase Auth
-    const { data: authData, error: authErr } = await supabase.auth.getUser()
-
-    if (authErr || !authData?.user) {
-      // غير مسجل دخول أو الكوكي حق Supabase غير موجود
-      return NextResponse.json(
-        { plan: 'free', status: null, current_period_end: null, note: 'no-auth-user' },
-        { status: 200 }
-      )
-    }
-
-    const userId = authData.user.id
-    const email = authData.user.email ?? null
-
-    // 2) اقرأ الاشتراك من قاعدة البيانات باستخدام service role
-    const { data: sub, error: subErr } = await supabaseAdmin
-      .from('subscriptions')
-      .select('plan,status,current_period_end')
-      .eq('user_id', userId)
-      .maybeSingle()
-
-    if (subErr) {
-      console.error('subscription status error:', subErr)
-      return NextResponse.json(
-        { plan: 'free', status: null, current_period_end: null, error: subErr.message },
-        { status: 200 }
-      )
-    }
-
-    return NextResponse.json(
-      {
-        plan: sub?.plan ?? 'free',
-        status: sub?.status ?? null,
-        current_period_end: sub?.current_period_end ?? null,
-        userId,
-        email,
+        setAll() {},
       },
-      { status: 200 }
-    )
-  } catch (e: any) {
-    console.error('status route fatal:', e)
+    }
+  )
+
+  const { data: userData } = await supabase.auth.getUser()
+  const user = userData?.user
+  if (!user) {
     return NextResponse.json(
-      { plan: 'free', status: null, current_period_end: null, error: e?.message || 'unknown' },
+      { entitled: false, plan: 'free', status: 'unauthenticated' },
       { status: 200 }
     )
   }
+
+  // اقرأ الاشتراك
+  const { data: sub, error } = await supabaseAdmin
+    .from('subscriptions')
+    .select('plan,status,trial_ends_at,current_period_end')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // احتياط: لو ما فيه سجل (لو التريجر ما اشتغل لأي سبب)
+  let subscription = sub
+  if (!subscription) {
+    const trialEnds = new Date()
+    trialEnds.setDate(trialEnds.getDate() + 7)
+
+    await supabaseAdmin.from('subscriptions').insert({
+      user_id: user.id,
+      plan: 'pro',
+      status: 'trialing',
+      trial_ends_at: trialEnds.toISOString(),
+    })
+
+    const { data: sub2 } = await supabaseAdmin
+      .from('subscriptions')
+      .select('plan,status,trial_ends_at,current_period_end')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    subscription = sub2 ?? null
+  }
+
+  const plan = subscription?.plan ?? 'free'
+  let status = subscription?.status ?? '-'
+  const trialEndsAt = subscription?.trial_ends_at ?? null
+
+  const now = new Date()
+
+  // entitlement rules:
+  // - active => مسموح
+  // - trialing + trial_ends_at > now => مسموح
+  // - otherwise => ممنوع
+  let entitled = false
+  let daysLeft: number | null = null
+
+  if (status === 'active') {
+    entitled = true
+  } else if (status === 'trialing' && trialEndsAt) {
+    const end = new Date(trialEndsAt)
+    const diffMs = end.getTime() - now.getTime()
+    daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+    if (daysLeft < 0) daysLeft = 0
+
+    if (now < end) {
+      entitled = true
+    } else {
+      // انتهت التجربة: حوّله expired + free (مرة واحدة)
+      status = 'expired'
+      entitled = false
+
+      await supabaseAdmin
+        .from('subscriptions')
+        .update({
+          plan: 'free',
+          status: 'expired',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+    }
+  } else {
+    entitled = false
+  }
+
+  return NextResponse.json({
+    userId: user.id,
+    email: user.email ?? null,
+    plan,
+    status,
+    trialEndsAt,
+    daysLeft,
+    entitled,
+    paymentsEnabled: process.env.PAYMENTS_ENABLED === 'true',
+  })
 }

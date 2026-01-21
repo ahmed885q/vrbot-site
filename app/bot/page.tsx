@@ -1,56 +1,39 @@
-'use client'
+import { redirect } from 'next/navigation'
 
-import { useEffect, useRef, useState } from 'react'
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
-type Log = {
-  id: string
-  level: string
-  message: string
-  created_at: string
-}
+export default async function BotPage() {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? ''}/api/subscription/status`, {
+    cache: 'no-store',
+  }).catch(() => null)
 
-export default function BotLogs() {
-  const [logs, setLogs] = useState<Log[]>([])
-  const lastTsRef = useRef<string | null>(null)
+  // لو محلي وما عندك NEXT_PUBLIC_APP_URL:
+  // استخدم fetch('/api/subscription/status') داخل Client Page
+  // لكن هنا Server Component، فالأفضل تضبط NEXT_PUBLIC_APP_URL في env.
 
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const url = lastTsRef.current
-        ? `/api/bot/logs?since=${encodeURIComponent(lastTsRef.current)}`
-        : '/api/bot/logs'
+  if (!res || !res.ok) {
+    redirect('/dashboard?bot=blocked')
+  }
 
-      const res = await fetch(url)
-      if (!res.ok) return
+  const data = await res.json()
 
-      const data = await res.json()
-      if (!data.logs?.length) return
+  if (!data?.entitled) {
+    redirect('/dashboard?trial=ended')
+  }
 
-      setLogs(prev => [...prev, ...data.logs])
-      lastTsRef.current =
-        data.logs[data.logs.length - 1].created_at
-    }, 3000) // كل 3 ثواني
-
-    return () => clearInterval(interval)
-  }, [])
-
+  // ✅ هنا فقط يظهر البوت للمؤهلين
   return (
-    <div className="space-y-2 text-sm">
-      {logs.length === 0 && (
-        <p className="text-gray-500">No logs yet</p>
-      )}
+    <div style={{ padding: 24 }}>
+      <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0 }}>VRBOT</h1>
+      <p style={{ marginTop: 10, color: '#64748b' }}>
+        You have access ({data.plan} / {data.status})
+      </p>
 
-      {logs.map(log => (
-        <div
-          key={log.id}
-          className="rounded bg-gray-100 p-2 font-mono"
-        >
-          <span className="text-gray-500">
-            {new Date(log.created_at).toLocaleTimeString()}
-          </span>{' '}
-          <span className="font-bold">{log.level.toUpperCase()}</span>{' '}
-          {log.message}
-        </div>
-      ))}
+      {/* ضع واجهة البوت هنا */}
+      <div style={{ marginTop: 16, padding: 12, border: '1px solid #e5e7eb', borderRadius: 12 }}>
+        Bot UI goes here…
+      </div>
     </div>
   )
 }
