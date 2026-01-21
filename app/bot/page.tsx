@@ -1,15 +1,15 @@
 // app/bot/page.tsx
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
-import BotPanel from '@/components/BotPanel'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-function addDays(date: Date, days: number) {
-  const d = new Date(date)
-  d.setDate(d.getDate() + days)
-  return d
+const TRIAL_DAYS = 7
+
+function isExpired(periodEnd: string | null) {
+  if (!periodEnd) return true
+  return new Date(periodEnd).getTime() < Date.now()
 }
 
 export default async function BotPage() {
@@ -29,14 +29,14 @@ export default async function BotPage() {
               cookieStore.set(name, value, options)
             )
           } catch {
-            // ignore
+            // ignore (Server Components sometimes can't set cookies)
           }
         },
       },
     }
   )
 
-  // 1) المستخدم الحالي
+  // 1) المستخدم
   const { data: userData } = await supabase.auth.getUser()
   const user = userData?.user
 
@@ -44,80 +44,133 @@ export default async function BotPage() {
     return (
       <div style={{ padding: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 800 }}>VRBOT</h1>
-        <p style={{ marginTop: 10 }}>You are not logged in.</p>
+        <p style={{ marginTop: 10 }}>Please login to access the bot.</p>
+        <a
+          href="/auth"
+          style={{
+            display: 'inline-block',
+            marginTop: 12,
+            padding: '10px 14px',
+            borderRadius: 10,
+            border: '1px solid #111827',
+            textDecoration: 'none',
+            fontWeight: 700,
+            color: '#111827',
+            background: '#fff',
+          }}
+        >
+          Go to login
+        </a>
       </div>
     )
   }
 
-  // 2) جلب الاشتراك
-  const { data: sub } = await supabase
+  // 2) قراءة الاشتراك
+  let { data: sub } = await supabase
     .from('subscriptions')
     .select('plan,status,current_period_end')
     .eq('user_id', user.id)
     .maybeSingle()
 
-  const now = new Date()
-  const currentPeriodEnd = sub?.current_period_end ? new Date(sub.current_period_end) : null
+  // 3) إذا ما فيه سجل: أنشئ Trial أسبوع
+  if (!sub) {
+    const end = new Date(
+      Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000
+    ).toISOString()
 
-  let plan = sub?.plan ?? 'free'
-  let status = sub?.status ?? '-'
-  let periodEndISO: string | null = currentPeriodEnd ? currentPeriodEnd.toISOString() : null
+    const { data: created } = await supabase
+      .from('subscriptions')
+      .insert({
+        user_id: user.id,
+        plan: 'trial',
+        status: 'trialing',
+        current_period_end: end,
+      })
+      .select('plan,status,current_period_end')
+      .single()
 
-  // 3) Trial تلقائي 7 أيام إذا ما عنده اشتراك
-  const hasPro = plan === 'pro' && status === 'active'
-  const hasActiveTrial =
-    plan === 'trial' && status === 'active' && currentPeriodEnd && currentPeriodEnd > now
-
-  if (!hasPro && !hasActiveTrial) {
-    // إذا ما فيه صف أصلًا أو free -> نبدأ Trial
-    if (!sub || plan === 'free' || status === '-' || status === 'inactive') {
-      const trialEnd = addDays(now, 7)
-      await supabase.from('subscriptions').upsert(
-        {
-          user_id: user.id,
-          plan: 'trial',
-          status: 'active',
-          current_period_end: trialEnd.toISOString(),
-        },
-        { onConflict: 'user_id' }
-      )
-
-      plan = 'trial'
-      status = 'active'
-      periodEndISO = trialEnd.toISOString()
-    } else {
-      // إذا موجود لكنه منتهي (مثلاً trial انتهى) نقفل
-      if (currentPeriodEnd && currentPeriodEnd <= now && plan !== 'pro') {
-        await supabase
-          .from('subscriptions')
-          .update({ status: 'expired', plan: 'free' })
-          .eq('user_id', user.id)
-
-        plan = 'free'
-        status = 'expired'
-      }
-    }
+    sub = created ?? { plan: 'trial', status: 'trialing', current_period_end: end }
   }
 
-  const allowed =
-    plan === 'pro'
-      ? status === 'active'
-      : plan === 'trial' && status === 'active' && periodEndISO && new Date(periodEndISO) > now
+  const plan = sub?.plan ?? 'free'
+  const status = sub?.status ?? '-'
+  const periodEnd = sub?.current_period_end ?? null
 
+  // ✅ السماح فقط إذا Trial/Active ولم تنتهي المدة
+  const allowed: boolean =
+    (status === 'trialing' || status === 'active') && !isExpired(periodEnd)
+
+  // ✅ إذا غير مسموح -> اقفل البوت
+  if (!allowed) {
+    return (
+      <div style={{ padding: 24, maxWidth: 720 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 800 }}>Bot Access Locked</h1>
+        <p style={{ marginTop: 10 }}>
+          Your free trial has ended. Payments will be enabled later via PayPal.
+        </p>
+
+        <div
+          style={{
+            marginTop: 14,
+            padding: 14,
+            border: '1px solid #e5e7eb',
+            borderRadius: 12,
+            background: '#fafafa',
+          }}
+        >
+          <p style={{ margin: 0, fontWeight: 700 }}>Current status</p>
+
+          <p style={{ margin: '8px 0 0' }}>
+            Plan: <b>{String(plan)}</b> — Status: <b>{String(status)}</b>
+          </p>
+
+          <p style={{ margin: '8px 0 0' }}>
+            Period End:{' '}
+            <b>{periodEnd ? new Date(periodEnd).toLocaleString() : '-'}</b>
+          </p>
+        </div>
+
+        <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <a
+            href="/dashboard"
+            style={{
+              padding: '10px 14px',
+              borderRadius: 10,
+              border: '1px solid #111827',
+              textDecoration: 'none',
+              fontWeight: 700,
+              color: '#111827',
+              background: '#fff',
+            }}
+          >
+            Go to Dashboard
+          </a>
+
+          <a
+            href="mailto:ahmed85q@hotmail.com?subject=VRBOT%20Access%20Request"
+            style={{
+              padding: '10px 14px',
+              borderRadius: 10,
+              border: '1px solid #e5e7eb',
+              textDecoration: 'none',
+              fontWeight: 700,
+              color: '#111827',
+              background: '#f3f4f6',
+            }}
+          >
+            Request Access
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  // ✅ هنا مكان البوت الحقيقي
   return (
-    <div style={{ padding: 24, maxWidth: 980, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0 }}>VRBOT Control</h1>
-      <p style={{ marginTop: 8, color: '#4b5563' }}>
-        Start/Stop the bot, view logs, and verify your 7-day trial access.
-      </p>
-
-      <BotPanel
-        userEmail={user.email ?? ''}
-        plan={plan}
-        status={status}
-        periodEndISO={periodEndISO}
-        allowed={allowed}
-      />
+    <div style={{ padding: 24 }}>
+      <h1 style={{ fontSize: 28, fontWeight: 800 }}>VRBOT</h1>
+      <p style={{ marginTop: 10 }}>Bot is enabled ✅</p>
+      <p style={{ marginTop: 8, opacity: 0.8 }}>(Put your bot UI here)</p>
     </div>
   )
 }
