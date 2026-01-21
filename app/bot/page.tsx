@@ -1,6 +1,7 @@
 // app/bot/page.tsx
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
+import BotUI from '@/components/BotUI'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -29,7 +30,7 @@ export default async function BotPage() {
               cookieStore.set(name, value, options)
             )
           } catch {
-            // ignore (Server Components sometimes can't set cookies)
+            // ignore
           }
         },
       },
@@ -45,20 +46,7 @@ export default async function BotPage() {
       <div style={{ padding: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 800 }}>VRBOT</h1>
         <p style={{ marginTop: 10 }}>Please login to access the bot.</p>
-        <a
-          href="/auth"
-          style={{
-            display: 'inline-block',
-            marginTop: 12,
-            padding: '10px 14px',
-            borderRadius: 10,
-            border: '1px solid #111827',
-            textDecoration: 'none',
-            fontWeight: 700,
-            color: '#111827',
-            background: '#fff',
-          }}
-        >
+        <a href="/auth" style={{ display: 'inline-block', marginTop: 12 }}>
           Go to login
         </a>
       </div>
@@ -74,10 +62,7 @@ export default async function BotPage() {
 
   // 3) إذا ما فيه سجل: أنشئ Trial أسبوع
   if (!sub) {
-    const end = new Date(
-      Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000
-    ).toISOString()
-
+    const end = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString()
     const { data: created } = await supabase
       .from('subscriptions')
       .insert({
@@ -96,11 +81,10 @@ export default async function BotPage() {
   const status = sub?.status ?? '-'
   const periodEnd = sub?.current_period_end ?? null
 
-  // ✅ السماح فقط إذا Trial/Active ولم تنتهي المدة
-  const allowed: boolean =
+  const allowed =
     (status === 'trialing' || status === 'active') && !isExpired(periodEnd)
 
-  // ✅ إذا غير مسموح -> اقفل البوت
+  // 4) مقفل بعد انتهاء التجربة
   if (!allowed) {
     return (
       <div style={{ padding: 24, maxWidth: 720 }}>
@@ -119,11 +103,9 @@ export default async function BotPage() {
           }}
         >
           <p style={{ margin: 0, fontWeight: 700 }}>Current status</p>
-
           <p style={{ margin: '8px 0 0' }}>
             Plan: <b>{String(plan)}</b> — Status: <b>{String(status)}</b>
           </p>
-
           <p style={{ margin: '8px 0 0' }}>
             Period End:{' '}
             <b>{periodEnd ? new Date(periodEnd).toLocaleString() : '-'}</b>
@@ -165,12 +147,6 @@ export default async function BotPage() {
     )
   }
 
-  // ✅ هنا مكان البوت الحقيقي
-  return (
-    <div style={{ padding: 24 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 800 }}>VRBOT</h1>
-      <p style={{ marginTop: 10 }}>Bot is enabled ✅</p>
-      <p style={{ marginTop: 8, opacity: 0.8 }}>(Put your bot UI here)</p>
-    </div>
-  )
+  // ✅ UI البوت الحقيقي
+  return <BotUI email={user.email ?? ''} userId={user.id} plan={plan} status={status} />
 }
