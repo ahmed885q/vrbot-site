@@ -64,8 +64,38 @@ export default async function DashboardPage() {
     label: 'PRO',
   },
 }
-
 const status = sub?.status ?? '-'
+const statusStyles: Record<
+  string,
+  { bg: string; color: string; label: string }
+> = {
+  active: {
+    bg: '#dcfce7',     // أخضر فاتح
+    color: '#166534',  // أخضر غامق
+    label: 'ACTIVE',
+  },
+  trialing: {
+    bg: '#e0f2fe',     // أزرق فاتح
+    color: '#075985',  // أزرق غامق
+    label: 'TRIAL',
+  },
+  canceled: {
+    bg: '#fee2e2',     // أحمر فاتح
+    color: '#991b1b',  // أحمر غامق
+    label: 'CANCELED',
+  },
+  incomplete: {
+    bg: '#fef3c7',     // أصفر
+    color: '#92400e',
+    label: 'INCOMPLETE',
+  },
+  '-': {
+    bg: '#e5e7eb',
+    color: '#374151',
+    label: 'NONE',
+  },
+}
+
 const periodEnd = sub?.current_period_end ?? null
 const formattedPeriodEnd = periodEnd
   ? new Date(periodEnd).toLocaleDateString('en-GB', {
@@ -98,7 +128,23 @@ const email = user.email ?? '-'
   </span>
 </p>
 
-    <p>Status: {status}</p>
+    <p>
+  Status:{' '}
+  <span
+    style={{
+      backgroundColor: statusStyles[status]?.bg ?? '#e5e7eb',
+      color: statusStyles[status]?.color ?? '#374151',
+      padding: '4px 10px',
+      borderRadius: 999,
+      fontSize: 12,
+      fontWeight: 600,
+      marginLeft: 6,
+    }}
+  >
+    {statusStyles[status]?.label ?? status.toUpperCase()}
+  </span>
+</p>
+
 
 <div style={{ marginTop: 8 }}>
   <span
