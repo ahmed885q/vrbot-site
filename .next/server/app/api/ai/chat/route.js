@@ -1,0 +1,7 @@
+"use strict";(()=>{var e={};e.id=7076,e.ids=[7076],e.modules={517:e=>{e.exports=require("next/dist/compiled/next-server/app-route.runtime.prod.js")},5784:(e,t,a)=>{a.r(t),a.d(t,{headerHooks:()=>m,originalPathname:()=>v,patchFetch:()=>f,requestAsyncStorage:()=>l,routeModule:()=>c,serverHooks:()=>h,staticGenerationAsyncStorage:()=>d,staticGenerationBailout:()=>g});var r={};a.r(r),a.d(r,{POST:()=>p,runtime:()=>u});var o=a(5419),n=a(9108),i=a(9678),s=a(8070);let u="nodejs";async function p(e){let t=await e.json().catch(()=>({})),a=String(t?.message??"").trim(),r=0===a.length?"Ask me a question about farming/build/rally planning.":`Plan idea:
+- Focus on economy + requirements.
+- Keep marches gathering resources.
+- Queue upgrades before sleep.
+
+You asked: "${a}"
+(Connect me to a real AI later for smarter answers.)`;return s.Z.json({ok:!0,reply:r})}let c=new o.AppRouteRouteModule({definition:{kind:n.x.APP_ROUTE,page:"/api/ai/chat/route",pathname:"/api/ai/chat",filename:"route",bundlePath:"app/api/ai/chat/route"},resolvedPagePath:"/workspaces/vrbot-site/app/api/ai/chat/route.ts",nextConfigOutput:"",userland:r}),{requestAsyncStorage:l,staticGenerationAsyncStorage:d,serverHooks:h,headerHooks:m,staticGenerationBailout:g}=c,v="/api/ai/chat/route";function f(){return(0,i.patchFetch)({serverHooks:h,staticGenerationAsyncStorage:d})}}};var t=require("../../../../webpack-runtime.js");t.C(e);var a=e=>t(t.s=e),r=t.X(0,[1638,6206],()=>a(5784));module.exports=r})();

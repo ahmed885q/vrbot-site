@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 
 type Props = {
   userId: string
@@ -11,6 +11,9 @@ type Props = {
 
 type TabKey =
   | 'overview'
+  | 'farms'
+  | 'devices'
+  | 'logs'
   | 'farming'
   | 'build'
   | 'rally'
@@ -98,13 +101,7 @@ function Card({
   )
 }
 
-function Row({
-  left,
-  right,
-}: {
-  left: React.ReactNode
-  right: React.ReactNode
-}) {
+function Row({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
   return (
     <div
       style={{
@@ -145,17 +142,8 @@ function Button({
 
   const styles =
     variant === 'primary'
-      ? {
-          ...base,
-          background: '#111827',
-          color: '#fff',
-        }
-      : {
-          ...base,
-          background: '#fff',
-          color: '#111827',
-          borderColor: '#e5e7eb',
-        }
+      ? { ...base, background: '#111827', color: '#fff' }
+      : { ...base, background: '#fff', color: '#111827', borderColor: '#e5e7eb' }
 
   return (
     <button type="button" style={styles} onClick={onClick}>
@@ -166,6 +154,42 @@ function Button({
 
 export default function BotUI({ email, userId, plan, status }: Props) {
   const [tab, setTab] = useState<TabKey>('overview')
+
+  // ✅ entitlements (trial + slots)
+  const [slots, setSlots] = useState<number | null>(null)
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
+  const [trialActive, setTrialActive] = useState<boolean | null>(null)
+  const [entError, setEntError] = useState<string | null>(null)
+
+  // ✅ farms
+  type FarmRow = {
+    id: string
+    name: string
+    server: string | null
+    notes: string | null
+    created_at: string
+  }
+  const [farms, setFarms] = useState<FarmRow[]>([])
+  const [farmsLoading, setFarmsLoading] = useState(false)
+  const [farmsError, setFarmsError] = useState<string | null>(null)
+
+  // ✅ device token (create)
+  const [deviceToken, setDeviceToken] = useState<string | null>(null)
+  const [deviceBusy, setDeviceBusy] = useState(false)
+  const [deviceError, setDeviceError] = useState<string | null>(null)
+
+  // ✅ logs
+  type LogRow = {
+    id: number
+    farm_id: string | null
+    level: string
+    message: string
+    created_at: string
+  }
+  const [logs, setLogs] = useState<LogRow[]>([])
+  const [logsLoading, setLogsLoading] = useState(false)
+  const [logsError, setLogsError] = useState<string | null>(null)
+  const [selectedFarmId, setSelectedFarmId] = useState<string>('all')
 
   const planBadge = useMemo(() => {
     const p = String(plan || 'free').toLowerCase()
@@ -179,11 +203,20 @@ export default function BotUI({ email, userId, plan, status }: Props) {
     if (s === 'active') return { label: 'ACTIVE', icon: '✅', bg: '#dcfce7', color: '#166534' }
     if (s === 'trialing') return { label: 'TRIALING', icon: '⏳', bg: '#e0f2fe', color: '#075985' }
     if (s === 'canceled') return { label: 'CANCELED', icon: '🛑', bg: '#fee2e2', color: '#991b1b' }
-    return { label: String(status || '—').toUpperCase(), icon: '•', bg: '#f3f4f6', color: '#374151' }
+    return {
+      label: String(status || '—').toUpperCase(),
+      icon: '•',
+      bg: '#f3f4f6',
+      color: '#374151',
+    }
   }, [status])
 
   const tabs: { key: TabKey; label: string; icon: string }[] = [
     { key: 'overview', label: 'Overview', icon: '🏠' },
+    { key: 'farms', label: 'Farms', icon: '🏡' },
+    { key: 'devices', label: 'Devices', icon: '🖥️' },
+    { key: 'logs', label: 'Logs', icon: '📜' },
+
     { key: 'farming', label: 'Farming', icon: '🌾' },
     { key: 'build', label: 'Build', icon: '🏗️' },
     { key: 'rally', label: 'Rally', icon: '⚔️' },
@@ -191,6 +224,62 @@ export default function BotUI({ email, userId, plan, status }: Props) {
     { key: 'mail', label: 'Mail & Gifts', icon: '🎁' },
     { key: 'ai', label: 'AI Helper', icon: '🤖' },
   ]
+
+  async function ensureEntitlements() {
+    setEntError(null)
+    try {
+      const res = await fetch('/api/entitlements/ensure', { cache: 'no-store' })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(j?.error || 'Failed to ensure entitlements')
+
+      setSlots(j?.farm_slots ?? null)
+      setTrialEndsAt(j?.trial_ends_at ?? null)
+      setTrialActive(Boolean(j?.trialActive))
+    } catch (e: any) {
+      setEntError(e?.message || 'Entitlements error')
+    }
+  }
+
+  async function loadFarms() {
+    setFarmsLoading(true)
+    setFarmsError(null)
+    try {
+      const res = await fetch('/api/farms/list', { cache: 'no-store' })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(j?.error || 'Failed to load farms')
+      setFarms(j?.farms || [])
+    } catch (e: any) {
+      setFarmsError(e?.message || 'Farms error')
+    } finally {
+      setFarmsLoading(false)
+    }
+  }
+
+  async function loadLogs(farmId: string) {
+    setLogsLoading(true)
+    setLogsError(null)
+    try {
+      const qs =
+        farmId && farmId !== 'all'
+          ? `?limit=50&farmId=${encodeURIComponent(farmId)}`
+          : `?limit=50`
+      const res = await fetch(`/api/logs/list${qs}`, { cache: 'no-store' })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(j?.error || 'Failed to load logs')
+      setLogs(j?.logs || [])
+    } catch (e: any) {
+      setLogsError(e?.message || 'Logs error')
+    } finally {
+      setLogsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    ensureEntitlements()
+    loadFarms()
+    loadLogs('all')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div
@@ -270,6 +359,44 @@ export default function BotUI({ email, userId, plan, status }: Props) {
           }}
         >
           {tab === 'overview' ? <Overview email={email} userId={userId} /> : null}
+
+          {tab === 'farms' ? (
+            <FarmsTab
+              slots={slots}
+              trialEndsAt={trialEndsAt}
+              trialActive={trialActive}
+              entError={entError}
+              farms={farms}
+              farmsLoading={farmsLoading}
+              farmsError={farmsError}
+              reloadFarms={loadFarms}
+              ensureEntitlements={ensureEntitlements}
+            />
+          ) : null}
+
+          {tab === 'devices' ? (
+            <DevicesTab
+              deviceToken={deviceToken}
+              setDeviceToken={setDeviceToken}
+              deviceBusy={deviceBusy}
+              setDeviceBusy={setDeviceBusy}
+              deviceError={deviceError}
+              setDeviceError={setDeviceError}
+            />
+          ) : null}
+
+          {tab === 'logs' ? (
+            <LogsTab
+              farms={farms.map((f) => ({ id: f.id, name: f.name }))}
+              selectedFarmId={selectedFarmId}
+              setSelectedFarmId={setSelectedFarmId}
+              logs={logs}
+              logsLoading={logsLoading}
+              logsError={logsError}
+              reloadLogs={loadLogs}
+            />
+          ) : null}
+
           {tab === 'farming' ? <Farming /> : null}
           {tab === 'build' ? <BuildPlanner /> : null}
           {tab === 'rally' ? <RallyPlanner /> : null}
@@ -284,8 +411,6 @@ export default function BotUI({ email, userId, plan, status }: Props) {
       </div>
     </div>
   )
-}
-
 function Overview({ email, userId }: { email: string; userId: string }) {
   return (
     <Card
@@ -311,8 +436,13 @@ function Overview({ email, userId }: { email: string; userId: string }) {
       <Row left="Email" right={<span style={{ fontWeight: 800 }}>{email || '—'}</span>} />
       <Row
         left="User ID"
-        right={<span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{userId}</span>}
+        right={
+          <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+            {userId}
+          </span>
+        }
       />
+
       <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <a
           href="/"
@@ -328,6 +458,7 @@ function Overview({ email, userId }: { email: string; userId: string }) {
         >
           🏠 Home
         </a>
+
         <a
           href="mailto:ahmed85q@hotmail.com?subject=VRBOT%20Feedback"
           style={{
@@ -363,7 +494,9 @@ function Farming() {
           checked={routine.gather}
           onChange={(e) => setRoutine({ ...routine, gather: e.target.checked })}
         />
-        <span><b>Gather resources</b> — send marches to nearest rich nodes</span>
+        <span>
+          <b>Gather resources</b> — send marches to nearest rich nodes
+        </span>
       </label>
 
       <label style={chkRow()}>
@@ -372,7 +505,9 @@ function Farming() {
           checked={routine.farmTiles}
           onChange={(e) => setRoutine({ ...routine, farmTiles: e.target.checked })}
         />
-        <span><b>Farm map tiles</b> — rotate zones to avoid over-farming one area</span>
+        <span>
+          <b>Farm map tiles</b> — rotate zones to avoid over-farming one area
+        </span>
       </label>
 
       <label style={chkRow()}>
@@ -381,7 +516,9 @@ function Farming() {
           checked={routine.upgradeWorkers}
           onChange={(e) => setRoutine({ ...routine, upgradeWorkers: e.target.checked })}
         />
-        <span><b>Upgrade economy</b> — queue upgrades for farm/production buildings</span>
+        <span>
+          <b>Upgrade economy</b> — queue upgrades for farm/production buildings
+        </span>
       </label>
 
       <label style={chkRow()}>
@@ -390,7 +527,9 @@ function Farming() {
           checked={routine.heal}
           onChange={(e) => setRoutine({ ...routine, heal: e.target.checked })}
         />
-        <span><b>Heal + hospital</b> — keep capacity safe before rallies</span>
+        <span>
+          <b>Heal + hospital</b> — keep capacity safe before rallies
+        </span>
       </label>
 
       <div
@@ -405,7 +544,7 @@ function Farming() {
           fontSize: 13,
         }}
       >
-        ✅ This section is a planner/checklist. If later you want real automation, it must be done within the game’s allowed tools and rules.
+        ✅ This section is a planner/checklist. (No ban-bypass features.)
       </div>
     </Card>
   )
@@ -414,7 +553,6 @@ function Farming() {
 function BuildPlanner() {
   const [level, setLevel] = useState(1)
   const target = 17
-
   const pct = Math.max(0, Math.min(100, Math.round((level / target) * 100)))
 
   return (
@@ -423,9 +561,13 @@ function BuildPlanner() {
         <div style={{ fontWeight: 900 }}>Target farm level</div>
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <Button variant="ghost" onClick={() => setLevel((v) => Math.max(1, v - 1))}>−</Button>
+          <Button variant="ghost" onClick={() => setLevel((v) => Math.max(1, v - 1))}>
+            −
+          </Button>
           <div style={{ fontSize: 28, fontWeight: 950 }}>{level}</div>
-          <Button variant="ghost" onClick={() => setLevel((v) => Math.min(target, v + 1))}>+</Button>
+          <Button variant="ghost" onClick={() => setLevel((v) => Math.min(target, v + 1))}>
+            +
+          </Button>
           <div style={{ color: '#6b7280', fontWeight: 800 }}>Target: {target}</div>
         </div>
 
@@ -434,11 +576,11 @@ function BuildPlanner() {
         </div>
 
         <div style={{ fontSize: 13, color: '#374151', fontWeight: 700 }}>
-          Suggested focus: <b>HQ/Stronghold requirements</b> + resource production + troop capacity.
+          Suggested focus: <b>HQ/Stronghold requirements</b> + production + troop capacity.
         </div>
 
         <textarea
-          placeholder="Notes (e.g., next upgrades, missing requirements, timers...)"
+          placeholder="Notes (next upgrades, missing requirements, timers...)"
           style={{
             width: '100%',
             minHeight: 120,
@@ -471,14 +613,14 @@ function RallyPlanner() {
       {mode === 'monsters' ? (
         <div style={{ display: 'grid', gap: 10 }}>
           <Row left="Goal" right="Farm XP + loot efficiently" />
-          <Row left="Tip" right="Use strongest march, keep stamina check" />
+          <Row left="Tip" right="Use strongest march, watch stamina" />
           <Row left="Checklist" right="Scout → rally → heal → repeat" />
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 10 }}>
           <Row left="Goal" right="Support alliance rallies" />
           <Row left="Tip" right="Set time windows + notify group" />
-          <Row left="Checklist" right="Join → send support → return → refill" />
+          <Row left="Checklist" right="Join → send support → return" />
         </div>
       )}
 
@@ -547,7 +689,9 @@ function MailAndGifts() {
           checked={done.dailyMail}
           onChange={(e) => setDone({ ...done, dailyMail: e.target.checked })}
         />
-        <span><b>Daily mail</b> — claim all rewards</span>
+        <span>
+          <b>Daily mail</b> — claim all rewards
+        </span>
       </label>
 
       <label style={chkRow()}>
@@ -556,7 +700,9 @@ function MailAndGifts() {
           checked={done.allianceGifts}
           onChange={(e) => setDone({ ...done, allianceGifts: e.target.checked })}
         />
-        <span><b>Alliance gifts</b> — open + share notes</span>
+        <span>
+          <b>Alliance gifts</b> — open + share notes
+        </span>
       </label>
 
       <label style={chkRow()}>
@@ -565,7 +711,9 @@ function MailAndGifts() {
           checked={done.events}
           onChange={(e) => setDone({ ...done, events: e.target.checked })}
         />
-        <span><b>Events</b> — check limited tasks</span>
+        <span>
+          <b>Events</b> — check limited tasks
+        </span>
       </label>
 
       <label style={chkRow()}>
@@ -574,7 +722,9 @@ function MailAndGifts() {
           checked={done.store}
           onChange={(e) => setDone({ ...done, store: e.target.checked })}
         />
-        <span><b>Store</b> — free pack / weekly items</span>
+        <span>
+          <b>Store</b> — free packs / weekly items
+        </span>
       </label>
 
       <div style={{ marginTop: 10, color: '#6b7280', fontWeight: 700, fontSize: 13 }}>
@@ -603,8 +753,7 @@ function AIHelper() {
   const [msgs, setMsgs] = useState<{ role: 'user' | 'ai'; text: string }[]>([
     {
       role: 'ai',
-      text:
-        'Ask me for a farming/build/rally plan. (This is a safe helper—no ban bypass or cheating instructions.)',
+      text: 'Ask me for a farming/build/rally plan. (Safe helper—no ban-bypass.)',
     },
   ])
   const [loading, setLoading] = useState(false)
@@ -718,11 +867,7 @@ function chkRow(): React.CSSProperties {
   }
 }
 
-function resRow(
-  label: string,
-  value: number,
-  setValue: (n: number) => void
-) {
+function resRow(label: string, value: number, setValue: (n: number) => void) {
   return (
     <div
       style={{
