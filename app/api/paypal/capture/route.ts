@@ -11,6 +11,6 @@ export async function POST() {
     )
   }
 
-  // لاحقاً: تنشئ Order من PayPal API
+  // لاحقاً: Capture order
   return NextResponse.json({ error: 'Not implemented yet' }, { status: 501 })
 }

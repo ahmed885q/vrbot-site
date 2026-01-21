@@ -1,35 +1,75 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 
 export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl
+  const res = NextResponse.next()
 
-  // احمِ مسارات البوت فقط (عدّلها حسب مشروعك)
-  if (!pathname.startsWith('/api/bot')) {
-    return NextResponse.next()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            res.cookies.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
+
+  const pathname = req.nextUrl.pathname
+
+  // ✅ مسارات تحتاج تسجيل دخول
+  const protectedPaths = ['/dashboard', '/bot']
+  const isProtectedPage = protectedPaths.some(
+    (p) => pathname === p || pathname.startsWith(p + '/')
+  )
+
+  // ✅ API لازم تكون خاصة بالمستخدمين المسجلين
+  const isProtectedApi =
+    pathname.startsWith('/api/bot') ||
+    pathname.startsWith('/api/subscription') ||
+    pathname.startsWith('/api/stripe') // إذا ما زلت تستخدمه مؤقتاً
+    // paypal حالياً placeholder، تقدر تحميه أو تخليه مفتوح حسب رغبتك:
+    // || pathname.startsWith('/api/paypal')
+
+  if (!isProtectedPage && !isProtectedApi) {
+    return res
   }
 
-  // استدعاء داخلي لـ status
-  const url = new URL('/api/subscription/status', req.url)
-  const res = await fetch(url, {
-    headers: {
-      cookie: req.headers.get('cookie') || '',
-    },
-    cache: 'no-store',
-  })
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  const data = await res.json().catch(() => null)
-  const plan = data?.plan ?? 'free'
+  // ❌ غير مسجل
+  if (!user) {
+    // API يرجع 401 بدل تحويل
+    if (isProtectedApi) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-  if (plan !== 'pro') {
-    return NextResponse.json(
-      { error: 'Pro subscription required' },
-      { status: 403 }
-    )
+    // صفحات: تحويل للصفحة الرئيسية مع next
+    const url = req.nextUrl.clone()
+    url.pathname = '/'
+    url.searchParams.set('next', pathname)
+    return NextResponse.redirect(url)
   }
 
-  return NextResponse.next()
+  return res
 }
 
+// مهم: لا تشغل middleware على كل شيء (خصوصاً assets)
 export const config = {
-  matcher: ['/api/bot/:path*'],
+  matcher: [
+    '/dashboard/:path*',
+    '/bot/:path*',
+    '/api/bot/:path*',
+    '/api/subscription/:path*',
+    '/api/stripe/:path*',
+    // '/api/paypal/:path*', // فعّله إذا تبي PayPal API محمي
+  ],
 }
