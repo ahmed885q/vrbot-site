@@ -52,17 +52,69 @@ export default async function DashboardPage() {
     .maybeSingle()
 
   const plan = sub?.plan ?? 'free'
-  const status = sub?.status ?? '-'
-  const periodEnd = sub?.current_period_end ?? '-'
-  const email = user.email ?? '-'
+  const planStyles: Record<string, { bg: string; color: string; label: string }> = {
+  free: {
+    bg: '#e5e7eb',     // رمادي فاتح
+    color: '#374151',  // رمادي غامق
+    label: 'FREE',
+  },
+  pro: {
+    bg: '#dcfce7',     // أخضر فاتح
+    color: '#166534',  // أخضر غامق
+    label: 'PRO',
+  },
+}
+
+const status = sub?.status ?? '-'
+const periodEnd = sub?.current_period_end ?? null
+const formattedPeriodEnd = periodEnd
+  ? new Date(periodEnd).toLocaleDateString('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+  : '-'
+const email = user.email ?? '-'
+
 
   return (
     <div style={{ padding: 24 }}>
       <h1 style={{ fontSize: 28, fontWeight: 700 }}>Dashboard</h1>
 
-      <p style={{ marginTop: 12 }}>Plan: {plan}</p>
-      <p>Status: {status}</p>
-      <p>Period End: {periodEnd}</p>
+     <p style={{ marginTop: 12 }}>
+  Plan:{' '}
+  <span
+    style={{
+      backgroundColor: planStyles[plan]?.bg ?? '#e5e7eb',
+      color: planStyles[plan]?.color ?? '#374151',
+      padding: '4px 10px',
+      borderRadius: 999,
+      fontSize: 12,
+      fontWeight: 600,
+      marginLeft: 6,
+    }}
+  >
+    {planStyles[plan]?.label ?? plan.toUpperCase()}
+  </span>
+</p>
+
+    <p>Status: {status}</p>
+
+<div style={{ marginTop: 8 }}>
+  <span
+    style={{
+      display: 'inline-block',
+      padding: '6px 12px',
+      borderRadius: 999,
+      fontSize: 14,
+      fontWeight: 600,
+      backgroundColor: periodEnd ? '#e6f4ea' : '#f1f1f1',
+      color: periodEnd ? '#137333' : '#555',
+    }}
+  >
+    {periodEnd ? `Active until ${formattedPeriodEnd}` : 'No expiry'}
+  </span>
+</div>
       <p>Email: {email}</p>
 
       {plan !== 'pro' && (
