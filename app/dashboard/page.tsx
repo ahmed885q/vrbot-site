@@ -18,7 +18,7 @@ export default async function DashboardPage() {
           return cookieStore.getAll()
         },
         setAll(cookiesToSet) {
-          // في Server Component أحيانًا ممنوع تعديل الكوكيز، فنسويها بأمان
+          // في Server Component أحياناً ممنوع تعديل الكوكيز، فنحاول بأمان
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
@@ -52,117 +52,128 @@ export default async function DashboardPage() {
     .maybeSingle()
 
   const plan = sub?.plan ?? 'free'
-  const planStyles: Record<string, { bg: string; color: string; label: string }> = {
-  free: {
-    bg: '#e5e7eb',     // رمادي فاتح
-    color: '#374151',  // رمادي غامق
-    label: 'FREE',
-  },
-  pro: {
-    bg: '#dcfce7',     // أخضر فاتح
-    color: '#166534',  // أخضر غامق
-    label: 'PRO',
-  },
-}
-const status = sub?.status ?? '-'
-const statusStyles: Record<
-  string,
-  { bg: string; color: string; label: string }
-> = {
-  active: {
-    bg: '#dcfce7',     // أخضر فاتح
-    color: '#166534',  // أخضر غامق
-    label: 'ACTIVE',
-  },
-  trialing: {
-    bg: '#e0f2fe',     // أزرق فاتح
-    color: '#075985',  // أزرق غامق
-    label: 'TRIAL',
-  },
-  canceled: {
-    bg: '#fee2e2',     // أحمر فاتح
-    color: '#991b1b',  // أحمر غامق
-    label: 'CANCELED',
-  },
-  incomplete: {
-    bg: '#fef3c7',     // أصفر
-    color: '#92400e',
-    label: 'INCOMPLETE',
-  },
-  '-': {
+  const status = sub?.status ?? '-'
+  const periodEnd = sub?.current_period_end ?? null
+  const email = user.email ?? '-'
+
+  const formattedPeriodEnd = periodEnd
+    ? new Date(periodEnd).toLocaleDateString('en-GB', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+    : '-'
+
+  // ✅ Styles + Icons (بدون مكتبات)
+  const planStyles: Record<string, { bg: string; color: string; label: string; icon: string }> = {
+    free: { bg: '#e5e7eb', color: '#374151', label: 'FREE', icon: '•' },
+    pro: { bg: '#dcfce7', color: '#166534', label: 'PRO', icon: '★' },
+    enterprise: { bg: '#ede9fe', color: '#5b21b6', label: 'ENTERPRISE', icon: '◆' },
+  }
+
+  const statusStyles: Record<
+    string,
+    { bg: string; color: string; label: string; icon: string }
+  > = {
+    active: { bg: '#dcfce7', color: '#166534', label: 'ACTIVE', icon: '✓' },
+    trialing: { bg: '#e0f2fe', color: '#075985', label: 'TRIAL', icon: '⏳' },
+    canceled: { bg: '#fee2e2', color: '#991b1b', label: 'CANCELED', icon: '✕' },
+    incomplete: { bg: '#fef3c7', color: '#92400e', label: 'INCOMPLETE', icon: '!' },
+    past_due: { bg: '#fef3c7', color: '#92400e', label: 'PAST DUE', icon: '!' },
+    unpaid: { bg: '#fee2e2', color: '#991b1b', label: 'UNPAID', icon: '!' },
+    '-': { bg: '#e5e7eb', color: '#374151', label: 'NONE', icon: '•' },
+  }
+
+  const planBadge = planStyles[plan] ?? {
     bg: '#e5e7eb',
     color: '#374151',
-    label: 'NONE',
-  },
-}
+    label: plan.toUpperCase(),
+    icon: '•',
+  }
 
-const periodEnd = sub?.current_period_end ?? null
-const formattedPeriodEnd = periodEnd
-  ? new Date(periodEnd).toLocaleDateString('en-GB', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })
-  : '-'
-const email = user.email ?? '-'
+  const statusBadge = statusStyles[status] ?? {
+    bg: '#e5e7eb',
+    color: '#374151',
+    label: String(status).toUpperCase(),
+    icon: '•',
+  }
 
+  const badgeStyleBase: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '6px 10px',
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 700,
+    lineHeight: 1,
+    whiteSpace: 'nowrap',
+  }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: 24, maxWidth: 720 }}>
       <h1 style={{ fontSize: 28, fontWeight: 700 }}>Dashboard</h1>
 
-     <p style={{ marginTop: 12 }}>
-  Plan:{' '}
-  <span
-    style={{
-      backgroundColor: planStyles[plan]?.bg ?? '#e5e7eb',
-      color: planStyles[plan]?.color ?? '#374151',
-      padding: '4px 10px',
-      borderRadius: 999,
-      fontSize: 12,
-      fontWeight: 600,
-      marginLeft: 6,
-    }}
-  >
-    {planStyles[plan]?.label ?? plan.toUpperCase()}
-  </span>
-</p>
+      {/* ✅ Badges جنب بعض + مناسب للموبايل */}
+      <div
+        style={{
+          marginTop: 12,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          flexWrap: 'wrap', // ✅ مهم للموبايل
+        }}
+      >
+        <span style={{ fontWeight: 700 }}>Plan:</span>
 
-    <p>
-  Status:{' '}
-  <span
-    style={{
-      backgroundColor: statusStyles[status]?.bg ?? '#e5e7eb',
-      color: statusStyles[status]?.color ?? '#374151',
-      padding: '4px 10px',
-      borderRadius: 999,
-      fontSize: 12,
-      fontWeight: 600,
-      marginLeft: 6,
-    }}
-  >
-    {statusStyles[status]?.label ?? status.toUpperCase()}
-  </span>
-</p>
+        {/* Plan Badge */}
+        <span
+          style={{
+            ...badgeStyleBase,
+            backgroundColor: planBadge.bg,
+            color: planBadge.color,
+          }}
+        >
+          <span aria-hidden="true">{planBadge.icon}</span>
+          {planBadge.label}
+        </span>
 
+        {/* Status Badge */}
+        <span
+          style={{
+            ...badgeStyleBase,
+            backgroundColor: statusBadge.bg,
+            color: statusBadge.color,
+          }}
+        >
+          <span aria-hidden="true">{statusBadge.icon}</span>
+          {statusBadge.label}
+        </span>
+      </div>
 
-<div style={{ marginTop: 8 }}>
-  <span
-    style={{
-      display: 'inline-block',
-      padding: '6px 12px',
-      borderRadius: 999,
-      fontSize: 14,
-      fontWeight: 600,
-      backgroundColor: periodEnd ? '#e6f4ea' : '#f1f1f1',
-      color: periodEnd ? '#137333' : '#555',
-    }}
-  >
-    {periodEnd ? `Active until ${formattedPeriodEnd}` : 'No expiry'}
-  </span>
-</div>
-      <p>Email: {email}</p>
+      {/* ✅ Expiry Badge */}
+      <div style={{ marginTop: 10 }}>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 10px',
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 700,
+            backgroundColor: periodEnd ? '#f3f4f6' : '#f1f1f1',
+            color: '#111827',
+          }}
+        >
+          <span aria-hidden="true">🗓</span>
+          {periodEnd ? `Active until ${formattedPeriodEnd}` : 'No expiry'}
+        </span>
+      </div>
 
+      <p style={{ marginTop: 14 }}>Email: {email}</p>
+
+      {/* ✅ زر الترقية يظهر فقط لو مو Pro */}
       {plan !== 'pro' && (
         <div style={{ marginTop: 16 }}>
           <UpgradeButton userId={user.id} email={email} />
