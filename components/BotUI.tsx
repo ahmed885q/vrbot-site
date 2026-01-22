@@ -5,6 +5,8 @@ import FarmsTab from './FarmsTab'
 import DevicesTab from './DevicesTab'
 import LogsTab from './LogsTab'
 import { Badge, Button, Card, Row } from '@/components/bot/ui'
+import TransfersTab from '@/components/TransfersTab'
+
 
 
 type Props = {
@@ -26,6 +28,9 @@ type TabKey =
   | 'resources'
   | 'mail'
   | 'ai'
+  | 'transfers'
+
+
 
 // نوع إعدادات البوت الجديد
 type BotSettings = {
