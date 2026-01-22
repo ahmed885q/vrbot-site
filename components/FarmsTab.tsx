@@ -9,6 +9,9 @@ type FarmRow = {
   server: string | null
   notes: string | null
   created_at: string
+  bot_enabled?: boolean // ✅ إضافة حالة البوت
+  bot_settings?: any    // ✅ إضافة إعدادات البوت للمزرعة
+  last_active?: string  // ✅ إضافة آخر نشاط
 }
 
 type Props = {
@@ -21,6 +24,10 @@ type Props = {
   farmsError: string | null
   reloadFarms: () => Promise<void>
   ensureEntitlements: () => Promise<void>
+  // ✅ إضافة دالة لتشغيل/إيقاف البوت للمزرعة
+  onToggleBot?: (farmId: string, enabled: boolean) => Promise<void>
+  // ✅ إضافة دالة لفتح إعدادات البوت للمزرعة
+  onOpenBotSettings?: (farmId: string) => void
 }
 
 export default function FarmsTab({
@@ -33,6 +40,8 @@ export default function FarmsTab({
   farmsError,
   reloadFarms,
   ensureEntitlements,
+  onToggleBot,
+  onOpenBotSettings,
 }: Props) {
   const [newFarmName, setNewFarmName] = useState('')
   const [newFarmServer, setNewFarmServer] = useState('')
@@ -40,6 +49,9 @@ export default function FarmsTab({
   const [createBusy, setCreateBusy] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [createSuccess, setCreateSuccess] = useState(false)
+  
+  // ✅ حالة لتحميل البوت لكل مزرعة
+  const [botLoading, setBotLoading] = useState<Record<string, boolean>>({})
 
   async function createFarm() {
     const name = newFarmName.trim()
@@ -60,6 +72,21 @@ export default function FarmsTab({
           name,
           server: newFarmServer.trim() || null,
           notes: newFarmNotes.trim() || null,
+          bot_settings: { // ✅ إضافة إعدادات افتراضية للبوت
+            security: {
+              antiDetection: true,
+              randomDelays: true,
+              maxActionsPerHour: 180,
+              humanizeMouse: true,
+              avoidPatterns: true
+            },
+            automation: {
+              autoFarm: true,
+              autoBuild: true,
+              targetLevel: 17,
+              priorityBuilding: 'hall'
+            }
+          }
         }),
       })
 
@@ -93,6 +120,43 @@ export default function FarmsTab({
     }
   }
 
+  // ✅ دالة لتشغيل/إيقاف البوت لمزرعة محددة
+  async function toggleBotForFarm(farmId: string, currentlyEnabled: boolean) {
+    setBotLoading(prev => ({ ...prev, [farmId]: true }))
+    
+    try {
+      if (onToggleBot) {
+        await onToggleBot(farmId, !currentlyEnabled)
+      } else {
+        // التنفيذ الافتراضي إذا لم توفر الدالة
+        const res = await fetch(`/api/farms/${farmId}/bot/toggle`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: !currentlyEnabled })
+        })
+        
+        if (!res.ok) throw new Error('Failed to toggle bot')
+      }
+      
+      await reloadFarms()
+    } catch (error) {
+      console.error('Failed to toggle bot:', error)
+      alert('Failed to toggle bot. Please try again.')
+    } finally {
+      setBotLoading(prev => ({ ...prev, [farmId]: false }))
+    }
+  }
+
+  // ✅ دالة لفتح إعدادات البوت
+  function openBotSettings(farmId: string) {
+    if (onOpenBotSettings) {
+      onOpenBotSettings(farmId)
+    } else {
+      // التنفيذ الافتراضي
+      window.location.href = `/farm/${farmId}/settings`
+    }
+  }
+
   return (
     <>
       {/* Entitlements Card */}
@@ -100,9 +164,19 @@ export default function FarmsTab({
         title="Plan & Limits"
         subtitle="Your current subscription allowances"
         right={
-          <Button variant="ghost" onClick={ensureEntitlements}>
-            🔄 Refresh
-          </Button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button variant="ghost" onClick={ensureEntitlements}>
+              🔄 Refresh
+            </Button>
+            {slots !== null && farms.length >= slots && (
+              <Button 
+                variant="primary"
+                onClick={() => window.open('/pricing', '_blank')}
+              >
+                ⭐ Upgrade Plan
+              </Button>
+            )}
+          </div>
         }
       >
         {entError ? (
@@ -129,7 +203,25 @@ export default function FarmsTab({
               </span>
               {slots !== null && farms.length >= slots ? (
                 <Badge label="FULL" icon="⚠️" bg="#fee2e2" color="#991b1b" />
-              ) : null}
+              ) : (
+                <Badge label="AVAILABLE" icon="✅" bg="#dcfce7" color="#166534" />
+              )}
+            </div>
+          </div>
+
+          {/* ✅ إضافة إحصائيات البوت */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: 14,
+              padding: '10px 0',
+              borderBottom: '1px solid #f1f5f9',
+            }}
+          >
+            <div style={{ color: '#111827', fontWeight: 700 }}>Active Bots</div>
+            <div style={{ fontWeight: 900 }}>
+              {farms.filter(f => f.bot_enabled).length} / {farms.length}
             </div>
           </div>
 
@@ -226,6 +318,17 @@ export default function FarmsTab({
             />
           </div>
 
+          {/* ✅ إضافة خيارات البوت عند الإنشاء */}
+          <div style={{ marginTop: 8 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="checkbox" defaultChecked />
+              <span style={{ fontWeight: 700 }}>Enable bot with default settings</span>
+            </label>
+            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+              Includes: Anti-Detection, Auto-Farming, Auto-Build to level 17
+            </div>
+          </div>
+
           {createError ? (
             <div style={{ color: '#ef4444', fontWeight: 700 }}>Error: {createError}</div>
           ) : null}
@@ -234,13 +337,17 @@ export default function FarmsTab({
             <div style={{ color: '#16a34a', fontWeight: 700 }}>✅ Farm created successfully!</div>
           ) : null}
 
-          <div style={{ display: 'flex', gap: 10 }}>
-            <Button onClick={createFarm} disabled={createBusy}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <Button 
+              onClick={createFarm} 
+              disabled={createBusy || (slots !== null && farms.length >= slots)}
+            >
               {createBusy ? 'Creating...' : '➕ Create Farm'}
             </Button>
+            
             {slots !== null && farms.length >= slots ? (
               <div style={{ color: '#ef4444', fontWeight: 700, fontSize: 13 }}>
-                Upgrade plan to add more farms
+                ⚠️ Upgrade plan to add more farms
               </div>
             ) : null}
           </div>
@@ -252,9 +359,16 @@ export default function FarmsTab({
         title="Your Farms"
         subtitle="All connected Viking Rise accounts"
         right={
-          <Button variant="ghost" onClick={reloadFarms}>
-            🔄 Refresh
-          </Button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button variant="ghost" onClick={reloadFarms}>
+              🔄 Refresh
+            </Button>
+            {farms.length > 0 && (
+              <Button variant="primary" onClick={() => console.log('Export farms')}>
+                📤 Export
+              </Button>
+            )}
+          </div>
         }
       >
         {farmsLoading ? (
@@ -271,82 +385,208 @@ export default function FarmsTab({
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
-            {farms.map((farm) => (
-              <div
-                key={farm.id}
-                style={{
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 14,
-                  padding: 14,
-                  background: '#f8fafc',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-                  <div>
-                    <div style={{ fontWeight: 900, fontSize: 16 }}>{farm.name}</div>
-                    <div style={{ display: 'flex', gap: 10, marginTop: 6, fontSize: 13 }}>
-                      {farm.server ? (
-                        <span style={{ color: '#6b7280', fontWeight: 700 }}>
-                          🖥️ Server: {farm.server}
-                        </span>
-                      ) : null}
-                      <span style={{ color: '#6b7280', fontWeight: 700 }}>
-                        📅 Created: {new Date(farm.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    {farm.notes ? (
-                      <div style={{ marginTop: 8, color: '#4b5563', fontWeight: 700, fontSize: 13 }}>
-                        📝 {farm.notes}
+            {farms.map((farm) => {
+              const isBotEnabled = farm.bot_enabled || false
+              const isLoading = botLoading[farm.id] || false
+              
+              return (
+                <div
+                  key={farm.id}
+                  style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 14,
+                    padding: 14,
+                    background: '#f8fafc',
+                    borderLeft: `4px solid ${isBotEnabled ? '#10b981' : '#6b7280'}`,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <div style={{ fontWeight: 900, fontSize: 16 }}>{farm.name}</div>
+                        {isBotEnabled && (
+                          <Badge label="BOT ACTIVE" icon="🤖" bg="#dcfce7" color="#166534" />
+                        )}
                       </div>
-                    ) : null}
+                      
+                      <div style={{ display: 'flex', gap: 10, marginTop: 6, fontSize: 13, flexWrap: 'wrap' }}>
+                        {farm.server ? (
+                          <span style={{ color: '#6b7280', fontWeight: 700 }}>
+                            🖥️ Server: {farm.server}
+                          </span>
+                        ) : null}
+                        <span style={{ color: '#6b7280', fontWeight: 700 }}>
+                          📅 Created: {new Date(farm.created_at).toLocaleDateString()}
+                        </span>
+                        {farm.last_active && (
+                          <span style={{ color: '#6b7280', fontWeight: 700 }}>
+                            ⏰ Last active: {new Date(farm.last_active).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {farm.notes ? (
+                        <div style={{ marginTop: 8, color: '#4b5563', fontWeight: 700, fontSize: 13 }}>
+                          📝 {farm.notes}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                      {/* ✅ زر تشغيل/إيقاف البوت */}
+                      <button
+                        onClick={() => toggleBotForFarm(farm.id, isBotEnabled)}
+                        disabled={isLoading}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: 10,
+                          border: `1px solid ${isBotEnabled ? '#fca5a5' : '#a7f3d0'}`,
+                          background: isBotEnabled ? '#fee2e2' : '#dcfce7',
+                          color: isBotEnabled ? '#991b1b' : '#166534',
+                          fontWeight: 900,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          minWidth: 100,
+                          justifyContent: 'center',
+                          opacity: isLoading ? 0.6 : 1,
+                        }}
+                      >
+                        {isLoading ? '...' : (
+                          <>
+                            {isBotEnabled ? '⏹️ Stop Bot' : '🤖 Start Bot'}
+                          </>
+                        )}
+                      </button>
+                      
+                      {/* ✅ زر إعدادات البوت */}
+                      <button
+                        onClick={() => openBotSettings(farm.id)}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: 10,
+                          border: '1px solid #93c5fd',
+                          background: '#dbeafe',
+                          color: '#1e40af',
+                          fontWeight: 900,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        ⚙️ Settings
+                      </button>
+                      
+                      <button
+                        onClick={() => deleteFarm(farm.id)}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: 10,
+                          border: '1px solid #fca5a5',
+                          background: '#fee2e2',
+                          color: '#991b1b',
+                          fontWeight: 900,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <a
-                      href={`/farm/${farm.id}`}
-                      style={{
-                        textDecoration: 'none',
-                        fontWeight: 900,
-                        padding: '8px 12px',
-                        borderRadius: 10,
-                        border: '1px solid #e5e7eb',
-                        background: '#fff',
-                        color: '#111827',
-                        fontSize: 13,
-                      }}
-                    >
-                      Open
-                    </a>
-                    <button
-                      onClick={() => deleteFarm(farm.id)}
-                      style={{
-                        padding: '8px 12px',
-                        borderRadius: 10,
-                        border: '1px solid #fca5a5',
-                        background: '#fee2e2',
-                        color: '#991b1b',
-                        fontWeight: 900,
-                        fontSize: 13,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Delete
-                    </button>
+                  {/* ✅ معلومات البوت الإضافية */}
+                  {farm.bot_settings && (
+                    <div style={{ 
+                      marginTop: 12, 
+                      padding: 10, 
+                      background: '#f0f9ff', 
+                      borderRadius: 8,
+                      border: '1px solid #e0f2fe'
+                    }}>
+                      <div style={{ fontWeight: 900, fontSize: 13, color: '#075985', marginBottom: 4 }}>
+                        Bot Settings:
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {farm.bot_settings.security?.antiDetection && (
+                          <Badge label="Anti-Detection" icon="🛡️" bg="#fff7ed" color="#9a3412" />
+                        )}
+                        {farm.bot_settings.automation?.autoFarm && (
+                          <Badge label="Auto-Farm" icon="🌾" bg="#dcfce7" color="#166534" />
+                        )}
+                        {farm.bot_settings.automation?.autoBuild && (
+                          <Badge label={`Build to L${farm.bot_settings.automation.targetLevel || 17}`} 
+                                 icon="🏗️" bg="#dbeafe" color="#1e40af" />
+                        )}
+                        {farm.bot_settings.combat?.huntMonsters && (
+                          <Badge label="Monster Hunt" icon="⚔️" bg="#fee2e2" color="#991b1b" />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+                    <Badge label="Viking Rise" icon="🎮" bg="#dbeafe" color="#1e40af" />
+                    <Badge label={farm.bot_enabled ? "Auto Mode" : "Manual Mode"} 
+                           icon={farm.bot_enabled ? "🤖" : "👨‍💻"} 
+                           bg={farm.bot_enabled ? "#dcfce7" : "#f3f4f6"} 
+                           color={farm.bot_enabled ? "#166534" : "#374151"} />
+                    {farm.bot_settings?.ai?.enabled && (
+                      <Badge label="AI Enabled" icon="🧠" bg="#f3e8ff" color="#7c3aed" />
+                    )}
                   </div>
                 </div>
-
-                <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-                  <Badge label="Viking Rise" icon="🎮" bg="#dbeafe" color="#1e40af" />
-                  <Badge label="Manual Mode" icon="👨‍💻" bg="#f3f4f6" color="#374151" />
-                  <Badge label="No Bot" icon="🤖" bg="#fef3c7" color="#92400e" />
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
+        <div style={{ 
+          marginTop: 14, 
+          padding: 12, 
+          background: '#f0f9ff', 
+          borderRadius: 12,
+          border: '1px solid #e0f2fe'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontWeight: 900, fontSize: 14 }}>Quick Actions</div>
+              <div style={{ fontSize: 12, color: '#6b7280', fontWeight: 700 }}>
+                Manage all your farms at once
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button variant="ghost" onClick={() => {
+                const enabledFarms = farms.filter(f => f.bot_enabled)
+                if (enabledFarms.length > 0) {
+                  if (confirm(`Stop bot on ${enabledFarms.length} farms?`)) {
+                    enabledFarms.forEach(farm => toggleBotForFarm(farm.id, true))
+                  }
+                }
+              }}>
+                ⏹️ Stop All Bots
+              </Button>
+              <Button variant="ghost" onClick={() => {
+                const disabledFarms = farms.filter(f => !f.bot_enabled)
+                if (disabledFarms.length > 0) {
+                  if (confirm(`Start bot on ${disabledFarms.length} farms?`)) {
+                    disabledFarms.forEach(farm => toggleBotForFarm(farm.id, false))
+                  }
+                }
+              }}>
+                🤖 Start All Bots
+              </Button>
+            </div>
+          </div>
+        </div>
+        
         <div style={{ marginTop: 14, fontSize: 12, color: '#6b7280', fontWeight: 700 }}>
-          Note: Farms are for manual tracking. No automation data is stored.
+          ✅ Total: {farms.length} farms • 🤖 Active bots: {farms.filter(f => f.bot_enabled).length} 
+          • 🎮 Manual: {farms.filter(f => !f.bot_enabled).length}
         </div>
       </Card>
     </>
