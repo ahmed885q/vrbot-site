@@ -112,7 +112,7 @@ export function Button({
 }: {
   children: React.ReactNode
   onClick?: () => void
-  variant?: 'primary' | 'ghost'
+ variant?: 'primary' | 'ghost' | 'danger'
   disabled?: boolean
 }) {
   const base: React.CSSProperties = {
@@ -130,10 +130,11 @@ export function Button({
   }
 
   const styles =
-    variant === 'primary'
-      ? { ...base, background: '#111827', color: '#fff' }
+  variant === 'primary'
+    ? { ...base, background: '#111827', color: '#fff' }
+    : variant === 'danger'
+      ? { ...base, background: '#dc2626', color: '#fff' }
       : { ...base, background: '#fff', color: '#111827', borderColor: '#e5e7eb' }
-
   return (
     <button type="button" style={styles} onClick={disabled ? undefined : onClick} disabled={disabled}>
       {children}
