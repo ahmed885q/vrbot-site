@@ -1,0 +1,26 @@
+appId: com.vikingrais.agent
+productName: Viking Rais Agent
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - "src/**/*"
+  - "../agent-windows/**/*"
+
+win:
+  target:
+    - nsis
+  artifactName: "${productName}-Setup-${version}.exe"
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+publish:
+  - provider: github
+    owner: YOUR_OWNER
+    repo: YOUR_REPO
+    private: true

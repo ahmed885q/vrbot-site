@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Viking Rais Agent</title>
+  <link rel="stylesheet" href="./dashboard.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">VR</div>
+      <div>
+        <div class="title">Viking Rais Agent</div>
+        <div class="subtitle" id="subTitle">Dashboard</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="btnStart">تشغيل</button>
+      <button class="btn" id="btnStop">إيقاف</button>
+      <button class="btn" id="btnRestart">إعادة تشغيل</button>
+      <div class="sep"></div>
+      <button class="btn ghost" id="btnUpdate">فحص تحديث</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="card">
+      <div class="cardHeader">
+        <h2>المزارع</h2>
+        <div class="row">
+          <input id="farmName" placeholder="Viking Rais | Ahmed" />
+          <button class="btn" id="btnAddFarm">إضافة</button>
+        </div>
+      </div>
+
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>الاسم</th>
+              <th>الحالة</th>
+              <th>آخر نشاط</th>
+              <th>تحكم</th>
+            </tr>
+          </thead>
+          <tbody id="farmBody"></tbody>
+        </table>
+      </div>
+
+      <div class="hint">
+        غير محدود ✅ — تقدر تضيف 5 أو 50 أو 500. التشغيل/التجميع يتم حسب الـ Agent.
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="cardHeader">
+        <h2>السجلات</h2>
+        <div class="row">
+          <span class="pill" id="agentState">Agent: ...</span>
+          <span class="pill" id="updateState">Update: ...</span>
+        </div>
+      </div>
+
+      <pre class="log" id="logBox"></pre>
+    </section>
+  </main>
+
+  <script src="./dashboard.js"></script>
+</body>
+</html>
