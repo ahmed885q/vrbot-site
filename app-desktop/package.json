@@ -4,6 +4,11 @@
   "private": true,
   "main": "src/main.js",
   "description": "Viking Rais Agent Desktop",
+  "author": "Ahmed",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ahmed885q/vrbot-site.git"
+  },
   "scripts": {
     "dev": "electron .",
     "pack": "electron-builder --dir",
