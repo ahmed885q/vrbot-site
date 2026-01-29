@@ -1,0 +1,10 @@
+# Electron build outputs
+dist/
+*.exe
+*.AppImage
+*.snap
+*.dmg
+
+# Electron caches
+.node-gyp
+.cache
