@@ -29,6 +29,6 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "types/**/*.d.ts"
-  ],
+, "components/bot/EducationalBypassSystem.ts "  ],
   "exclude": ["node_modules"]
 }

@@ -1,396 +1,277 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { Badge, Button, Card, Row } from '@/components/bot/ui'
+import { Button, Card, Badge } from '@/components/bot/ui'
 
-type Farm = { id: string; name: string }
 type Transfer = {
   id: string
-  farm_id: string
-  recipient: string
-  recipient_type: 'name' | 'id'
-  wood: number
-  food: number
-  stone: number
-  gold: number
-  status: 'pending' | 'done' | 'canceled'
-  note: string | null
-  scheduled_at: string | null
+  from_farm_id: string
+  to_player: string
+  amount: number
+  resource_type: 'food' | 'wood' | 'stone' | 'gold' | string
+  status: 'pending' | 'sent' | 'cancelled' | 'failed' | string
   created_at: string
 }
 
+function formatDate(d: string) {
+  try {
+    return new Date(d).toLocaleString()
+  } catch {
+    return d
+  }
+}
+
+function StatusBadge({ status }: { status: Transfer['status'] }) {
+  const map: Record<string, { label: string; bg: string; color: string }> = {
+    pending: { label: 'Pending', bg: '#fff7ed', color: '#9a3412' },
+    sent: { label: 'Sent', bg: '#ecfdf5', color: '#065f46' },
+    cancelled: { label: 'Cancelled', bg: '#f3f4f6', color: '#374151' },
+    failed: { label: 'Failed', bg: '#fef2f2', color: '#991b1b' },
+  }
+  const s = map[status] ?? { label: status, bg: '#eef2ff', color: '#3730a3' }
+  return <Badge label={s.label} bg={s.bg} color={s.color} />
+}
+
 export default function TransfersTab() {
-  const [farms, setFarms] = useState<Farm[]>([])
-  const [transfers, setTransfers] = useState<Transfer[]>([])
-  const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [items, setItems] = useState<Transfer[]>([])
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
 
   // form
-  const [farmId, setFarmId] = useState('')
-  const [recipientType, setRecipientType] = useState<'name' | 'id'>('name')
-  const [recipient, setRecipient] = useState('')
-  const [wood, setWood] = useState(0)
-  const [food, setFood] = useState(0)
-  const [stone, setStone] = useState(0)
-  const [gold, setGold] = useState(0)
-  const [note, setNote] = useState('')
-  const [scheduleNow, setScheduleNow] = useState(true)
-  const [scheduledAt, setScheduledAt] = useState('')
+  const [fromFarmId, setFromFarmId] = useState('')
+  const [toPlayer, setToPlayer] = useState('') // اسم أو ID
+  const [resourceType, setResourceType] = useState<Transfer['resource_type']>('food')
+  const [amount, setAmount] = useState<number>(1000)
 
-  const pendingCount = useMemo(
-    () => transfers.filter((t) => t.status === 'pending').length,
-    [transfers]
-  )
+  const canSubmit = useMemo(() => {
+    return (
+      fromFarmId.trim().length > 0 &&
+      toPlayer.trim().length > 0 &&
+      Number.isFinite(amount) &&
+      amount > 0 &&
+      String(resourceType).trim().length > 0
+    )
+  }, [fromFarmId, toPlayer, amount, resourceType])
 
-  async function loadAll() {
+  async function load() {
     setLoading(true)
-    setError(null)
+    setErr(null)
     try {
-      // farms
-      const fRes = await fetch('/api/farms/list', { cache: 'no-store' })
-      const fJson = await fRes.json().catch(() => ({}))
-      if (!fRes.ok) throw new Error(fJson?.error || 'Failed to load farms')
-      const farmsList: Farm[] = fJson?.farms || []
-      setFarms(farmsList)
-      if (!farmId && farmsList[0]?.id) setFarmId(farmsList[0].id)
-
-      // transfers
-      const tRes = await fetch('/api/transfers/list', { cache: 'no-store' })
-      const tJson = await tRes.json().catch(() => ({}))
-      if (!tRes.ok) throw new Error(tJson?.error || 'Failed to load transfers')
-      setTransfers(tJson?.transfers || [])
+      const res = await fetch('/api/transfers/list', { cache: 'no-store' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Failed to load transfers')
+      setItems(data.items ?? [])
     } catch (e: any) {
-      setError(e?.message || 'Load failed')
+      setErr(e?.message || 'Error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function createTransfer() {
+    if (!canSubmit) return
+    setLoading(true)
+    setErr(null)
+    try {
+      const res = await fetch('/api/transfers/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromFarmId: fromFarmId.trim(),
+          toPlayer: toPlayer.trim(), // يقبل اسم أو ID
+          amount: Number(amount),
+          resourceType,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Failed to create transfer')
+      // حدث القائمة
+      await load()
+      // نظف بسيط
+      setToPlayer('')
+    } catch (e: any) {
+      setErr(e?.message || 'Error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function cancelTransfer(id: string) {
+    setLoading(true)
+    setErr(null)
+    try {
+      const res = await fetch('/api/transfers/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Failed to cancel transfer')
+      await load()
+    } catch (e: any) {
+      setErr(e?.message || 'Error')
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    loadAll()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    load()
   }, [])
 
-  function resetAmounts() {
-    setWood(0)
-    setFood(0)
-    setStone(0)
-    setGold(0)
-  }
-
-  async function createTransfer() {
-    setError(null)
-    const r = recipient.trim()
-    if (!farmId) return setError('Select a farm')
-    if (!r) return setError('Enter recipient')
-    if (wood + food + stone + gold <= 0) return setError('Set at least one resource amount')
-
-    setBusy(true)
-    try {
-      const res = await fetch('/api/transfers/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          farmId,
-          recipientType,
-          recipient: r,
-          wood,
-          food,
-          stone,
-          gold,
-          note: note.trim() || null,
-          scheduledAt: scheduleNow ? null : scheduledAt || null,
-        }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json?.error || 'Create failed')
-
-      setRecipient('')
-      setNote('')
-      setScheduleNow(true)
-      setScheduledAt('')
-      resetAmounts()
-      await loadAll()
-    } catch (e: any) {
-      setError(e?.message || 'Create failed')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function setStatus(id: string, status: 'pending' | 'done' | 'canceled') {
-    setError(null)
-    setBusy(true)
-    try {
-      const res = await fetch('/api/transfers/update-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json?.error || 'Update failed')
-      await loadAll()
-    } catch (e: any) {
-      setError(e?.message || 'Update failed')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function removeTransfer(id: string) {
-    if (!confirm('Delete this transfer task?')) return
-    setError(null)
-    setBusy(true)
-    try {
-      const res = await fetch('/api/transfers/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json?.error || 'Delete failed')
-      await loadAll()
-    } catch (e: any) {
-      setError(e?.message || 'Delete failed')
-    } finally {
-      setBusy(false)
-    }
-  }
-
   return (
-    <Card
-      title="Resource Transfers"
-      subtitle="Create transfer tasks (recipient by Name or ID) + track status"
-      right={
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Badge label={`Pending: ${pendingCount}`} icon="📦" bg="#eef2ff" color="#3730a3" />
-          <Button variant="ghost" onClick={loadAll} disabled={busy || loading}>
-            🔄 Refresh
+    <div style={{ display: 'grid', gap: 14 }}>
+      <Card
+        title="Transfers"
+        subtitle="Send resources to a player (Name or ID). This currently creates/queues a transfer record."
+        right={
+          <Button onClick={load} variant="ghost" disabled={loading}>
+            Refresh
           </Button>
-        </div>
-      }
-    >
-      {error ? (
+        }
+      >
+        {err ? (
+          <div style={{ marginBottom: 10, color: '#b91c1c', fontSize: 13 }}>
+            {err}
+          </div>
+        ) : null}
+
         <div
           style={{
-            background: '#fee2e2',
-            color: '#991b1b',
-            border: '1px solid rgba(17,24,39,0.08)',
-            padding: 12,
-            borderRadius: 12,
-            fontWeight: 800,
-            marginBottom: 12,
+            display: 'grid',
+            gap: 10,
+            gridTemplateColumns: '1fr 1fr',
+            alignItems: 'end',
           }}
         >
-          {error}
-        </div>
-      ) : null}
-
-      {/* Create form */}
-      <div
-        style={{
-          border: '1px solid #e5e7eb',
-          borderRadius: 14,
-          background: '#fff',
-          padding: 12,
-          marginBottom: 12,
-        }}
-      >
-        <Row
-          left="From farm"
-          right={
-            <select
-              value={farmId}
-              onChange={(e) => setFarmId(e.target.value)}
-              style={selStyle()}
-            >
-              {farms.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          }
-        />
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
           <div>
-            <div style={labelStyle()}>Recipient type</div>
-            <select
-              value={recipientType}
-              onChange={(e) => setRecipientType(e.target.value as any)}
-              style={selStyle()}
-            >
-              <option value="name">Name</option>
-              <option value="id">ID</option>
-            </select>
-          </div>
-
-          <div>
-            <div style={labelStyle()}>Recipient</div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>From Farm ID</div>
             <input
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-              placeholder={recipientType === 'name' ? 'Player name' : 'Player ID'}
-              style={inputStyle()}
-            />
-          </div>
-        </div>
-
-        <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <Amount label="🪵 Wood" value={wood} setValue={setWood} />
-          <Amount label="🍞 Food" value={food} setValue={setFood} />
-          <Amount label="🪨 Stone" value={stone} setValue={setStone} />
-          <Amount label="🪙 Gold" value={gold} setValue={setGold} />
-        </div>
-
-        <div style={{ marginTop: 10 }}>
-          <div style={labelStyle()}>Note (optional)</div>
-          <input value={note} onChange={(e) => setNote(e.target.value)} style={inputStyle()} />
-        </div>
-
-        <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 800 }}>
-            <input type="checkbox" checked={scheduleNow} onChange={(e) => setScheduleNow(e.target.checked)} />
-            Send now
-          </label>
-
-          {!scheduleNow ? (
-            <input
-              value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
-              placeholder="YYYY-MM-DDTHH:mm (optional)"
-              style={{ ...inputStyle(), minWidth: 260 }}
-            />
-          ) : null}
-
-          <Button onClick={createTransfer} disabled={busy || loading}>
-            ➕ Create task
-          </Button>
-
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setRecipient('')
-              setNote('')
-              resetAmounts()
-            }}
-            disabled={busy || loading}
-          >
-            🧹 Clear
-          </Button>
-        </div>
-      </div>
-
-      {/* List */}
-      {loading ? (
-        <div style={{ color: '#6b7280', fontWeight: 800 }}>Loading…</div>
-      ) : transfers.length === 0 ? (
-        <div style={{ color: '#6b7280', fontWeight: 800 }}>No transfer tasks yet.</div>
-      ) : (
-        <div style={{ display: 'grid', gap: 10 }}>
-          {transfers.map((t) => (
-            <div
-              key={t.id}
+              value={fromFarmId}
+              onChange={(e) => setFromFarmId(e.target.value)}
+              placeholder="farm uuid..."
               style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: 12,
                 border: '1px solid #e5e7eb',
-                borderRadius: 14,
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>To Player (Name or ID)</div>
+            <input
+              value={toPlayer}
+              onChange={(e) => setToPlayer(e.target.value)}
+              placeholder="player name or ID..."
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: 12,
+                border: '1px solid #e5e7eb',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Resource</div>
+            <select
+              value={resourceType}
+              onChange={(e) => setResourceType(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: 12,
+                border: '1px solid #e5e7eb',
+                outline: 'none',
                 background: '#fff',
-                padding: 12,
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                <div style={{ fontWeight: 950 }}>
-                  To: {t.recipient} <span style={{ color: '#6b7280' }}>({t.recipient_type})</span>
-                </div>
+              <option value="food">Food</option>
+              <option value="wood">Wood</option>
+              <option value="stone">Stone</option>
+              <option value="gold">Gold</option>
+            </select>
+          </div>
 
-                <Badge
-                  label={t.status.toUpperCase()}
-                  icon={t.status === 'pending' ? '⏳' : t.status === 'done' ? '✅' : '🛑'}
-                  bg={t.status === 'done' ? '#dcfce7' : t.status === 'canceled' ? '#fee2e2' : '#e0f2fe'}
-                  color={t.status === 'done' ? '#166534' : t.status === 'canceled' ? '#991b1b' : '#075985'}
-                />
-              </div>
+          <div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Amount</div>
+            <input
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              type="number"
+              min={1}
+              step={1}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: 12,
+                border: '1px solid #e5e7eb',
+                outline: 'none',
+              }}
+            />
+          </div>
 
-              <div style={{ marginTop: 8, color: '#374151', fontWeight: 800, fontSize: 13 }}>
-                Amounts: 🪵 {t.wood} · 🍞 {t.food} · 🪨 {t.stone} · 🪙 {t.gold}
-              </div>
+          <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 10 }}>
+            <Button onClick={createTransfer} variant="primary" disabled={!canSubmit || loading}>
+              {loading ? '...' : 'Create Transfer'}
+            </Button>
 
-              {t.note ? (
-                <div style={{ marginTop: 6, color: '#6b7280', fontWeight: 800, fontSize: 13 }}>
-                  Note: {t.note}
-                </div>
-              ) : null}
-
-              <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <Button variant="ghost" onClick={() => setStatus(t.id, 'pending')} disabled={busy}>
-                  ⏳ Pending
-                </Button>
-                <Button onClick={() => setStatus(t.id, 'done')} disabled={busy}>
-                  ✅ Done
-                </Button>
-                <Button variant="danger" onClick={() => setStatus(t.id, 'canceled')} disabled={busy}>
-                  🛑 Cancel
-                </Button>
-                <Button variant="danger" onClick={() => removeTransfer(t.id)} disabled={busy}>
-                  🗑 Delete
-                </Button>
-              </div>
+            <div style={{ fontSize: 12, color: '#6b7280', alignSelf: 'center' }}>
+              Tip: “To Player” accepts either **name** or **ID**.
             </div>
-          ))}
+          </div>
         </div>
-      )}
-    </Card>
-  )
-}
+      </Card>
 
-function labelStyle(): React.CSSProperties {
-  return { fontWeight: 900, fontSize: 12, color: '#6b7280', marginBottom: 6 }
-}
+      <Card title="Recent Transfers" subtitle={`${items.length} items`}>
+        <div style={{ display: 'grid', gap: 10 }}>
+          {items.length === 0 ? (
+            <div style={{ color: '#6b7280', fontSize: 13 }}>No transfers yet.</div>
+          ) : (
+            items.map((t) => (
+              <div
+                key={t.id}
+                style={{
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 14,
+                  padding: 12,
+                  display: 'grid',
+                  gap: 6,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                  <div style={{ fontWeight: 700, color: '#111827' }}>
+                    {t.resource_type} · {t.amount.toLocaleString()}
+                  </div>
+                  <StatusBadge status={t.status} />
+                </div>
 
-function inputStyle(): React.CSSProperties {
-  return {
-    width: '100%',
-    padding: '12px 12px',
-    borderRadius: 12,
-    border: '1px solid #e5e7eb',
-    outline: 'none',
-    fontWeight: 800,
-  }
-}
+                <div style={{ fontSize: 13, color: '#374151' }}>
+                  From: <span style={{ fontFamily: 'monospace' }}>{t.from_farm_id}</span>
+                </div>
 
-function selStyle(): React.CSSProperties {
-  return {
-    width: '100%',
-    padding: '12px 12px',
-    borderRadius: 12,
-    border: '1px solid #e5e7eb',
-    outline: 'none',
-    fontWeight: 800,
-    background: '#fff',
-  }
-}
+                <div style={{ fontSize: 13, color: '#374151' }}>
+                  To: <span style={{ fontWeight: 700 }}>{t.to_player}</span>
+                </div>
 
-function Amount({
-  label,
-  value,
-  setValue,
-}: {
-  label: string
-  value: number
-  setValue: (n: number) => void
-}) {
-  return (
-    <div>
-      <div style={labelStyle()}>{label}</div>
-      <input
-        type="number"
-        value={value}
-        min={0}
-        onChange={(e) => setValue(Math.max(0, Number(e.target.value || 0)))}
-        style={inputStyle()}
-      />
+                <div style={{ fontSize: 12, color: '#6b7280' }}>{formatDate(t.created_at)}</div>
+
+                <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                  {t.status === 'pending' ? (
+                    <Button onClick={() => cancelTransfer(t.id)} variant="ghost" disabled={loading}>
+                      Cancel
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
     </div>
   )
 }

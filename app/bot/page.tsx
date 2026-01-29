@@ -43,12 +43,29 @@ export default async function BotPage() {
 
   if (!user) {
     return (
-      <div style={{ padding: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800 }}>VRBOT</h1>
-        <p style={{ marginTop: 10 }}>Please login to access the bot.</p>
-        <a href="/auth" style={{ display: 'inline-block', marginTop: 12 }}>
-          Go to login
-        </a>
+      <div className="bot-page">
+        <header className="bot-header">
+          <h1>🎮 نظام Viking Rise Bot التعليمي</h1>
+          <p className="subtitle">نظام متكامل مع أنظمة الحماية والتعلّم</p>
+        </header>
+        
+        <main className="bot-main">
+          <div className="auth-required">
+            <h2>الوصول مقيد</h2>
+            <p>يرجى تسجيل الدخول للوصول إلى نظام البوت.</p>
+            <a href="/auth" className="auth-button">
+              الذهاب إلى صفحة تسجيل الدخول
+            </a>
+          </div>
+        </main>
+        
+        <footer className="bot-footer">
+          <p className="disclaimer">
+            ⚠️ هذا النظام للأغراض التعليمية والبحثية فقط. 
+            يجب استخدامه فقط على أنظمة تطوير محلية.
+          </p>
+          <p className="version"></p>
+        </footer>
       </div>
     )
   }
@@ -87,66 +104,74 @@ export default async function BotPage() {
   // 4) مقفل بعد انتهاء التجربة
   if (!allowed) {
     return (
-      <div style={{ padding: 24, maxWidth: 720 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800 }}>Bot Access Locked</h1>
-        <p style={{ marginTop: 10 }}>
-          Your free trial has ended. Payments will be enabled later via PayPal.
-        </p>
+      <div className="bot-page">
+        <header className="bot-header">
+          <h1>🎮 نظام Viking Rise Bot التعليمي</h1>
+          <p className="subtitle">نظام متكامل مع أنظمة الحماية والتعلّم</p>
+        </header>
+        
+        <main className="bot-main">
+          <div className="access-locked">
+            <h2>وصول البوت مقفل</h2>
+            <p>
+              انتهت فترة التجربة المجانية الخاصة بك. سيتم تمكين المدفوعات لاحقًا عبر PayPal.
+            </p>
 
-        <div
-          style={{
-            marginTop: 14,
-            padding: 14,
-            border: '1px solid #e5e7eb',
-            borderRadius: 12,
-            background: '#fafafa',
-          }}
-        >
-          <p style={{ margin: 0, fontWeight: 700 }}>Current status</p>
-          <p style={{ margin: '8px 0 0' }}>
-            Plan: <b>{String(plan)}</b> — Status: <b>{String(status)}</b>
+            <div className="status-info">
+              <h3>الحالة الحالية</h3>
+              <p><strong>الخطة:</strong> {String(plan)}</p>
+              <p><strong>الحالة:</strong> {String(status)}</p>
+              <p>
+                <strong>تاريخ الانتهاء:</strong>{' '}
+                {periodEnd ? new Date(periodEnd).toLocaleString('ar-SA') : '-'}
+              </p>
+            </div>
+
+            <div className="action-buttons">
+              <a href="/dashboard" className="dashboard-button">
+                الذهاب إلى لوحة التحكم
+              </a>
+
+              <a
+                href="mailto:ahmed85q@hotmail.com?subject=VRBOT%20Access%20Request"
+                className="request-button"
+              >
+                طلب الوصول
+              </a>
+            </div>
+          </div>
+        </main>
+        
+        <footer className="bot-footer">
+          <p className="disclaimer">
+            ⚠️ هذا النظام للأغراض التعليمية والبحثية فقط. 
+            يجب استخدامه فقط على أنظمة تطوير محلية.
           </p>
-          <p style={{ margin: '8px 0 0' }}>
-            Period End:{' '}
-            <b>{periodEnd ? new Date(periodEnd).toLocaleString() : '-'}</b>
-          </p>
-        </div>
-
-        <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <a
-            href="/dashboard"
-            style={{
-              padding: '10px 14px',
-              borderRadius: 10,
-              border: '1px solid #111827',
-              textDecoration: 'none',
-              fontWeight: 700,
-              color: '#111827',
-              background: '#fff',
-            }}
-          >
-            Go to Dashboard
-          </a>
-
-          <a
-            href="mailto:ahmed85q@hotmail.com?subject=VRBOT%20Access%20Request"
-            style={{
-              padding: '10px 14px',
-              borderRadius: 10,
-              border: '1px solid #e5e7eb',
-              textDecoration: 'none',
-              fontWeight: 700,
-              color: '#111827',
-              background: '#f3f4f6',
-            }}
-          >
-            Request Access
-          </a>
-        </div>
+  
+        </footer>
       </div>
     )
   }
 
   // ✅ UI البوت الحقيقي
-  return <BotUI email={user.email ?? ''} userId={user.id} plan={plan} status={status} />
+  return (
+    <div className="bot-page">
+      <header className="bot-header">
+        <h1>🎮 نظام Viking Rise Bot التعليمي</h1>
+        <p className="subtitle">نظام متكامل مع أنظمة الحماية والتعلّم</p>
+      </header>
+      
+      <main className="bot-main">
+        <BotUI email={user.email ?? ''} userId={user.id} plan={plan} status={status} />
+      </main>
+      
+      <footer className="bot-footer">
+        <p className="disclaimer">
+          ⚠️ هذا النظام للأغراض التعليمية والبحثية فقط. 
+          يجب استخدامه فقط على أنظمة تطوير محلية.
+        </p>
+       
+      </footer>
+    </div>
+  )
 }

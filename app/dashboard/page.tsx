@@ -1,10 +1,20 @@
 // app/dashboard/page.tsx
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
+import LocalStreamControls from '@/components/LocalStreamControls'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-
+export function LocalStreamPage() {
+  return (
+    <div style={{ padding: 24 }}>
+      <h1 style={{ fontSize: 24, fontWeight: 800 }}>VR Farm Manager</h1>
+      <div style={{ marginTop: 16 }}>
+        <LocalStreamControls />
+      </div>
+    </div>
+  )
+}
 const TRIAL_DAYS = 7
 
 function isExpired(periodEnd: string | null) {

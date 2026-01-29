@@ -12,16 +12,15 @@
       <div class="logo">VR</div>
       <div>
         <div class="title">Viking Rais Agent</div>
-        <div class="subtitle" id="subTitle">Dashboard</div>
+        <div class="subtitle">Dashboard</div>
       </div>
     </div>
 
     <div class="actions">
-      <button class="btn" id="btnStart">تشغيل</button>
-      <button class="btn" id="btnStop">إيقاف</button>
-      <button class="btn" id="btnRestart">إعادة تشغيل</button>
-      <div class="sep"></div>
-      <button class="btn ghost" id="btnUpdate">فحص تحديث</button>
+      <button class="btn" id="btnAgentStart">تشغيل Agent</button>
+      <button class="btn ghost" id="btnAgentStop">إيقاف</button>
+      <button class="btn ghost" id="btnAgentRestart">Restart</button>
+      <span class="pill" id="agentState">Agent: ...</span>
     </div>
   </header>
 
@@ -32,6 +31,8 @@
         <div class="row">
           <input id="farmName" placeholder="Viking Rais | Ahmed" />
           <button class="btn" id="btnAddFarm">إضافة</button>
+          <button class="btn ghost" id="btnRefresh">تحديث</button>
+          <button class="btn ghost" id="btnRefreshWindows">تحديث النوافذ</button>
         </div>
       </div>
 
@@ -41,7 +42,8 @@
             <tr>
               <th>الاسم</th>
               <th>الحالة</th>
-              <th>آخر نشاط</th>
+              <th>ربط النافذة</th>
+              <th>آخر OCR</th>
               <th>تحكم</th>
             </tr>
           </thead>
@@ -50,7 +52,7 @@
       </div>
 
       <div class="hint">
-        غير محدود ✅ — تقدر تضيف 5 أو 50 أو 500. التشغيل/التجميع يتم حسب الـ Agent.
+        ✅ Detect & Bind يبحث في النوافذ، يقرأ الاسم من Anchor، ثم يربطها تلقائيًا.
       </div>
     </section>
 
@@ -58,11 +60,10 @@
       <div class="cardHeader">
         <h2>السجلات</h2>
         <div class="row">
-          <span class="pill" id="agentState">Agent: ...</span>
-          <span class="pill" id="updateState">Update: ...</span>
+          <span class="pill" id="apiState">API: ...</span>
+          <span class="pill" id="toolsState">Tools: ...</span>
         </div>
       </div>
-
       <pre class="log" id="logBox"></pre>
     </section>
   </main>

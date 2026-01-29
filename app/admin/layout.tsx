@@ -1,20 +1,39 @@
 import { redirect } from 'next/navigation'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createSupabaseServerClient()
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const cookieStore = cookies()
 
-  const { data: authData } = await supabase.auth.getUser()
-  const user = authData?.user
-  if (!user) redirect('/admin/login')
+  // ✅ قراءة فقط (بدون set/remove) داخل Server Component
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+      },
+    }
+  )
 
-  const { data: roleRow } = await supabase
-    .from('user_roles')
-    .select('role')
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) redirect('/')
+
+  // ✅ تحقق هل Admin (يتطلب وجود جدول admins)
+  const { data: admin } = await supabase
+    .from('admins')
+    .select('user_id')
     .eq('user_id', user.id)
     .maybeSingle()
 
-  if (!roleRow || roleRow.role !== 'admin') redirect('/dashboard')
+  if (!admin) redirect('/dashboard')
 
   return <>{children}</>
 }

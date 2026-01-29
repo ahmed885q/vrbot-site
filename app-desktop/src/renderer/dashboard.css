@@ -39,7 +39,6 @@ body{
 .subtitle{color:var(--muted); font-size:12px; margin-top:2px}
 
 .actions{display:flex; align-items:center; gap:8px}
-.sep{width:1px; height:26px; background:var(--line); margin:0 6px}
 
 .btn{
   border:1px solid var(--line);
@@ -113,6 +112,7 @@ td .mini{display:inline-flex; gap:6px}
   color:var(--muted);
   font-size:12px;
 }
+
 .log{
   height: calc(100vh - 180px);
   margin:0;

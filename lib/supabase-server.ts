@@ -24,3 +24,8 @@ export function createSupabaseServerClient() {
     },
   })
 }
+
+// ...existing code...
+export async function supabaseServer() {
+  return createSupabaseServerClient()
+}

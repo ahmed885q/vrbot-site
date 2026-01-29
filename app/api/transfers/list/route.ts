@@ -1,27 +1,34 @@
-import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { createClient } from "@supabase/supabase-js";
 
-export const runtime = 'nodejs'
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-export async function GET() {
-  const supabase = createSupabaseServerClient()
+export async function GET(req: Request) {
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as any)?.id || session?.user?.email;
 
-  const { data: authData } = await supabase.auth.getUser()
-  const user = authData?.user
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const { searchParams } = new URL(req.url);
+  const limit = Math.min(Number(searchParams.get("limit") || 50), 200);
 
   const { data, error } = await supabase
-    .from('resource_transfers')
-    .select('id,farm_id,recipient,recipient_type,wood,food,stone,gold,status,note,scheduled_at,created_at')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+    .from("transfers")
+    .select("*")
+    .eq("user_id", String(userId))
+    .order("created_at", { ascending: false })
+    .limit(limit);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ transfers: data ?? [] })
+  return NextResponse.json({ transfers: data ?? [] });
 }
-

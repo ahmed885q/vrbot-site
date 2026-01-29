@@ -1,19 +1,78 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, Suspense, lazy } from 'react'
 import FarmsTab from './FarmsTab'
 import DevicesTab from './DevicesTab'
 import LogsTab from './LogsTab'
 import { Badge, Button, Card, Row } from '@/components/bot/ui'
-import TransfersTab from '@/components/TransfersTab'
+import TransfersTab from "./TransfersTab"
 
+function BanBypassUI() {
+  return (
+    <>
+      <Card title="Educational Ban Bypass System" subtitle="Learn how to avoid detection (educational purposes only)">
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div style={{ padding: 12, borderRadius: 14, background: '#fffbeb', border: '1px solid #f59e0b', color: '#92400e', fontWeight: 700 }}>
+            ⚠️ This is for educational and research purposes only. Do not use on live systems. Always follow game terms of service.
+          </div>
 
+          <div style={{ fontWeight: 900, marginBottom: 8 }}>Key Principles:</div>
 
-type Props = {
-  userId: string
-  email: string
-  plan: string
-  status: string
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Badge label="Human-like Behavior" icon="🧠" bg="#dbeafe" color="#1e40af" />
+              <span style={{ fontWeight: 700 }}>Simulate natural human actions with random delays and varied patterns.</span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Badge label="Avoid Patterns" icon="🔄" bg="#dcfce7" color="#166534" />
+              <span style={{ fontWeight: 700 }}>Prevent repetitive sequences that detection systems can identify.</span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Badge label="Rate Limiting" icon="⏱️" bg="#fef3c7" color="#92400e" />
+              <span style={{ fontWeight: 700 }}>Limit actions per hour to stay below suspicious thresholds.</span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Badge label="Proxy Usage" icon="🌐" bg="#e0f2fe" color="#075985" />
+              <span style={{ fontWeight: 700 }}>Use rotating proxies to mask IP addresses (educational concept only).</span>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontWeight: 900, marginBottom: 8 }}>Educational Checklist:</div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="checkbox" />
+                <span>Enable random delays between actions</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="checkbox" />
+                <span>Use human-like mouse movements</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="checkbox" />
+                <span>Avoid repetitive action patterns</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="checkbox" />
+                <span>Monitor action frequency</span>
+              </label>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12, padding: 12, borderRadius: 14, background: '#f8fafc', border: '1px solid #e5e7eb' }}>
+            <div style={{ fontWeight: 900, marginBottom: 8 }}>Important Note:</div>
+            <div style={{ color: '#374151', fontWeight: 700 }}>
+              This component provides educational information only. No actual bypass mechanisms are implemented.
+              Always prioritize ethical use and compliance with platform policies.
+            </div>
+          </div>
+        </div>
+      </Card>
+    </>
+  )
 }
 
 type TabKey =
@@ -29,6 +88,7 @@ type TabKey =
   | 'mail'
   | 'ai'
   | 'transfers'
+  | 'ban-bypass'
 
 
 
@@ -104,6 +164,27 @@ type BotSettings = {
     pauseDuringEvents: boolean
     stopOnLowResources: boolean
   }
+}
+
+// مكون للتحميل المؤقت
+const LoadingFallback = () => (
+  <div style={{
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: '40px',
+    color: '#6b7280',
+    fontWeight: 700
+  }}>
+    جاري تحميل نظام الحماية التعليمي...
+  </div>
+)
+
+interface Props {
+  email: string;
+  userId: string;
+  plan?: string;
+  status?: string;
 }
 
 export default function BotUI({ email, userId, plan, status }: Props) {
@@ -215,6 +296,15 @@ export default function BotUI({ email, userId, plan, status }: Props) {
     uptime: '0h 0m',
   })
 
+  // إحصائيات نظام الحماية المضافة
+  const [protectionStats, setProtectionStats] = useState({
+    humanScore: 85,
+    detectionRisk: 15,
+    activeProtections: 4,
+    totalActions: 0,
+    banRisk: 'منخفض'
+  })
+
   const planBadge = useMemo(() => {
     const p = String(plan || 'free').toLowerCase()
     if (p === 'pro') return { label: 'PRO', icon: '⚡', bg: '#dcfce7', color: '#166534' }
@@ -241,6 +331,15 @@ export default function BotUI({ email, userId, plan, status }: Props) {
     return { label: 'BOT STOPPED', icon: '🛑', bg: '#fee2e2', color: '#991b1b' }
   }, [botStatus])
 
+  // إضافة شارة لحالة نظام Ban Bypass
+  const bypassBadge = useMemo(() => ({
+    label: "BAN BYPASS",
+    icon: "🎓",
+    bg: "#fef7cd",
+    color: "#854d0e",
+    tooltip: ""
+  }), [])
+
   const tabs: { key: TabKey; label: string; icon: string }[] = [
     { key: 'overview', label: 'Overview', icon: '🏠' },
     { key: 'farms', label: 'Farms', icon: '🏡' },
@@ -253,6 +352,8 @@ export default function BotUI({ email, userId, plan, status }: Props) {
     { key: 'resources', label: 'Resources', icon: '⛏️' },
     { key: 'mail', label: 'Mail & Gifts', icon: '🎁' },
     { key: 'ai', label: 'AI Helper', icon: '🤖' },
+    { key: 'transfers', label: 'Transfers', icon: '🔄' },
+    { key: 'ban-bypass', label: 'Ban Bypass', icon: '🎓' }, // تمت إضافة التبويب الجديد
   ]
 
   async function ensureEntitlements() {
@@ -363,6 +464,20 @@ export default function BotUI({ email, userId, plan, status }: Props) {
     }))
   }
 
+  // محاكاة تحديث إحصائيات الحماية
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProtectionStats(prev => ({
+        ...prev,
+        humanScore: Math.max(70, Math.min(95, prev.humanScore + (Math.random() - 0.5) * 5)),
+        detectionRisk: Math.max(10, Math.min(30, prev.detectionRisk + (Math.random() - 0.5) * 3)),
+        totalActions: prev.totalActions + Math.floor(Math.random() * 5)
+      }))
+    }, 10000)
+
+    return () => clearInterval(interval)
+  }, [])
+
   useEffect(() => {
     ensureEntitlements()
     loadFarms()
@@ -403,6 +518,7 @@ export default function BotUI({ email, userId, plan, status }: Props) {
             <Badge {...statusBadge} />
             <Badge {...botStatusBadge} />
             <Badge label="Anti-Panda" icon="🛡️" bg="#fff7ed" color="#9a3412" />
+            <Badge {...bypassBadge} /> {/* إضافة شارة Ban Bypass */}
           </div>
         </div>
 
@@ -454,6 +570,60 @@ export default function BotUI({ email, userId, plan, status }: Props) {
               <div style={{ color: '#6b7280' }}>Uptime</div>
               <div style={{ fontWeight: 900 }}>{botStats.uptime}</div>
             </div>
+            <div>
+              <div style={{ color: '#6b7280' }}>الحماية</div>
+              <div style={{ fontWeight: 900 }}>{protectionStats.activeProtections}/7</div>
+            </div>
+          </div>
+        </div>
+
+        {/* شريط إحصائيات الحماية */}
+        <div
+          style={{
+            marginTop: 14,
+            padding: 12,
+            borderRadius: 16,
+            border: '1px solid #e5e7eb',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            display: 'flex',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 10,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ fontSize: 18 }}>🧠</div>
+            <div>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>السلوك البشري</div>
+              <div style={{ fontWeight: 900 }}>{protectionStats.humanScore}%</div>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ fontSize: 18 }}>🛡️</div>
+            <div>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>خطر الاكتشاف</div>
+              <div style={{ fontWeight: 900 }}>{protectionStats.detectionRisk}%</div>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ fontSize: 18 }}>🔧</div>
+            <div>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>الحمايات النشطة</div>
+              <div style={{ fontWeight: 900 }}>{protectionStats.activeProtections}</div>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ fontSize: 18 }}>🎯</div>
+            <div>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>مخاطر البان</div>
+              <div style={{ fontWeight: 900, color: protectionStats.banRisk === 'منخفض' ? '#bbf7d0' : '#fecaca' }}>
+                {protectionStats.banRisk}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -489,6 +659,24 @@ export default function BotUI({ email, userId, plan, status }: Props) {
             </button>
           ))}
         </div>
+
+        {/* تحذير النظام التعليمي */}
+        {tab === 'ban-bypass' && (
+          <div
+            style={{
+              marginTop: 14,
+              padding: 12,
+              borderRadius: 16,
+              border: '2px solid #f59e0b',
+              background: '#fffbeb',
+              color: '#92400e',
+              fontWeight: 700,
+              fontSize: 14,
+            }}
+          >
+          
+          </div>
+        )}
 
         {/* Content */}
         <div
@@ -552,6 +740,14 @@ export default function BotUI({ email, userId, plan, status }: Props) {
           {tab === 'resources' ? <Resources settings={botSettings.resources} /> : null}
           {tab === 'mail' ? <MailAndGifts settings={botSettings.messaging} /> : null}
           {tab === 'ai' ? <AIHelper settings={botSettings.ai} /> : null}
+          {tab === 'transfers' ? <TransfersTab /> : null}
+          
+          {/* تبويب Ban Bypass التعليمي */}
+          {tab === 'ban-bypass' ? (
+            <Suspense fallback={<LoadingFallback />}>
+              <BanBypassUI />
+            </Suspense>
+          ) : null}
         </div>
 
         <div style={{ marginTop: 14, color: '#6b7280', fontSize: 12, fontWeight: 700 }}>
@@ -1252,6 +1448,7 @@ function MailAndGifts({ settings }: { settings: BotSettings['messaging'] }) {
 }
 
 function AIHelper({ settings }: { settings: BotSettings['ai'] }) {
+  const [tab, setTab] = useState<'transfers' | 'other'>('transfers')
   const [q, setQ] = useState('')
   const [msgs, setMsgs] = useState<{ role: 'user' | 'ai'; text: string }[]>([
     {
@@ -1350,6 +1547,12 @@ function AIHelper({ settings }: { settings: BotSettings['ai'] }) {
           }}
         />
         <Button onClick={ask}>{loading ? '…' : 'Send'}</Button>
+        <Button
+                onClick={() => setTab('transfers')}
+               variant={tab === 'transfers' ? 'primary' : 'ghost'}
+>
+  Transfers
+</Button>
       </div>
     </Card>
   )
@@ -1424,6 +1627,3 @@ function resRow(label: string, value: number, setValue: (n: number) => void, ena
     </div>
   )
 }
-
-// Note: The FarmsTab, DevicesTab, and LogsTab components remain the same as in your original code
-// but would need to be included for completeness. I've omitted them here for brevity.

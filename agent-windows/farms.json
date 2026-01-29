@@ -1,0 +1,11 @@
+{
+  "hlsBaseUrl": "http://127.0.0.1:8888",
+  "rtmpBaseUrl": "rtmp://127.0.0.1:1935/live",
+  "farms": [
+    { "id": "farm1", "windowTitle": "LDPlayer-1", "fps": 15, "width": 1280, "bitrateK": 1800 },
+    { "id": "farm2", "windowTitle": "LDPlayer-2", "fps": 15, "width": 1280, "bitrateK": 1800 },
+    { "id": "farm3", "windowTitle": "LDPlayer-3", "fps": 15, "width": 1280, "bitrateK": 1800 },
+    { "id": "farm4", "windowTitle": "LDPlayer-4", "fps": 15, "width": 1280, "bitrateK": 1800 },
+    { "id": "farm5", "windowTitle": "LDPlayer-5", "fps": 15, "width": 1280, "bitrateK": 1800 }
+  ]
+}

@@ -1,68 +1,74 @@
-import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { createClient } from "@supabase/supabase-js";
 
-export const runtime = 'nodejs'
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-function toInt(v: any) {
-  const n = Number(v)
-  if (!Number.isFinite(n)) return 0
-  return Math.max(0, Math.floor(n))
-}
+type Body = {
+  fromFarmId?: string | null;
+  toPlayerType: "name" | "id";
+  toPlayerValue: string;
+  resourceType: string;
+  amount: number;
+  note?: string;
+};
 
 export async function POST(req: Request) {
-  const supabase = createSupabaseServerClient()
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as any)?.id || session?.user?.email;
 
-  const { data: authData } = await supabase.auth.getUser()
-  const user = authData?.user
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => null)
-
-  const farmId = body?.farmId as string | undefined
-  const recipient = (body?.recipient as string | undefined)?.trim()
-  const recipientType = body?.recipientType as 'name' | 'id' | undefined
-
-  const wood = toInt(body?.wood)
-  const food = toInt(body?.food)
-  const stone = toInt(body?.stone)
-  const gold = toInt(body?.gold)
-
-  const note = (body?.note as string | undefined)?.trim() ?? null
-  const scheduledAt = body?.scheduledAt ? new Date(body.scheduledAt).toISOString() : null
-
-  if (!farmId) return NextResponse.json({ error: 'Missing farmId' }, { status: 400 })
-  if (!recipient) return NextResponse.json({ error: 'Missing recipient' }, { status: 400 })
-  if (!recipientType || !['name', 'id'].includes(recipientType)) {
-    return NextResponse.json({ error: 'Invalid recipientType' }, { status: 400 })
+  let body: Body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  if (wood + food + stone + gold <= 0) {
-    return NextResponse.json({ error: 'Select at least one resource amount' }, { status: 400 })
+
+  // validation
+  if (!body.toPlayerType || !["name", "id"].includes(body.toPlayerType)) {
+    return NextResponse.json({ error: "toPlayerType must be name|id" }, { status: 400 });
+  }
+  if (!body.toPlayerValue?.trim()) {
+    return NextResponse.json({ error: "toPlayerValue is required" }, { status: 400 });
+  }
+  if (!body.resourceType?.trim()) {
+    return NextResponse.json({ error: "resourceType is required" }, { status: 400 });
+  }
+  const amount = Number(body.amount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return NextResponse.json({ error: "amount must be > 0" }, { status: 400 });
   }
 
   const { data, error } = await supabase
-    .from('resource_transfers')
+    .from("transfers")
     .insert({
-      user_id: user.id,
-      farm_id: farmId,
-      recipient,
-      recipient_type: recipientType,
-      wood,
-      food,
-      stone,
-      gold,
-      status: 'pending',
-      note,
-      scheduled_at: scheduledAt,
+      user_id: String(userId),
+      from_farm_id: body.fromFarmId ?? null,
+      to_player_type: body.toPlayerType,
+      to_player_value: body.toPlayerValue.trim(),
+      resource_type: body.resourceType.trim(),
+      amount: Math.floor(amount),
+      note: body.note?.trim() || null,
+      status: "queued",
     })
-    .select('id,farm_id,recipient,recipient_type,wood,food,stone,gold,status,note,scheduled_at,created_at')
-    .single()
+    .select("*")
+    .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, transfer: data })
-}
+  // ✅ هنا مكان التنفيذ الفعلي (اختياري)
+  // مثال: إرسال للـ worker queue / webhook
+  // await fetch(process.env.TRANSFER_WORKER_URL!, { method:"POST", body: JSON.stringify({transferId: data.id}) })
 
+  return NextResponse.json({ transfer: data });
+}
