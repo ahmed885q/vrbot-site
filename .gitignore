@@ -4,30 +4,19 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Electron build output
+# Electron build
 dist/
 out/
-*.log
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Runtime data
-agent-windows/data/
-agent-windows/public/
-agent-windows/logs/
-*.tmp
+*.exe
+*.msi
+*.dmg
+*.zip
+*.AppImage
 
 # Env
 .env
 .env.*
 
-# IDE
-.vscode/
-.idea/
-
-# If you don't want to commit binaries (recommended)
-agent-windows/bin/*.exe
-agent-windows/bin/*.dll
-agent-windows/bin/*.yml
+# OS
+.DS_Store
+Thumbs.db
