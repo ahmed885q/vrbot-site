@@ -11,25 +11,22 @@ permissions:
 
 jobs:
   build:
-    name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest]
+    runs-on: windows-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
+      - name: Clear npm cache
+        run: npm cache clean --force
+
       - name: Install deps
         working-directory: app-desktop
-        run: npm ci
+        run: npm install
 
       - name: Build (electron-builder)
         working-directory: app-desktop
