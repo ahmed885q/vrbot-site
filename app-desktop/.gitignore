@@ -1,0 +1,6 @@
+dist/
+linux-unpacked/
+*.exe
+*.AppImage
+*.snap
+*.dmg
