@@ -1,12 +1,23 @@
 // app/bot/page.tsx
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
-import BotUI from '@/components/BotUI'
+import BotUI from '@/components/BotUI' // تأكد من أن هذا هو المكون المحدث
+import '../styles/bot.css' // إضافة أنماط CSS
+import type { ComponentType } from 'react'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const TRIAL_DAYS = 7
+
+type BotUIProps = {
+  email: string
+  userId: string
+  plan: string
+  status: string
+}
+
+const TypedBotUI = BotUI as ComponentType<BotUIProps>
 
 function isExpired(periodEnd: string | null) {
   if (!periodEnd) return true
@@ -45,8 +56,8 @@ export default async function BotPage() {
     return (
       <div className="bot-page">
         <header className="bot-header">
-          <h1>🎮 نظام Viking Rise Bot التعليمي</h1>
-          <p className="subtitle">نظام متكامل مع أنظمة الحماية والتعلّم</p>
+          <h1>🎮 Viking Rise Bot </h1>
+          <p className="subtitle"></p>
         </header>
         
         <main className="bot-main">
@@ -61,8 +72,7 @@ export default async function BotPage() {
         
         <footer className="bot-footer">
           <p className="disclaimer">
-            ⚠️ هذا النظام للأغراض التعليمية والبحثية فقط. 
-            يجب استخدامه فقط على أنظمة تطوير محلية.
+            
           </p>
           <p className="version"></p>
         </footer>
@@ -106,8 +116,8 @@ export default async function BotPage() {
     return (
       <div className="bot-page">
         <header className="bot-header">
-          <h1>🎮 نظام Viking Rise Bot التعليمي</h1>
-          <p className="subtitle">نظام متكامل مع أنظمة الحماية والتعلّم</p>
+          <h1>🎮 Viking Rise Bot</h1>
+          <p className="subtitle"></p>
         </header>
         
         <main className="bot-main">
@@ -144,10 +154,9 @@ export default async function BotPage() {
         
         <footer className="bot-footer">
           <p className="disclaimer">
-            ⚠️ هذا النظام للأغراض التعليمية والبحثية فقط. 
-            يجب استخدامه فقط على أنظمة تطوير محلية.
+          
           </p>
-  
+          <p className="version"></p>
         </footer>
       </div>
     )
@@ -157,20 +166,29 @@ export default async function BotPage() {
   return (
     <div className="bot-page">
       <header className="bot-header">
-        <h1>🎮 نظام Viking Rise Bot التعليمي</h1>
-        <p className="subtitle">نظام متكامل مع أنظمة الحماية والتعلّم</p>
+        <h1>🎮 Viking Rise Bot </h1>
+        <p className="subtitle"></p>
+        
+        <div className="user-info">
+          <span className={`plan-badge ${plan}`}>
+            {plan === 'trial' ? 'تجريبي' : plan === 'pro' ? 'محترف' : plan}
+          </span>
+          <span className="user-email">{user.email}</span>
+          <span className="expiry-date">
+            تاريخ انتهاء الصلاحية: {periodEnd ? new Date(periodEnd).toLocaleDateString('ar-SA') : '-'}
+          </span>
+        </div>
       </header>
       
       <main className="bot-main">
-        <BotUI email={user.email ?? ''} userId={user.id} plan={plan} status={status} />
+        <TypedBotUI email={user.email ?? ''} userId={user.id} plan={String(plan)} status={String(status)} />
       </main>
       
       <footer className="bot-footer">
         <p className="disclaimer">
-          ⚠️ هذا النظام للأغراض التعليمية والبحثية فقط. 
-          يجب استخدامه فقط على أنظمة تطوير محلية.
+        
         </p>
-       
+        <p className="version">الإصدار 2.0.0 - نظام Viking Rise المتكامل مع BotUI</p>
       </footer>
     </div>
   )

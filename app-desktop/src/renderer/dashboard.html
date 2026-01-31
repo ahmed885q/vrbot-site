@@ -1,73 +1,53 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Viking Rais Agent</title>
-  <link rel="stylesheet" href="./dashboard.css" />
-</head>
-<body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">VR</div>
-      <div>
-        <div class="title">Viking Rais Agent</div>
-        <div class="subtitle">Dashboard</div>
-      </div>
-    </div>
+<script>
+  const WS_URL = "ws://127.0.0.1:8787/ws"; // عدله حسب عندك
+  let ws;
+  let reconnectAttempt = 0;
 
-    <div class="actions">
-      <button class="btn" id="btnAgentStart">تشغيل Agent</button>
-      <button class="btn ghost" id="btnAgentStop">إيقاف</button>
-      <button class="btn ghost" id="btnAgentRestart">Restart</button>
-      <span class="pill" id="agentState">Agent: ...</span>
-    </div>
-  </header>
+  function connect() {
+    ws = new WebSocket(WS_URL);
 
-  <main class="layout">
-    <section class="card">
-      <div class="cardHeader">
-        <h2>المزارع</h2>
-        <div class="row">
-          <input id="farmName" placeholder="Viking Rais | Ahmed" />
-          <button class="btn" id="btnAddFarm">إضافة</button>
-          <button class="btn ghost" id="btnRefresh">تحديث</button>
-          <button class="btn ghost" id="btnRefreshWindows">تحديث النوافذ</button>
-        </div>
-      </div>
+    ws.onopen = () => {
+      reconnectAttempt = 0;
+      console.log("WS online");
+      send("get_status", {});
+    };
 
-      <div class="tableWrap">
-        <table>
-          <thead>
-            <tr>
-              <th>الاسم</th>
-              <th>الحالة</th>
-              <th>ربط النافذة</th>
-              <th>آخر OCR</th>
-              <th>تحكم</th>
-            </tr>
-          </thead>
-          <tbody id="farmBody"></tbody>
-        </table>
-      </div>
+    ws.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data);
+      console.log("WS msg", msg);
 
-      <div class="hint">
-        ✅ Detect & Bind يبحث في النوافذ، يقرأ الاسم من Anchor، ثم يربطها تلقائيًا.
-      </div>
-    </section>
+      if (msg.type === "agent_hello") {
+        // عرض معلومات الجهاز + المزارع
+      }
+      if (msg.type === "windows_list") {
+        // عرض النوافذ المكتشفة
+      }
+      if (msg.type === "farm_status") {
+        // تحديث حالة مزرعة
+      }
+      if (msg.type === "log") {
+        // عرض اللوق
+      }
+    };
 
-    <section class="card">
-      <div class="cardHeader">
-        <h2>السجلات</h2>
-        <div class="row">
-          <span class="pill" id="apiState">API: ...</span>
-          <span class="pill" id="toolsState">Tools: ...</span>
-        </div>
-      </div>
-      <pre class="log" id="logBox"></pre>
-    </section>
-  </main>
+    ws.onclose = () => {
+      const delay = Math.min(30000, 1000 * Math.pow(2, reconnectAttempt)) + Math.floor(Math.random() * 500);
+      reconnectAttempt++;
+      console.log("WS closed, reconnect in", delay);
+      setTimeout(connect, delay);
+    };
+  }
 
-  <script src="./dashboard.js"></script>
-</body>
-</html>
+  function send(type, payload) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type, payload, ts: Date.now(), id: crypto.randomUUID?.() || String(Math.random()) }));
+  }
+
+  // أزرار
+  function discover() { send("discover_windows", {}); }
+  function startFarm(farmId) { send("farm_start", { farmId }); }
+  function stopFarm(farmId) { send("farm_stop", { farmId }); }
+  function getLogs() { send("get_logs", {}); }
+
+  connect();
+</script>

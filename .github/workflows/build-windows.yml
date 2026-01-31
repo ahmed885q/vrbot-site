@@ -1,33 +1,108 @@
-name: Build Desktop (Electron)
+name: Build Windows EXE - Viking Rise Bot
 
 on:
-  workflow_dispatch:
   push:
-    tags:
-      - "v*.*.*"
-
-permissions:
-  contents: write
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # للبناء اليدوي
 
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    env:
+      APP_NAME: "VikingRiseBot"
+      APP_VERSION: "2.0.0"
 
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: app-desktop/package-lock.json
 
-      - name: Install deps
-        working-directory: app-desktop
-        run: npm install
+      - name: Install dependencies
+        run: |
+          cd app-desktop
+          npm ci
+        shell: pwsh
 
-      - name: Build (electron-builder)
-        working-directory: app-desktop
+      - name: Build Viking Rise Desktop App
+        run: |
+          cd app-desktop
+          npm run build:windows
+        shell: pwsh
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist
+          NODE_ENV: production
+          NEXT_PUBLIC_APP_VERSION: "2.0.0"
+          NEXT_PUBLIC_APP_NAME: "Viking Rise Bot"
+
+      - name: List build artifacts
+        run: |
+          if (Test-Path "app-desktop/dist") {
+            Get-ChildItem -Path "app-desktop/dist" -Recurse
+          }
+        shell: pwsh
+
+      - name: Upload Windows EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Viking-Rise-Bot-Windows-${{ matrix.node-version }}
+          path: |
+            app-desktop/dist/*.exe
+            app-desktop/dist/*.msi
+            app-desktop/dist/*.nsis
+          retention-days: 90
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-Logs-Windows-${{ matrix.node-version }}
+          path: |
+            app-desktop/build.log
+            app-desktop/error.log
+          retention-days: 30
+
+  deploy-test:
+    runs-on: ubuntu-latest
+    needs: build-windows
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: Viking-Rise-Bot-Windows-*
+          path: artifacts
+
+      - name: Create release summary
+        run: |
+          echo "## 🚀 Viking Rise Bot Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** 2.0.0" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Node.js versions:** 18.x, 20.x" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Available Artifacts:" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows EXE Installer" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows MSI Package" >> $GITHUB_STEP_SUMMARY
+          echo "- Build Logs" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🛡️ System Features:" >> $GITHUB_STEP_SUMMARY
+          echo "- Viking Rise Bot Management" >> $GITHUB_STEP_SUMMARY
+          echo "- Anti-Detection Protection" >> $GITHUB_STEP_SUMMARY
+          echo "- Live Stream Monitoring" >> $GITHUB_STEP_SUMMARY
+          echo "- Educational Bypass System" >> $GITHUB_STEP_SUMMARY
+          echo "- Human Behavior Simulation" >> $GITHUB_STEP_SUMMARY

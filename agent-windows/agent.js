@@ -1,432 +1,281 @@
-"use strict";
+// agent-windows/agent.js
+// Usage:
+//   node agent.js
+// It will ask for: APP_URL + TOKEN (once) and then run ping + log demo.
 
-/**
- * Agent API (Local) + Auto Window Detect + Anchor OCR + Smart Bind
- *
- * Features:
- * - List open windows (PowerShell Get-Process MainWindowTitle)
- * - Capture screenshot from a window by title using ffmpeg gdigrab
- * - OCR on Anchor region (top-left) using Tesseract
- * - Match extracted name with farm name: "Viking Rais | Name"
- * - Auto-bind farm.windowTitle to the matching window title
- */
+const fs = require('fs')
+const path = require('path')
+const os = require('os')
 
-const http = require("http");
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
-const { execFile } = require("child_process");
-
-const PORT = 9797;
-
-// ---- Tools directory (downloaded by Electron Setup)
-const TOOLS_DIR = process.env.TOOLS_DIR || path.join(__dirname, "bin");
-const FFMPEG = path.join(TOOLS_DIR, "ffmpeg.exe");
-const FFPROBE = path.join(TOOLS_DIR, "ffprobe.exe");
-const MEDIAMTX = path.join(TOOLS_DIR, "mediamtx.exe");
-const MEDIAMTX_YML = path.join(TOOLS_DIR, "mediamtx.yml");
-
-// ---- OCR (Tesseract)
-function findTesseract() {
-  const envPath = process.env.TESSERACT_PATH;
-  if (envPath && fs.existsSync(envPath)) return envPath;
-
-  const bundled1 = path.join(TOOLS_DIR, "tesseract.exe");
-  if (fs.existsSync(bundled1)) return bundled1;
-
-  const bundled2 = path.join(TOOLS_DIR, "tesseract", "tesseract.exe");
-  if (fs.existsSync(bundled2)) return bundled2;
-
-  const p1 = "C:\\Program Files\\Tesseract-OCR\\tesseract.exe";
-  const p2 = "C:\\Program Files (x86)\\Tesseract-OCR\\tesseract.exe";
-  if (fs.existsSync(p1)) return p1;
-  if (fs.existsSync(p2)) return p2;
-
-  return "";
-}
-
-
-// ---- User config storage
-const APP_DIR = path.join(os.homedir(), "AppData", "Roaming", "VikingRais");
-const CONFIG_PATH = path.join(APP_DIR, "config.json");
-
-function ensureDir(p) {
-  if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
-}
+const CONFIG_PATH = path.join(__dirname, 'config.json')
+const LOG_FILE = path.join(__dirname, 'agent.log')
 
 function loadConfig() {
-  ensureDir(APP_DIR);
-  if (!fs.existsSync(CONFIG_PATH)) {
-    const init = { farms: [] };
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(init, null, 2), "utf8");
-    return init;
+  if (fs.existsSync(CONFIG_PATH)) {
+    try {
+      return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'))
+    } catch (e) {
+      console.error('Error loading config:', e.message)
+    }
   }
-  try {
-    return JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
-  } catch {
-    const init = { farms: [] };
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(init, null, 2), "utf8");
-    return init;
-  }
+  return null
 }
 
 function saveConfig(cfg) {
-  ensureDir(APP_DIR);
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), "utf8");
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8')
 }
 
-function json(res, code, data) {
-  res.writeHead(code, { "Content-Type": "application/json; charset=utf-8" });
-  res.end(JSON.stringify(data));
+function logToFile(message) {
+  const timestamp = new Date().toISOString()
+  const logMessage = `[${timestamp}] ${message}\n`
+  fs.appendFileSync(LOG_FILE, logMessage, 'utf8')
 }
 
-function readBody(req) {
-  return new Promise((resolve) => {
-    let b = "";
-    req.on("data", (d) => (b += d));
-    req.on("end", () => {
-      try {
-        resolve(b ? JSON.parse(b) : {});
-      } catch {
-        resolve({});
-      }
-    });
-  });
+async function prompt(question) {
+  process.stdout.write(question)
+  return await new Promise((resolve) => {
+    process.stdin.once('data', (d) => resolve(String(d).trim()))
+  })
 }
 
-function uid() {
-  return Math.random().toString(16).slice(2) + Date.now().toString(16);
-}
+async function postJSON(url, body, timeout = 10000) {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
 
-function toolsCheck() {
-  return {
-    toolsDir: TOOLS_DIR,
-    ffmpeg: fs.existsSync(FFMPEG),
-    ffprobe: fs.existsSync(FFPROBE),
-    mediamtx: fs.existsSync(MEDIAMTX),
-    mediamtxYml: fs.existsSync(MEDIAMTX_YML),
-    tesseract: findTesseract() || "",
-  };
-}
-
-// -----------------------------
-// Window enumeration (PowerShell)
-// -----------------------------
-function runExecFile(file, args, opts = {}) {
-  return new Promise((resolve, reject) => {
-    execFile(file, args, { windowsHide: true, maxBuffer: 10 * 1024 * 1024, ...opts }, (err, stdout, stderr) => {
-      if (err) {
-        err.stdout = stdout;
-        err.stderr = stderr;
-        return reject(err);
-      }
-      resolve({ stdout, stderr });
-    });
-  });
-}
-
-async function listWindows() {
-  // Returns: [{ pid, processName, title, hwnd }]
-  // Note: MainWindowTitle sometimes empty; filter it.
-  const ps = [
-    "-NoProfile",
-    "-ExecutionPolicy",
-    "Bypass",
-    "-Command",
-    `
-$procs = Get-Process | Where-Object { $_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -ne "" } |
-  Select-Object Id, ProcessName, MainWindowTitle, MainWindowHandle
-$procs | ConvertTo-Json -Depth 3
-    `.trim(),
-  ];
-
-  const { stdout } = await runExecFile("powershell.exe", ps);
-  let data = [];
   try {
-    const parsed = JSON.parse(stdout || "[]");
-    data = Array.isArray(parsed) ? parsed : [parsed];
-  } catch {
-    data = [];
-  }
-
-  return data
-    .map((p) => ({
-      pid: p.Id,
-      processName: p.ProcessName,
-      title: p.MainWindowTitle,
-      hwnd: String(p.MainWindowHandle),
-    }))
-    .filter((x) => x.title && x.title.trim().length > 0);
-}
-
-// -----------------------------
-// Capture frame from window title (FFmpeg gdigrab)
-// -----------------------------
-async function captureAnchorPngFromWindowTitle(windowTitle, outPngPath, anchor) {
-  if (!fs.existsSync(FFMPEG)) throw new Error("ffmpeg.exe not found");
-
-  const a = anchor || { x: 0.02, y: 0.02, w: 0.5, h: 0.18 };
-
-  // Use expression crop based on input width/height
-  // crop=iw*w:ih*h:iw*x:ih*y
-  const cropExpr = `crop=iw*${a.w}:ih*${a.h}:iw*${a.x}:ih*${a.y}`;
-
-  const args = [
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-y",
-    "-f",
-    "gdigrab",
-    "-framerate",
-    "5",
-    "-i",
-    `title=${windowTitle}`,
-    "-frames:v",
-    "1",
-    "-vf",
-    cropExpr,
-    outPngPath,
-  ];
-
-  await runExecFile(FFMPEG, args, { cwd: TOOLS_DIR });
-}
-
-// -----------------------------
-// OCR using Tesseract
-// -----------------------------
-function cleanOcrText(raw) {
-  const lines = String(raw || "")
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  // Remove common junk
-  const filtered = lines.filter((l) => !/power|القوة/i.test(l));
-
-  // Pick best candidate line
-  const candidate =
-    filtered.find((l) => /^[\p{L}\p{N}\s_\-.'|]{2,}$/u.test(l)) ||
-    filtered[0] ||
-    "";
-
-  return candidate.replace(/\s{2,}/g, " ").trim();
-}
-
-async function ocrPng(pngPath) {
-  const t = findTesseract();
-  if (!t) throw new Error("Tesseract not found. Install it or add it to TOOLS_DIR as tesseract.exe");
-
-  const args = [pngPath, "stdout", "-l", "eng+ara", "--psm", "6"];
-  const { stdout } = await runExecFile(t, args);
-  return cleanOcrText(stdout);
-}
-
-// -----------------------------
-// Smart match: farm.name = "Viking Rais | Name"
-// -----------------------------
-function extractTargetNameFromFarmLabel(label) {
-  const s = String(label || "");
-  const parts = s.split("|");
-  if (parts.length >= 2) return parts.slice(1).join("|").trim();
-  return s.trim();
-}
-
-function nameLooseEquals(a, b) {
-  const norm = (x) =>
-    String(x || "")
-      .toLowerCase()
-      .replace(/\s+/g, "")
-      .replace(/[^\p{L}\p{N}]/gu, "");
-  return norm(a) === norm(b) && norm(a).length > 0;
-}
-
-// -----------------------------
-// Auto bind logic
-// -----------------------------
-async function detectAndBindFarm(farm, options = {}) {
-  // options:
-  // - anchor: {x,y,w,h} relative floats
-  // - windowFilter: string contains
-  // - maxScan: number
-  const anchor = options.anchor || farm.anchor || { x: 0.02, y: 0.02, w: 0.5, h: 0.18 };
-  const targetName = extractTargetNameFromFarmLabel(farm.name);
-
-  const windows = await listWindows();
-  const filtered = options.windowFilter
-    ? windows.filter((w) => w.title.toLowerCase().includes(String(options.windowFilter).toLowerCase()))
-    : windows;
-
-  const maxScan = Math.max(1, Math.min(60, Number(options.maxScan || 25)));
-  const candidates = filtered.slice(0, maxScan);
-
-  const tmpDir = path.join(os.tmpdir(), "vr-ocr");
-  ensureDir(tmpDir);
-
-  for (const w of candidates) {
-    const outPng = path.join(tmpDir, `anchor_${Date.now()}_${Math.random().toString(16).slice(2)}.png`);
-
-    try {
-      await captureAnchorPngFromWindowTitle(w.title, outPng, anchor);
-      const gotName = await ocrPng(outPng);
-
-      if (gotName && nameLooseEquals(gotName, targetName)) {
-        farm.windowTitle = w.title; // bind to exact window title
-        farm.lastDetectedName = gotName;
-        farm.lastDetectAt = new Date().toISOString();
-        farm.status = "bound";
-        farm.last = farm.lastDetectAt;
-        return { ok: true, bound: true, window: w, gotName, targetName };
-      } else {
-        // keep debug last read
-        farm.lastDetectedName = gotName || farm.lastDetectedName || "";
-        farm.lastDetectAt = new Date().toISOString();
-      }
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'User-Agent': 'VikingRise-Windows-Agent/2.0.0'
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    })
+    
+    clearTimeout(timeoutId)
+    
+    const text = await res.text()
+    let json = null
+    try { 
+      json = JSON.parse(text) 
     } catch (e) {
-      // ignore and continue
-    } finally {
-      try {
-        fs.unlinkSync(outPng);
-      } catch {}
+      throw new Error(`Invalid JSON response: ${text}`)
     }
+    
+    if (!res.ok) {
+      throw new Error(json.error || `HTTP ${res.status}: ${text}`)
+    }
+    
+    return json
+  } catch (error) {
+    clearTimeout(timeoutId)
+    throw error
   }
-
-  farm.status = "not_found";
-  farm.last = new Date().toISOString();
-  return { ok: true, bound: false, targetName, scanned: candidates.length };
 }
 
-/* ====== Hooks (تشغيل/إيقاف) ====== */
-async function farmStart(farm) {
-  // لاحقًا نربطها بتشغيل ستريم/تحكم
-  farm.status = "running";
-  farm.last = new Date().toISOString();
-}
-
-async function farmStop(farm) {
-  farm.status = "stopped";
-  farm.last = new Date().toISOString();
-}
-
-async function farmDetect(farm, body) {
-  // 1) لو المستخدم اختار نافذة يدويًا:
-  if (body?.bindTitle && String(body.bindTitle).trim()) {
-    farm.windowTitle = String(body.bindTitle).trim();
-    farm.status = "bound";
-    farm.last = new Date().toISOString();
-    saveConfig(config);
-    return { ok: true, bound: true, manual: true, windowTitle: farm.windowTitle };
+async function getSystemInfo() {
+  return {
+    platform: os.platform(),
+    arch: os.arch(),
+    hostname: os.hostname(),
+    totalMem: os.totalmem(),
+    freeMem: os.freemem(),
+    cpus: os.cpus().length,
+    uptime: os.uptime(),
+    networkInterfaces: Object.keys(os.networkInterfaces()).length
   }
-
-  // 2) auto detect + bind
-  const r = await detectAndBindFarm(farm, {
-    windowFilter: body?.windowFilter || "", // e.g. "LDPlayer"
-    maxScan: body?.maxScan || 25,
-    anchor: body?.anchor || farm.anchor,
-  });
-
-  farm.anchor = body?.anchor || farm.anchor || { x: 0.02, y: 0.02, w: 0.5, h: 0.18 };
-  saveConfig(config);
-  return r;
 }
-/* ================================ */
 
-let config = loadConfig();
+async function registerDevice(appUrl, token) {
+  const registerUrl = `${appUrl}/api/devices/register`
+  const systemInfo = await getSystemInfo()
+  
+  const deviceData = {
+    token,
+    name: `Windows-${os.hostname()}`,
+    type: 'windows',
+    version: '2.0.0',
+    capabilities: ['viking-rise', 'bot-management', 'live-streaming', 'protection-system'],
+    systemInfo
+  }
+  
+  const response = await postJSON(registerUrl, deviceData)
+  logToFile(`Device registered: ${JSON.stringify(response)}`)
+  return response
+}
 
-const server = http.createServer(async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") return res.end();
+async function sendHeartbeat(appUrl, token) {
+  const pingUrl = `${appUrl}/api/devices/ping`
+  const systemInfo = await getSystemInfo()
+  
+  const pingData = {
+    token,
+    status: 'online',
+    systemInfo,
+    timestamp: new Date().toISOString()
+  }
+  
+  const response = await postJSON(pingUrl, pingData)
+  logToFile(`Heartbeat sent: ${response.status}`)
+  return response
+}
 
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const method = req.method || "GET";
+async function sendLog(appUrl, token, level, message, data = {}) {
+  const logUrl = `${appUrl}/api/logs/append`
+  
+  const logData = {
+    token,
+    level,
+    message,
+    data,
+    timestamp: new Date().toISOString()
+  }
+  
+  const response = await postJSON(logUrl, logData)
+  logToFile(`Log sent [${level}]: ${message}`)
+  return response
+}
 
+async function checkForUpdates(appUrl, token) {
+  const updatesUrl = `${appUrl}/api/devices/check-updates`
+  
+  const updateData = {
+    token,
+    currentVersion: '2.0.0',
+    system: 'windows'
+  }
+  
   try {
-    if (method === "GET" && url.pathname === "/health") {
-      return json(res, 200, {
-        ok: true,
-        agent: "1.1.0",
-        port: PORT,
-        tools: toolsCheck(),
-      });
+    const response = await postJSON(updatesUrl, updateData)
+    if (response.updateAvailable) {
+      logToFile(`Update available: ${response.latestVersion}`)
+      await sendLog(appUrl, token, 'info', `Update available: ${response.latestVersion}`, response)
     }
-
-    // List windows
-    if (method === "GET" && url.pathname === "/api/windows") {
-      const windows = await listWindows();
-      return json(res, 200, { ok: true, windows });
-    }
-
-    // Farms list
-    if (method === "GET" && url.pathname === "/api/farms") {
-      return json(res, 200, { farms: config.farms });
-    }
-
-    // Add farm
-    if (method === "POST" && url.pathname === "/api/farms") {
-      const body = await readBody(req);
-      const name = String(body.name || "").trim();
-      if (!name) return json(res, 400, { ok: false, error: "name required" });
-
-      const farm = {
-        id: uid(),
-        name,
-        status: "idle",
-        last: new Date().toISOString(),
-        windowTitle: "",
-        anchor: { x: 0.02, y: 0.02, w: 0.5, h: 0.18 }, // default top-left
-        lastDetectedName: "",
-        lastDetectAt: "",
-      };
-
-      config.farms.unshift(farm);
-      saveConfig(config);
-      return json(res, 200, { ok: true, farm });
-    }
-
-    // Update farm (anchor/windowTitle)
-    const updateMatch = url.pathname.match(/^\/api\/farms\/([^/]+)\/update$/);
-    if (method === "POST" && updateMatch) {
-      const [, id] = updateMatch;
-      const body = await readBody(req);
-      const farm = config.farms.find((f) => f.id === id);
-      if (!farm) return json(res, 404, { ok: false, error: "farm not found" });
-
-      if (body.windowTitle !== undefined) farm.windowTitle = String(body.windowTitle || "");
-      if (body.anchor !== undefined) farm.anchor = body.anchor;
-      farm.last = new Date().toISOString();
-      saveConfig(config);
-      return json(res, 200, { ok: true, farm });
-    }
-
-    // start/stop/detect
-    const match = url.pathname.match(/^\/api\/farms\/([^/]+)\/(start|stop|detect)$/);
-    if (method === "POST" && match) {
-      const [, id, action] = match;
-      const farm = config.farms.find((f) => f.id === id);
-      if (!farm) return json(res, 404, { ok: false, error: "farm not found" });
-
-      const body = await readBody(req);
-
-      if (action === "start") await farmStart(farm);
-      if (action === "stop") await farmStop(farm);
-      if (action === "detect") {
-        const r = await farmDetect(farm, body);
-        return json(res, 200, r);
-      }
-
-      saveConfig(config);
-      return json(res, 200, { ok: true, farm });
-    }
-
-    return json(res, 404, { ok: false, error: "not found" });
-  } catch (e) {
-    return json(res, 500, { ok: false, error: String(e?.message || e) });
+    return response
+  } catch (error) {
+    logToFile(`Failed to check updates: ${error.message}`)
+    return null
   }
-});
+}
 
-server.listen(PORT, "127.0.0.1", () => {
-  console.log(`[Agent] running on http://127.0.0.1:${PORT}`);
-  console.log(`[Agent] toolsDir: ${TOOLS_DIR}`);
-});
+async function main() {
+  console.log('=== Viking Rise Windows Agent ===')
+  console.log('Version: 2.0.0')
+  console.log('===============================\n')
+  
+  let cfg = loadConfig()
+  let needsRegistration = false
+
+  if (!cfg || !cfg.appUrl || !cfg.token) {
+    console.log('First time setup required.\n')
+    
+    const appUrl = await prompt('Enter APP_URL (e.g., https://your-viking-rise-app.com): ')
+    const token = await prompt('Enter DEVICE TOKEN (from /bot -> Devices): ')
+    
+    cfg = { appUrl, token }
+    saveConfig(cfg)
+    needsRegistration = true
+    
+    console.log('\nConfig saved to config.json ✅')
+  } else {
+    console.log('Loaded existing configuration.')
+    console.log(`App URL: ${cfg.appUrl}`)
+    console.log(`Token: ${cfg.token.substring(0, 10)}...\n`)
+  }
+
+  const { appUrl, token } = cfg
+  
+  try {
+    // Register device if needed
+    if (needsRegistration) {
+      console.log('Registering device with server...')
+      await registerDevice(appUrl, token)
+      console.log('Device registered successfully! ✅')
+    }
+    
+    // Initial heartbeat
+    console.log('Sending initial heartbeat...')
+    await sendHeartbeat(appUrl, token)
+    console.log('Initial heartbeat sent! ✅')
+    
+    // Check for updates
+    console.log('Checking for updates...')
+    await checkForUpdates(appUrl, token)
+    
+    // Send startup log
+    await sendLog(appUrl, token, 'info', 'Viking Rise Windows Agent started', {
+      version: '2.0.0',
+      system: await getSystemInfo()
+    })
+    
+    console.log('\nAgent is now running!')
+    console.log('Press Ctrl+C to stop.\n')
+    
+    // Regular heartbeat every 30 seconds
+    let heartbeatCounter = 0
+    setInterval(async () => {
+      try {
+        heartbeatCounter++
+        
+        // Send heartbeat
+        await sendHeartbeat(appUrl, token)
+        
+        // Send log every 10th heartbeat (5 minutes)
+        if (heartbeatCounter % 10 === 0) {
+          await sendLog(appUrl, token, 'info', 'Regular heartbeat', {
+            counter: heartbeatCounter,
+            uptime: process.uptime()
+          })
+          
+          // Check for updates every 30 minutes
+          if (heartbeatCounter % 60 === 0) {
+            await checkForUpdates(appUrl, token)
+          }
+        }
+        
+        process.stdout.write('.')
+      } catch (error) {
+        console.error(`\nHeartbeat error: ${error.message}`)
+        logToFile(`Heartbeat error: ${error.message}`)
+      }
+    }, 30000)
+    
+    // Handle graceful shutdown
+    process.on('SIGINT', async () => {
+      console.log('\n\nShutting down agent...')
+      await sendLog(appUrl, token, 'info', 'Windows Agent shutting down')
+      console.log('Goodbye! 👋')
+      process.exit(0)
+    })
+    
+  } catch (error) {
+    console.error(`\nFatal error: ${error.message}`)
+    logToFile(`Fatal error: ${error.message}`)
+    
+    // Try to send error log
+    try {
+      await sendLog(appUrl, token, 'error', `Agent startup failed: ${error.message}`)
+    } catch (e) {
+      // Ignore if we can't send the error
+    }
+    
+    process.exit(1)
+  }
+}
+
+// Run the agent
+if (require.main === module) {
+  main().catch((error) => {
+    console.error('Unhandled error:', error)
+    process.exit(1)
+  })
+}
+
+module.exports = {
+  loadConfig,
+  saveConfig,
+  sendHeartbeat,
+  sendLog,
+  getSystemInfo
+}

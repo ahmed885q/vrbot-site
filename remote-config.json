@@ -1,28 +1,18 @@
 {
-  "version": 2,
-  "updatedAt": "2026-01-28T00:00:00Z",
   "tools": {
-    "ffmpeg": {
-      "url": "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
-      "sha256": ""
-    },
-    "mediamtx": {
-      "url": "https://github.com/bluenviron/mediamtx/releases/download/v1.15.6/mediamtx_v1.15.6_windows_amd64.zip",
-      "sha256": ""
-    },
-    "tesseract": {
-      "url": "https://sourceforge.net/projects/tesseract-ocr.mirror/files/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe/download",
-      "sha256": ""
-    },
-    "tessdata": {
-      "eng": {
-        "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/eng.traineddata",
-        "sha256": ""
+    "baseUrl": "https://YOUR-DOMAIN.COM/tools",
+    "windows": {
+      "mediamtx": {
+        "file": "mediamtx.exe",
+        "url": "https://YOUR-DOMAIN.COM/tools/mediamtx.exe"
       },
-      "ara": {
-        "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/ara.traineddata",
-        "sha256": ""
+      "ffmpeg": {
+        "file": "ffmpeg.exe",
+        "url": "https://YOUR-DOMAIN.COM/tools/ffmpeg.exe"
       }
     }
+  },
+  "stream": {
+    "statusUrl": "http://127.0.0.1:9797/stream/status"
   }
 }

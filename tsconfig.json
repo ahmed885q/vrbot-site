@@ -5,30 +5,44 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
+    "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    
+    /* Paths لمشروع Viking Rise */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["/*"],
+      "@components/*": ["components/*"],
+      "@app/*": ["app/*"],
+      "@modules/*": ["modules/*"],
+      "@lib/*": ["lib/*"],
+      "@styles/*": ["styles/*"]
+    },
+    
+    /* إعدادات Next.js */
     "plugins": [
       {
         "name": "next"
       }
     ],
-    "paths": {
-      "@/*": ["./*"]
-    },
-    "typeRoots": ["./node_modules/@types", "./types"]
+    "strictNullChecks": true
   },
   "include": [
     "next-env.d.ts",
+    ".next/types/**/*.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    "types/**/*.d.ts"
-, "components/bot/EducationalBypassSystem.ts "  ],
-  "exclude": ["node_modules"]
+    "app/**/*",
+    "components/**/*",
+    "modules/**/*",
+    "lib/**/*"
+  ],
+  "exclude": ["node_modules", ".next"]
 }

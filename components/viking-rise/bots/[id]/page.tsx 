@@ -1,0 +1,240 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
+import { Badge, Card, Button, Row } from '@/components/bot/ui'
+import { windowsAgentService } from '@/modules/viking-rise/services/WindowsAgentService'
+
+export default function BotDetailPage() {
+  const params = useParams()
+  const botId = params.id as string
+  
+  const [bot, setBot] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    actionsToday: 0,
+    successRate: 0,
+    avgDuration: 0,
+    lastActions: [] as any[]
+  })
+
+  useEffect(() => {
+    loadBotData()
+    const interval = setInterval(loadBotData, 5000)
+    return () => clearInterval(interval)
+  }, [botId])
+
+  const loadBotData = async () => {
+    setLoading(true)
+    try {
+      const bots = await windowsAgentService.getBots()
+      const foundBot = bots.find(b => b.id === botId)
+      setBot(foundBot)
+      
+      // محاكاة إحصائيات
+      setStats({
+        actionsToday: foundBot?.totalActions || 0,
+        successRate: foundBot?.successRate * 100 || 0,
+        avgDuration: 2450,
+        lastActions: [
+          { time: '10:30', action: 'تطبيق درع', success: true },
+          { time: '10:15', action: 'إرسال مساعدات', success: true },
+          { time: '09:45', action: 'جمع موارد', success: false },
+          { time: '09:30', action: 'تطبيق درع', success: true },
+        ]
+      })
+    } catch (error) {
+      console.error('فشل تحميل بيانات البوت:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const executeTask = async (taskType: 'shield' | 'helps' | 'collection') => {
+    try {
+      await windowsAgentService.executeBotTask(botId, taskType)
+      await loadBotData()
+    } catch (error) {
+      console.error('فشل تنفيذ المهمة:', error)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center' }}>
+        <div style={{ fontSize: 48, marginBottom: 20 }}>⏳</div>
+        <h3>جاري تحميل بيانات البوت...</h3>
+      </div>
+    )
+  }
+
+  if (!bot) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center' }}>
+        <div style={{ fontSize: 48, marginBottom: 20 }}>❌</div>
+        <h3>البوت غير موجود</h3>
+        <p>تعذر العثور على البوت المطلوب</p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ padding: 20, maxWidth: 1000, margin: '0 auto' }}>
+      {/* رأس الصفحة */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+        padding: 20,
+        borderRadius: 16,
+        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+        color: 'white'
+      }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900 }}>🤖 {bot.name}</h1>
+          <p style={{ margin: '8px 0 0 0', opacity: 0.9 }}>
+            {bot.gameAccount} • {bot.windowTitle}
+          </p>
+        </div>
+        
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Badge 
+            label={bot.status === 'active' ? 'نشط' : 'غير نشط'}
+            icon={bot.status === 'active' ? '✅' : '⏸️'}
+            bg={bot.status === 'active' ? '#dcfce7' : '#f3f4f6'}
+            color={bot.status === 'active' ? '#166534' : '#6b7280'}
+          />
+          <Badge 
+            label={`${stats.actionsToday} إجراء`}
+            icon="📊"
+            bg="#dbeafe"
+            color="#1e40af"
+          />
+        </div>
+      </div>
+
+      {/* الإجراءات السريعة */}
+      <Card title="الإجراءات السريعة" subtitle="تنفيذ مهام فورية على هذا البوت">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+          <Button 
+            onClick={() => executeTask('shield')}
+            disabled={bot.status !== 'active'}
+          >
+            🛡️ تطبيق درع
+          </Button>
+          
+          <Button 
+            onClick={() => executeTask('helps')}
+            disabled={bot.status !== 'active'}
+          >
+            🤝 إرسال مساعدات
+          </Button>
+          
+          <Button 
+            onClick={() => executeTask('collection')}
+            disabled={bot.status !== 'active'}
+          >
+            📦 جمع موارد
+          </Button>
+          
+          <Button 
+            onClick={() => window.history.back()}
+            variant="ghost"
+          >
+            ↩️ العودة
+          </Button>
+        </div>
+      </Card>
+
+      {/* الإحصائيات */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 15, marginTop: 20 }}>
+        <Card title="الإجراءات اليوم">
+          <div style={{ fontSize: 32, fontWeight: 900, textAlign: 'center' }}>{stats.actionsToday}</div>
+        </Card>
+        
+        <Card title="معدل النجاح">
+          <div style={{ fontSize: 32, fontWeight: 900, textAlign: 'center', color: stats.successRate > 80 ? '#10b981' : '#f59e0b' }}>
+            {stats.successRate.toFixed(1)}%
+          </div>
+        </Card>
+        
+        <Card title="متوسط المدة">
+          <div style={{ fontSize: 32, fontWeight: 900, textAlign: 'center' }}>{(stats.avgDuration / 1000).toFixed(1)}s</div>
+        </Card>
+        
+        <Card title="الحالة">
+          <div style={{ fontSize: 32, fontWeight: 900, textAlign: 'center' }}>
+            {bot.status === 'active' ? '🟢' : '🔴'}
+          </div>
+        </Card>
+      </div>
+
+      {/* آخر الإجراءات */}
+      <Card title="آخر الإجراءات" subtitle="السجل الزمني للنشاطات" style={{ marginTop: 20 }}>
+        <div style={{ display: 'grid', gap: 10 }}>
+          {stats.lastActions.map((action, index) => (
+            <div key={index} style={{
+              padding: 12,
+              borderRadius: 8,
+              background: '#f8fafc',
+              border: '1px solid #e5e7eb',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  background: action.success ? '#dcfce7' : '#fee2e2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {action.success ? '✅' : '❌'}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 900 }}>{action.action}</div>
+                  <div style={{ color: '#6b7280', fontSize: 12 }}>{action.time}</div>
+                </div>
+              </div>
+              
+              <Badge 
+                label={action.success ? 'ناجح' : 'فاشل'}
+                bg={action.success ? '#dcfce7' : '#fee2e2'}
+                color={action.success ? '#166534' : '#991b1b'}
+              />
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* إعدادات البوت */}
+      <Card title="إعدادات البوت" subtitle="تخصيص سلوك هذا البوت" style={{ marginTop: 20 }}>
+        <div style={{ display: 'grid', gap: 15 }}>
+          <Row left="اسم النافذة" right={<code>{bot.windowTitle}</code>} />
+          <Row left="معرف الجهاز" right={bot.deviceId} />
+          <Row left="حساب اللعبة" right={bot.gameAccount} />
+          <Row left="تاريخ الإنشاء" right={new Date(bot.createdAt || Date.now()).toLocaleDateString('ar-SA')} />
+          <Row left="آخر نشاط" right={bot.lastActive ? new Date(bot.lastActive).toLocaleTimeString('ar-SA') : 'غير متوفر'} />
+        </div>
+        
+        <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+          <Button variant="ghost">
+            ✏️ تعديل الإعدادات
+          </Button>
+          
+          <Button variant="ghost">
+            📊 عرض السجلات
+          </Button>
+          
+          <Button variant="danger">
+            🗑️ حذف البوت
+          </Button>
+        </div>
+      </Card>
+    </div>
+  )
+}

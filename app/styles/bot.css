@@ -1,0 +1,331 @@
+/* app/styles/bot.css */
+.bot-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.bot-header {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.bot-header h1 {
+  font-size: 36px;
+  font-weight: 900;
+  margin: 0;
+  color: #1f2937;
+}
+
+.bot-header .subtitle {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.bot-header .user-info {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f0f9ff;
+  border: 1px solid #e0f2fe;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.plan-badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.plan-badge.trial {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.plan-badge.pro {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.user-email {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.expiry-date {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.bot-main {
+  margin-bottom: 48px;
+}
+
+.auth-required,
+.access-locked {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+}
+
+.auth-required h2,
+.access-locked h2 {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 16px;
+  color: #1f2937;
+}
+
+.auth-required p,
+.access-locked p {
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+
+.auth-button,
+.dashboard-button,
+.request-button {
+  display: inline-block;
+  padding: 12px 24px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.auth-button {
+  background: #111827;
+  color: #fff;
+  border: 1px solid #111827;
+}
+
+.auth-button:hover {
+  background: #1f2937;
+}
+
+.status-info {
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  background: #f8fafc;
+  text-align: left;
+}
+
+.status-info h3 {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: #1f2937;
+}
+
+.status-info p {
+  margin: 8px 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.dashboard-button {
+  background: #fff;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+}
+
+.dashboard-button:hover {
+  background: #f9fafb;
+}
+
+.request-button {
+  background: #111827;
+  color: #fff;
+  border: 1px solid #111827;
+}
+
+.request-button:hover {
+  background: #1f2937;
+}
+
+.bot-footer {
+  text-align: center;
+  color: #6b7280;
+  font-size: 12px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.disclaimer {
+  margin-bottom: 8px;
+}
+
+.version {
+  font-weight: 600;
+}
+
+/* أنماط للتبويبات */
+.tab-container {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 12px;
+}
+
+.tab-button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #6b7280;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-button.active {
+  background: #fff;
+  color: #111827;
+  border-color: #e5e7eb;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* أنماط لوحة Viking Rise */
+.viking-rise-tab .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stats-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.stats-card .title {
+  font-weight: 900;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.stats-card .value {
+  font-size: 24px;
+  font-weight: 900;
+  color: #1890ff;
+  margin: 0;
+}
+
+.stats-card .sub-value {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* أنماط البث المباشر */
+.live-stream-container {
+  background: #1a1a1a;
+  border-radius: 8px;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  margin-bottom: 24px;
+}
+
+.live-stream-placeholder {
+  text-align: center;
+}
+
+.live-stream-placeholder .icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+/* تحسينات عامة */
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #10b981;
+  transition: width 0.3s ease;
+}
+
+.card {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(17,24,39,0.06);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.card-header {
+  padding: 14px;
+  border-bottom: 1px solid #eef2f7;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card-title {
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.card-body {
+  padding: 14px;
+}
+
+/* أنماط متجاوبة */
+@media (max-width: 768px) {
+  .bot-page {
+    padding: 16px;
+  }
+  
+  .bot-header h1 {
+    font-size: 28px;
+  }
+  
+  .viking-rise-tab .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .bot-header .user-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+}

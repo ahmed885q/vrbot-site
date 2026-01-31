@@ -1,0 +1,185 @@
+[33mcommit 136dcb29703410a5af715f5278ae19e1845f8415[m
+Author: ahmed885q <ahmed85q@hotmail.com>
+Date:   Thu Jan 29 10:25:04 2026 +0000
+
+    Remove build artifacts from repo
+
+ app-desktop/dist/Viking Rais Agent-1.0.0.AppImage        |    Bin [31m107572401[m -> [32m0[m bytes
+ app-desktop/dist/builder-debug.yml                       |     19 [31m-[m
+ app-desktop/dist/builder-effective-config.yaml           |     24 [31m-[m
+ app-desktop/dist/latest-linux.yml                        |      9 [31m-[m
+ app-desktop/dist/linux-unpacked/LICENSE.electron.txt     |     21 [31m-[m
+ app-desktop/dist/linux-unpacked/LICENSES.chromium.html   | 171490 [31m----------------------------------------------------------------[m
+ app-desktop/dist/linux-unpacked/chrome-sandbox           |    Bin [31m54192[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/chrome_100_percent.pak   |    Bin [31m152251[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/chrome_200_percent.pak   |    Bin [31m230312[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/chrome_crashpad_handler  |    Bin [31m1251088[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/icudtl.dat               |    Bin [31m10468208[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/libEGL.so                |    Bin [31m253960[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/libGLESv2.so             |    Bin [31m6839792[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/libffmpeg.so             |    Bin [31m2682104[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/libvk_swiftshader.so     |    Bin [31m4345520[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/libvulkan.so.1           |    Bin [31m7438016[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/af.pak           |    Bin [31m500319[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/am.pak           |    Bin [31m811251[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/ar.pak           |    Bin [31m886860[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/bg.pak           |    Bin [31m925423[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/bn.pak           |    Bin [31m1192834[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/ca.pak           |    Bin [31m562889[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/cs.pak           |    Bin [31m579028[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/da.pak           |    Bin [31m524865[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/de.pak           |    Bin [31m560049[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/el.pak           |    Bin [31m1014757[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/en-GB.pak        |    Bin [31m455785[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/en-US.pak        |    Bin [31m459562[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/es-419.pak       |    Bin [31m554175[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/es.pak           |    Bin [31m553811[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/et.pak           |    Bin [31m503673[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/fa.pak           |    Bin [31m824516[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/fi.pak           |    Bin [31m514294[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/fil.pak          |    Bin [31m581071[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/fr.pak           |    Bin [31m598663[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/gu.pak           |    Bin [31m1172873[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/he.pak           |    Bin [31m723213[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/hi.pak           |    Bin [31m1237537[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/hr.pak           |    Bin [31m558687[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/hu.pak           |    Bin [31m602350[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/id.pak           |    Bin [31m497010[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/it.pak           |    Bin [31m546097[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/ja.pak           |    Bin [31m666845[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/kn.pak           |    Bin [31m1342524[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/ko.pak           |    Bin [31m563705[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/lt.pak           |    Bin [31m605515[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/lv.pak           |    Bin [31m603917[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/ml.pak           |    Bin [31m1397876[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/mr.pak           |    Bin [31m1150465[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/ms.pak           |    Bin [31m521112[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/nb.pak           |    Bin [31m505122[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/nl.pak           |    Bin [31m522748[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/pl.pak           |    Bin [31m581431[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/pt-BR.pak        |    Bin [31m546786[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/pt-PT.pak        |    Bin [31m550518[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/ro.pak           |    Bin [31m569829[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/ru.pak           |    Bin [31m937300[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/sk.pak           |    Bin [31m587785[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/sl.pak           |    Bin [31m563892[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/sr.pak           |    Bin [31m870447[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/sv.pak           |    Bin [31m507793[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/sw.pak           |    Bin [31m535257[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/ta.pak           |    Bin [31m1389752[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/te.pak           |    Bin [31m1280555[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/th.pak           |    Bin [31m1075984[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/tr.pak           |    Bin [31m546257[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/uk.pak           |    Bin [31m936603[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/ur.pak           |    Bin [31m819166[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/vi.pak           |    Bin [31m648060[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/zh-CN.pak        |    Bin [31m466632[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/locales/zh-TW.pak        |    Bin [31m461476[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/resources.pak            |    Bin [31m5747497[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/resources/app-update.yml |      5 [31m-[m
+ app-desktop/dist/linux-unpacked/resources/app.asar       |    Bin [31m1734700[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/snapshot_blob.bin        |    Bin [31m310242[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/v8_context_snapshot.bin  |    Bin [31m662053[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/viking-rais-agent        |    Bin [31m181922488[m -> [32m0[m bytes
+ app-desktop/dist/linux-unpacked/vk_swiftshader_icd.json  |      1 [31m-[m
+ app-desktop/dist/viking-rais-agent_1.0.0_amd64.snap      |    Bin [31m91185152[m -> [32m0[m bytes
+ 79 files changed, 171569 deletions(-)
+
+[33mcommit 1742124aef3e92ac38288b1134aa78fe5dae2e9a[m
+Author: ahmed885q <ahmed85q@hotmail.com>
+Date:   Thu Jan 29 10:11:48 2026 +0000
+
+    Add Windows build workflow
+
+ app-desktop/dist/Viking Rais Agent-1.0.0.AppImage   | Bin [31m107535377[m -> [32m107572401[m bytes
+ app-desktop/dist/latest-linux.yml                   |  10 [32m+++++[m[31m-----[m
+ app-desktop/dist/linux-unpacked/resources/app.asar  | Bin [31m1601132[m -> [32m1734700[m bytes
+ app-desktop/dist/viking-rais-agent_1.0.0_amd64.snap | Bin [31m91148288[m -> [32m91185152[m bytes
+ 4 files changed, 5 insertions(+), 5 deletions(-)
+
+[33mcommit e4502889a99c29fe8402fd30255fa9ffdeaaf5c1[m[33m ([m[1;33mtag: [m[1;33mv1.0.0[m[33m)[m
+Author: ahmed885q <ahmed85q@hotmail.com>
+Date:   Wed Jan 28 16:42:40 2026 +0000
+
+    release v1.0.0
+
+ app-desktop/dist/Viking Rais Agent-1.0.0.AppImage        |    Bin [31m0[m -> [32m107535377[m bytes
+ app-desktop/dist/builder-debug.yml                       |     19 [32m+[m
+ app-desktop/dist/builder-effective-config.yaml           |     24 [32m+[m
+ app-desktop/dist/latest-linux.yml                        |      9 [32m+[m
+ app-desktop/dist/linux-unpacked/LICENSE.electron.txt     |     21 [32m+[m
+ app-desktop/dist/linux-unpacked/LICENSES.chromium.html   | 171490 [32m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[m
+ app-desktop/dist/linux-unpacked/chrome-sandbox           |    Bin [31m0[m -> [32m54192[m bytes
+ app-desktop/dist/linux-unpacked/chrome_100_percent.pak   |    Bin [31m0[m -> [32m152251[m bytes
+ app-desktop/dist/linux-unpacked/chrome_200_percent.pak   |    Bin [31m0[m -> [32m230312[m bytes
+ app-desktop/dist/linux-unpacked/chrome_crashpad_handler  |    Bin [31m0[m -> [32m1251088[m bytes
+ app-desktop/dist/linux-unpacked/icudtl.dat               |    Bin [31m0[m -> [32m10468208[m bytes
+ app-desktop/dist/linux-unpacked/libEGL.so                |    Bin [31m0[m -> [32m253960[m bytes
+ app-desktop/dist/linux-unpacked/libGLESv2.so             |    Bin [31m0[m -> [32m6839792[m bytes
+ app-desktop/dist/linux-unpacked/libffmpeg.so             |    Bin [31m0[m -> [32m2682104[m bytes
+ app-desktop/dist/linux-unpacked/libvk_swiftshader.so     |    Bin [31m0[m -> [32m4345520[m bytes
+ app-desktop/dist/linux-unpacked/libvulkan.so.1           |    Bin [31m0[m -> [32m7438016[m bytes
+ app-desktop/dist/linux-unpacked/locales/af.pak           |    Bin [31m0[m -> [32m500319[m bytes
+ app-desktop/dist/linux-unpacked/locales/am.pak           |    Bin [31m0[m -> [32m811251[m bytes
+ app-desktop/dist/linux-unpacked/locales/ar.pak           |    Bin [31m0[m -> [32m886860[m bytes
+ app-desktop/dist/linux-unpacked/locales/bg.pak           |    Bin [31m0[m -> [32m925423[m bytes
+ app-desktop/dist/linux-unpacked/locales/bn.pak           |    Bin [31m0[m -> [32m1192834[m bytes
+ app-desktop/dist/linux-unpacked/locales/ca.pak           |    Bin [31m0[m -> [32m562889[m bytes
+ app-desktop/dist/linux-unpacked/locales/cs.pak           |    Bin [31m0[m -> [32m579028[m bytes
+ app-desktop/dist/linux-unpacked/locales/da.pak           |    Bin [31m0[m -> [32m524865[m bytes
+ app-desktop/dist/linux-unpacked/locales/de.pak           |    Bin [31m0[m -> [32m560049[m bytes
+ app-desktop/dist/linux-unpacked/locales/el.pak           |    Bin [31m0[m -> [32m1014757[m bytes
+ app-desktop/dist/linux-unpacked/locales/en-GB.pak        |    Bin [31m0[m -> [32m455785[m bytes
+ app-desktop/dist/linux-unpacked/locales/en-US.pak        |    Bin [31m0[m -> [32m459562[m bytes
+ app-desktop/dist/linux-unpacked/locales/es-419.pak       |    Bin [31m0[m -> [32m554175[m bytes
+ app-desktop/dist/linux-unpacked/locales/es.pak           |    Bin [31m0[m -> [32m553811[m bytes
+ app-desktop/dist/linux-unpacked/locales/et.pak           |    Bin [31m0[m -> [32m503673[m bytes
+ app-desktop/dist/linux-unpacked/locales/fa.pak           |    Bin [31m0[m -> [32m824516[m bytes
+ app-desktop/dist/linux-unpacked/locales/fi.pak           |    Bin [31m0[m -> [32m514294[m bytes
+ app-desktop/dist/linux-unpacked/locales/fil.pak          |    Bin [31m0[m -> [32m581071[m bytes
+ app-desktop/dist/linux-unpacked/locales/fr.pak           |    Bin [31m0[m -> [32m598663[m bytes
+ app-desktop/dist/linux-unpacked/locales/gu.pak           |    Bin [31m0[m -> [32m1172873[m bytes
+ app-desktop/dist/linux-unpacked/locales/he.pak           |    Bin [31m0[m -> [32m723213[m bytes
+ app-desktop/dist/linux-unpacked/locales/hi.pak           |    Bin [31m0[m -> [32m1237537[m bytes
+ app-desktop/dist/linux-unpacked/locales/hr.pak           |    Bin [31m0[m -> [32m558687[m bytes
+ app-desktop/dist/linux-unpacked/locales/hu.pak           |    Bin [31m0[m -> [32m602350[m bytes
+ app-desktop/dist/linux-unpacked/locales/id.pak           |    Bin [31m0[m -> [32m497010[m bytes
+ app-desktop/dist/linux-unpacked/locales/it.pak           |    Bin [31m0[m -> [32m546097[m bytes
+ app-desktop/dist/linux-unpacked/locales/ja.pak           |    Bin [31m0[m -> [32m666845[m bytes
+ app-desktop/dist/linux-unpacked/locales/kn.pak           |    Bin [31m0[m -> [32m1342524[m bytes
+ app-desktop/dist/linux-unpacked/locales/ko.pak           |    Bin [31m0[m -> [32m563705[m bytes
+ app-desktop/dist/linux-unpacked/locales/lt.pak           |    Bin [31m0[m -> [32m605515[m bytes
+ app-desktop/dist/linux-unpacked/locales/lv.pak           |    Bin [31m0[m -> [32m603917[m bytes
+ app-desktop/dist/linux-unpacked/locales/ml.pak           |    Bin [31m0[m -> [32m1397876[m bytes
+ app-desktop/dist/linux-unpacked/locales/mr.pak           |    Bin [31m0[m -> [32m1150465[m bytes
+ app-desktop/dist/linux-unpacked/locales/ms.pak           |    Bin [31m0[m -> [32m521112[m bytes
+ app-desktop/dist/linux-unpacked/locales/nb.pak           |    Bin [31m0[m -> [32m505122[m bytes
+ app-desktop/dist/linux-unpacked/locales/nl.pak           |    Bin [31m0[m -> [32m522748[m bytes
+ app-desktop/dist/linux-unpacked/locales/pl.pak           |    Bin [31m0[m -> [32m581431[m bytes
+ app-desktop/dist/linux-unpacked/locales/pt-BR.pak        |    Bin [31m0[m -> [32m546786[m bytes
+ app-desktop/dist/linux-unpacked/locales/pt-PT.pak        |    Bin [31m0[m -> [32m550518[m bytes
+ app-desktop/dist/linux-unpacked/locales/ro.pak           |    Bin [31m0[m -> [32m569829[m bytes
+ app-desktop/dist/linux-unpacked/locales/ru.pak           |    Bin [31m0[m -> [32m937300[m bytes
+ app-desktop/dist/linux-unpacked/locales/sk.pak           |    Bin [31m0[m -> [32m587785[m bytes
+ app-desktop/dist/linux-unpacked/locales/sl.pak           |    Bin [31m0[m -> [32m563892[m bytes
+ app-desktop/dist/linux-unpacked/locales/sr.pak           |    Bin [31m0[m -> [32m870447[m bytes
+ app-desktop/dist/linux-unpacked/locales/sv.pak           |    Bin [31m0[m -> [32m507793[m bytes
+ app-desktop/dist/linux-unpacked/locales/sw.pak           |    Bin [31m0[m -> [32m535257[m bytes
+ app-desktop/dist/linux-unpacked/locales/ta.pak           |    Bin [31m0[m -> [32m1389752[m bytes
+ app-desktop/dist/linux-unpacked/locales/te.pak           |    Bin [31m0[m -> [32m1280555[m bytes
+ app-desktop/dist/linux-unpacked/locales/th.pak           |    Bin [31m0[m -> [32m1075984[m bytes
+ app-desktop/dist/linux-unpacked/locales/tr.pak           |    Bin [31m0[m -> [32m546257[m bytes
+ app-desktop/dist/linux-unpacked/locales/uk.pak           |    Bin [31m0[m -> [32m936603[m bytes
+ app-desktop/dist/linux-unpacked/locales/ur.pak           |    Bin [31m0[m -> [32m819166[m bytes
+ app-desktop/dist/linux-unpacked/locales/vi.pak           |    Bin [31m0[m -> [32m648060[m bytes
+ app-desktop/dist/linux-unpacked/locales/zh-CN.pak        |    Bin [31m0[m -> [32m466632[m bytes
+ app-desktop/dist/linux-unpacked/locales/zh-TW.pak        |    Bin [31m0[m -> [32m461476[m bytes
+ app-desktop/dist/linux-unpacked/resources.pak            |    Bin [31m0[m -> [32m5747497[m bytes
+ app-desktop/dist/linux-unpacked/resources/app-update.yml |      5 [32m+[m
+ app-desktop/dist/linux-unpacked/resources/app.asar       |    Bin [31m0[m -> [32m1601132[m bytes
+ app-desktop/dist/linux-unpacked/snapshot_blob.bin        |    Bin [31m0[m -> [32m310242[m bytes
+ app-desktop/dist/linux-unpacked/v8_context_snapshot.bin  |    Bin [31m0[m -> [32m662053[m bytes
+ app-desktop/dist/linux-unpacked/viking-rais-agent        |    Bin [31m0[m -> [32m181922488[m bytes
+ app-desktop/dist/linux-unpacked/vk_swiftshader_icd.json  |      1 [32m+[m
+ app-desktop/dist/viking-rais-agent_1.0.0_amd64.snap      |    Bin [31m0[m -> [32m91148288[m bytes
+ 79 files changed, 171569 insertions(+)

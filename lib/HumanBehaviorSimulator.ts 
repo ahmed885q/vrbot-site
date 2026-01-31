@@ -1,0 +1,650 @@
+// HumanBehaviorSimulator.ts
+export interface BehaviorPattern {
+  id: string;
+  name: string;
+  description: string;
+  delayRange: [number, number]; // [min, max] in ms
+  accuracy: number; // 0-1
+  errorRate: number; // 0-1
+  active: boolean;
+}
+
+export interface MouseMovement {
+  start: { x: number; y: number };
+  end: { x: number; y: number };
+  path: { x: number; y: number; time: number }[];
+  duration: number;
+  accuracy: number;
+}
+
+export interface TypingPattern {
+  text: string;
+  speed: number; // characters per minute
+  errors: number;
+  backspaces: number;
+  duration: number;
+}
+
+// =============== VIKING RISE EXTENSION TYPES ===============
+export interface VikingTapAction {
+  position: { x: number; y: number };
+  deviceId?: string;
+  timestamp: number;
+  success: boolean;
+  confidence: number;
+  screenResolution: { width: number; height: number };
+}
+
+export interface VikingSwipeAction {
+  start: { x: number; y: number };
+  end: { x: number; y: number };
+  duration: number;
+  speed: number;
+  deviceId?: string;
+}
+
+export interface VikingTask {
+  id: string;
+  name: string;
+  type: 'shield' | 'helps' | 'collection' | 'building' | 'attack' | 'defense' | 'critical';
+  priority: number;
+  estimatedTime: number; // ms
+  repeatInterval?: number;
+  lastExecuted?: number;
+  enabled: boolean;
+  actions: VikingTapAction[];
+}
+
+export interface VikingGameState {
+  lastScreenshot?: string; // base64 or path
+  detectedElements: Array<{
+    name: string;
+    confidence: number;
+    position: { x: number; y: number; width: number; height: number };
+  }>;
+  resources: {
+    wood: number;
+    stone: number;
+    food: number;
+    gold: number;
+    gems: number;
+  };
+  shieldActive: boolean;
+  shieldExpires?: number;
+  helpsAvailable: number;
+  lastUpdate: number;
+}
+
+export interface ADBDevice {
+  id: string;
+  name: string;
+  state: 'device' | 'offline' | 'unauthorized';
+  resolution: { width: number; height: number };
+  model: string;
+  emulator: boolean;
+}
+// ===========================================================
+
+class HumanBehaviorSimulator {
+  private patterns: BehaviorPattern[];
+  private currentPattern: BehaviorPattern;
+  private mouseHistory: MouseMovement[];
+  private typingHistory: TypingPattern[];
+  private behaviorScore: number;
+  
+  // =============== VIKING RISE EXTENSION PROPERTIES ===============
+  private vikingTasks: VikingTask[];
+  private vikingGameStates: Map<string, VikingGameState>; // key: deviceId
+  private vikingActionHistory: VikingTapAction[];
+  private connectedDevices: ADBDevice[];
+  // ================================================================
+
+  constructor() {
+    this.patterns = [
+      {
+        id: 'careful',
+        name: 'دقيق وحريص',
+        description: 'حركات بطيئة ودقيقة، أخطاء قليلة',
+        delayRange: [1000, 3000],
+        accuracy: 0.95,
+        errorRate: 0.02,
+        active: false
+      },
+      {
+        id: 'average',
+        name: 'طبيعي ومتوسط',
+        description: 'سرعة متوسطة، أخطاء عادية',
+        delayRange: [500, 1500],
+        accuracy: 0.85,
+        errorRate: 0.05,
+        active: true
+      },
+      {
+        id: 'fast',
+        name: 'سريع وخبير',
+        description: 'حركات سريعة، دقة متوسطة',
+        delayRange: [200, 800],
+        accuracy: 0.75,
+        errorRate: 0.08,
+        active: false
+      },
+      {
+        id: 'erratic',
+        name: 'غير منتظم',
+        description: 'توقيتات غير متوقعة، أخطاء متكررة',
+        delayRange: [100, 5000],
+        accuracy: 0.6,
+        errorRate: 0.15,
+        active: false
+      }
+    ];
+
+    this.currentPattern = this.patterns[1]; // النمط المتوسط افتراضيًا
+    this.mouseHistory = [];
+    this.typingHistory = [];
+    this.behaviorScore = 75;
+    
+    // =============== VIKING RISE EXTENSION INIT ===============
+    this.vikingTasks = this.getDefaultVikingTasks();
+    this.vikingGameStates = new Map();
+    this.vikingActionHistory = [];
+    this.connectedDevices = [];
+    // ==========================================================
+  }
+
+  // =============== VIKING RISE EXTENSION METHODS ===============
+  // دوال خاصة بـ Viking Rise
+  async vikingTap(position: { x: number; y: number }, deviceId?: string): Promise<VikingTapAction> {
+    await this.simulateDelay(800 + Math.random() * 400);
+    
+    // محاكاة حركة بشرية نحو الهدف
+    const startX = position.x - 50 + Math.random() * 100;
+    const startY = position.y - 50 + Math.random() * 100;
+    await this.simulateMouseMove(startX, startY, position.x, position.y);
+    
+    // احتمال الخطأ البشري في Viking Rise
+    let finalPosition = position;
+    if (Math.random() < this.currentPattern.errorRate * 0.8) {
+      finalPosition = {
+        x: position.x + (Math.random() - 0.5) * 30,
+        y: position.y + (Math.random() - 0.5) * 30
+      };
+      console.log(`⚠️ خطأ بشري في النقر: انحراف ${Math.round(Math.sqrt(Math.pow(finalPosition.x - position.x, 2) + Math.pow(finalPosition.y - position.y, 2)))}px`);
+    }
+    
+    await this.simulateClick();
+    
+    const action: VikingTapAction = {
+      position: finalPosition,
+      deviceId,
+      timestamp: Date.now(),
+      success: Math.random() > this.currentPattern.errorRate * 0.3,
+      confidence: this.currentPattern.accuracy * (0.8 + Math.random() * 0.2),
+      screenResolution: { width: 1080, height: 2400 } // افتراضي لشاشة الهاتف
+    };
+    
+    this.vikingActionHistory.push(action);
+    return action;
+  }
+
+  async vikingSwipe(start: { x: number; y: number }, end: { x: number; y: number }, duration: number = 1000, deviceId?: string): Promise<VikingSwipeAction> {
+    // محاكاة السحب في Viking Rise
+    const segments = 5 + Math.floor(Math.random() * 5);
+    const segmentDuration = duration / segments;
+    
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const currentX = start.x + (end.x - start.x) * t;
+      const currentY = start.y + (end.y - start.y) * t;
+      
+      // اهتزازات بشرية أثناء السحب
+      const jitterX = (Math.random() - 0.5) * 8;
+      const jitterY = (Math.random() - 0.5) * 8;
+      
+      await this.simulateDelay(segmentDuration / 2);
+      // هنا يمكن إضافة محاكاة حركة للماوس
+      await this.simulateDelay(segmentDuration / 2);
+    }
+    
+    const action: VikingSwipeAction = {
+      start,
+      end,
+      duration: duration * (0.9 + Math.random() * 0.2), // تباين في المدة
+      speed: Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2)) / duration * (0.8 + Math.random() * 0.4),
+      deviceId
+    };
+    
+    return action;
+  }
+
+  async executeVikingTask(taskId: string, deviceId?: string): Promise<{ success: boolean; actions: VikingTapAction[] }> {
+    const task = this.vikingTasks.find(t => t.id === taskId);
+    if (!task) {
+      throw new Error(`لم يتم العثور على المهمة: ${taskId}`);
+    }
+
+    console.log(`🚀 بدء تنفيذ مهمة Viking Rise: ${task.name}`);
+    const executedActions: VikingTapAction[] = [];
+    
+    for (const action of task.actions) {
+      await this.simulateDelay(500 + Math.random() * 1000);
+      
+      const result = await this.vikingTap(action.position, deviceId);
+      executedActions.push(result);
+      
+      if (!result.success && task.type === 'critical') {
+        console.log(`❌ فشل في تنفيذ إجراء حرج: ${task.name}`);
+        return { success: false, actions: executedActions };
+      }
+      
+      // تأخير عشوائي بين الإجراءات
+      await this.simulateDelay(1000 + Math.random() * 2000);
+    }
+    
+    task.lastExecuted = Date.now();
+    console.log(`✅ تم تنفيذ مهمة Viking Rise: ${task.name}`);
+    
+    return { success: true, actions: executedActions };
+  }
+
+  async vikingShieldApplication(deviceId?: string): Promise<boolean> {
+    console.log(`🛡️ تطبيق درع Viking Rise...`);
+    
+    // محاكاة تنفيذ تطبيق الدرع
+    const actions = [
+      await this.vikingTap({ x: 540, y: 1200 }, deviceId), // فتح القلعة
+      await this.vikingTap({ x: 300, y: 1800 }, deviceId), // اختيار الدرع
+      await this.vikingTap({ x: 800, y: 1800 }, deviceId), // تطبيق الدرع
+      await this.vikingTap({ x: 540, y: 2200 }, deviceId)  // تأكيد
+    ];
+    
+    const success = actions.filter(a => a.success).length >= 3;
+    
+    if (success) {
+      const gameState = this.vikingGameStates.get(deviceId || 'default');
+      if (gameState) {
+        gameState.shieldActive = true;
+        gameState.shieldExpires = Date.now() + 8 * 60 * 60 * 1000; // 8 ساعات
+        this.vikingGameStates.set(deviceId || 'default', gameState);
+      }
+      console.log(`✅ تم تطبيق الدرع بنجاح`);
+    } else {
+      console.log(`❌ فشل في تطبيق الدرع`);
+    }
+    
+    return success;
+  }
+
+  async vikingSendHelps(deviceId?: string): Promise<number> {
+    console.log(`🤝 إرسال مساعدات Viking Rise...`);
+    
+    const helpsSent = Math.floor(Math.random() * 5) + 1;
+    const actions: VikingTapAction[] = [];
+    
+    for (let i = 0; i < helpsSent; i++) {
+      await this.simulateDelay(800 + Math.random() * 1200);
+      const action = await this.vikingTap(
+        { x: 200 + Math.random() * 680, y: 800 + Math.random() * 1000 },
+        deviceId
+      );
+      actions.push(action);
+    }
+    
+    console.log(`✅ تم إرسال ${helpsSent} مساعدات`);
+    return helpsSent;
+  }
+
+  async detectVikingElements(deviceId?: string): Promise<VikingGameState> {
+    // محاكاة اكتشاف عناصر اللعبة
+    const elements = [
+      { name: 'castle', confidence: 0.95, position: { x: 540, y: 1200, width: 200, height: 200 } },
+      { name: 'shield_button', confidence: 0.88, position: { x: 300, y: 1800, width: 100, height: 50 } },
+      { name: 'resources', confidence: 0.92, position: { x: 900, y: 100, width: 150, height: 60 } },
+      { name: 'helps_button', confidence: 0.85, position: { x: 800, y: 1800, width: 100, height: 50 } }
+    ].filter(() => Math.random() > 0.1); // 10% احتمال عدم اكتشاف بعض العناصر
+    
+    const gameState: VikingGameState = {
+      detectedElements: elements,
+      resources: {
+        wood: Math.floor(Math.random() * 10000),
+        stone: Math.floor(Math.random() * 8000),
+        food: Math.floor(Math.random() * 12000),
+        gold: Math.floor(Math.random() * 5000),
+        gems: Math.floor(Math.random() * 100)
+      },
+      shieldActive: Math.random() > 0.7,
+      shieldExpires: Math.random() > 0.5 ? Date.now() + Math.random() * 3600000 : undefined,
+      helpsAvailable: Math.floor(Math.random() * 20),
+      lastUpdate: Date.now()
+    };
+    
+    this.vikingGameStates.set(deviceId || 'default', gameState);
+    return gameState;
+  }
+
+  async connectADBDevice(deviceId: string): Promise<ADBDevice> {
+    console.log(`🔌 محاولة الاتصال بجهاز ADB: ${deviceId}`);
+    
+    await this.simulateDelay(2000 + Math.random() * 3000);
+    
+    const device: ADBDevice = {
+      id: deviceId,
+      name: deviceId.startsWith('emulator') ? `Android Emulator (${deviceId})` : `Android Device (${deviceId})`,
+      state: 'device',
+      resolution: { width: 1080, height: 2400 },
+      model: deviceId.startsWith('emulator') ? 'Android SDK built for x86' : 'SM-G998B',
+      emulator: deviceId.startsWith('emulator')
+    };
+    
+    this.connectedDevices.push(device);
+    console.log(`✅ تم الاتصال بالجهاز: ${device.name}`);
+    
+    return device;
+  }
+
+  getVikingTasks(): VikingTask[] {
+    return this.vikingTasks;
+  }
+
+  getVikingGameState(deviceId?: string): VikingGameState | undefined {
+    return this.vikingGameStates.get(deviceId || 'default');
+  }
+
+  getVikingStats() {
+    return {
+      totalTasks: this.vikingTasks.length,
+      activeTasks: this.vikingTasks.filter(t => t.enabled).length,
+      totalActions: this.vikingActionHistory.length,
+      successRate: this.vikingActionHistory.length > 0 
+        ? this.vikingActionHistory.filter(a => a.success).length / this.vikingActionHistory.length 
+        : 0,
+      connectedDevices: this.connectedDevices.length,
+      lastTaskExecuted: this.vikingTasks.reduce((latest, task) => 
+        task.lastExecuted && (!latest || task.lastExecuted > latest) ? task.lastExecuted : latest, 0)
+    };
+  }
+
+  private getDefaultVikingTasks(): VikingTask[] {
+    return [
+      {
+        id: 'apply_shield',
+        name: 'تطبيق الدرع',
+        type: 'shield',
+        priority: 1,
+        estimatedTime: 10000,
+        repeatInterval: 6 * 60 * 60 * 1000, // كل 6 ساعات
+        enabled: true,
+        actions: [
+          { position: { x: 540, y: 1200 }, timestamp: 0, success: false, confidence: 0, screenResolution: { width: 1080, height: 2400 } },
+          { position: { x: 300, y: 1800 }, timestamp: 0, success: false, confidence: 0, screenResolution: { width: 1080, height: 2400 } },
+          { position: { x: 800, y: 1800 }, timestamp: 0, success: false, confidence: 0, screenResolution: { width: 1080, height: 2400 } }
+        ]
+      },
+      {
+        id: 'send_helps',
+        name: 'إرسال المساعدات',
+        type: 'helps',
+        priority: 2,
+        estimatedTime: 15000,
+        repeatInterval: 2 * 60 * 60 * 1000, // كل ساعتين
+        enabled: true,
+        actions: [
+          { position: { x: 800, y: 1800 }, timestamp: 0, success: false, confidence: 0, screenResolution: { width: 1080, height: 2400 } },
+          { position: { x: 540, y: 800 }, timestamp: 0, success: false, confidence: 0, screenResolution: { width: 1080, height: 2400 } },
+          { position: { x: 300, y: 1400 }, timestamp: 0, success: false, confidence: 0, screenResolution: { width: 1080, height: 2400 } }
+        ]
+      },
+      {
+        id: 'collect_resources',
+        name: 'جمع الموارد',
+        type: 'collection',
+        priority: 3,
+        estimatedTime: 20000,
+        repeatInterval: 60 * 60 * 1000, // كل ساعة
+        enabled: true,
+        actions: [
+          { position: { x: 900, y: 100 }, timestamp: 0, success: false, confidence: 0, screenResolution: { width: 1080, height: 2400 } },
+          { position: { x: 300, y: 400 }, timestamp: 0, success: false, confidence: 0, screenResolution: { width: 1080, height: 2400 } },
+          { position: { x: 700, y: 600 }, timestamp: 0, success: false, confidence: 0, screenResolution: { width: 1080, height: 2400 } }
+        ]
+      }
+    ];
+  }
+  // ================================================================
+
+  // [الدوال الأصلية المتبقية تبقى كما هي بدون تغيير]
+  setPattern(patternId: string): boolean {
+    const pattern = this.patterns.find(p => p.id === patternId);
+    if (pattern) {
+      this.patterns.forEach(p => p.active = false);
+      pattern.active = true;
+      this.currentPattern = pattern;
+      
+      this.updateBehaviorScore();
+      return true;
+    }
+    return false;
+  }
+
+  async simulateDelay(customDelay?: number): Promise<void> {
+    const delay = customDelay || this.getRandomDelay();
+    const jitter = (Math.random() - 0.5) * delay * 0.1;
+    const finalDelay = Math.max(100, delay + jitter);
+    
+    return new Promise(resolve => setTimeout(resolve, finalDelay));
+  }
+
+  async simulateMouseMove(
+    startX: number,
+    startY: number,
+    targetX: number,
+    targetY: number
+  ): Promise<MouseMovement> {
+    const startTime = Date.now();
+    const movement: MouseMovement = {
+      start: { x: startX, y: startY },
+      end: { x: targetX, y: targetY },
+      path: [],
+      duration: 0,
+      accuracy: this.currentPattern.accuracy
+    };
+
+    const steps = 10 + Math.floor(Math.random() * 10);
+    const controlPoints = this.generateBezierPoints(
+      startX, startY,
+      startX + (targetX - startX) / 2 + (Math.random() - 0.5) * 100,
+      startY + (targetY - startY) / 2 + (Math.random() - 0.5) * 100,
+      targetX, targetY
+    );
+
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const point = this.calculateBezierPoint(controlPoints, t);
+      
+      point.x += (Math.random() - 0.5) * 3;
+      point.y += (Math.random() - 0.5) * 3;
+      
+      movement.path.push({
+        x: point.x,
+        y: point.y,
+        time: Date.now()
+      });
+
+      await this.simulateDelay(20);
+    }
+
+    if (Math.random() > this.currentPattern.accuracy) {
+      const offsetX = (Math.random() - 0.5) * 15;
+      const offsetY = (Math.random() - 0.5) * 15;
+      movement.end.x = targetX + offsetX;
+      movement.end.y = targetY + offsetY;
+    }
+
+    movement.duration = Date.now() - startTime;
+    this.mouseHistory.push(movement);
+    
+    this.updateBehaviorScore();
+    
+    return movement;
+  }
+
+  async simulateClick(
+    element?: HTMLElement,
+    clickType: 'left' | 'right' | 'middle' = 'left'
+  ): Promise<boolean> {
+    await this.simulateDelay();
+    
+    if (Math.random() < this.currentPattern.errorRate) {
+      await this.simulateDelay(300);
+      
+      if (Math.random() > 0.3) {
+        await this.simulateDelay(200);
+        return true;
+      }
+      return false;
+    }
+    
+    return true;
+  }
+
+  async simulateTyping(text: string): Promise<TypingPattern> {
+    const startTime = Date.now();
+    const pattern: TypingPattern = {
+      text,
+      speed: 0,
+      errors: 0,
+      backspaces: 0,
+      duration: 0
+    };
+
+    const chars = text.split('');
+    let typedText = '';
+    
+    for (let i = 0; i < chars.length; i++) {
+      const baseDelay = 50 + Math.random() * 150;
+      await this.simulateDelay(baseDelay);
+      
+      if (Math.random() < this.currentPattern.errorRate * 0.5) {
+        const wrongChar = this.getRandomChar();
+        typedText += wrongChar;
+        pattern.errors++;
+        
+        await this.simulateDelay(100 + Math.random() * 200);
+        
+        typedText = typedText.slice(0, -1);
+        pattern.backspaces++;
+        
+        await this.simulateDelay(50 + Math.random() * 100);
+        typedText += chars[i];
+      } else {
+        typedText += chars[i];
+      }
+      
+      if (chars[i] === ' ' && Math.random() < 0.1) {
+        await this.simulateDelay(200 + Math.random() * 600);
+      }
+    }
+    
+    pattern.duration = Date.now() - startTime;
+    pattern.speed = (text.length / pattern.duration) * 60000;
+    
+    this.typingHistory.push(pattern);
+    this.updateBehaviorScore();
+    
+    return pattern;
+  }
+
+  async simulateRandomActivity(): Promise<void> {
+    const activities = [
+      () => this.simulateMouseMove(100, 100, 300, 300),
+      () => this.simulateDelay(500 + Math.random() * 1500),
+      () => this.simulateTyping('test'),
+      () => this.simulateClick()
+    ];
+    
+    const randomActivity = activities[Math.floor(Math.random() * activities.length)];
+    await randomActivity();
+  }
+
+  private generateBezierPoints(
+    startX: number, startY: number,
+    controlX: number, controlY: number,
+    endX: number, endY: number
+  ): { x: number; y: number }[] {
+    return [
+      { x: startX, y: startY },
+      { x: controlX, y: controlY },
+      { x: endX, y: endY }
+    ];
+  }
+
+  private calculateBezierPoint(
+    points: { x: number; y: number }[],
+    t: number
+  ): { x: number; y: number } {
+    if (points.length === 1) return points[0];
+    
+    const newPoints: { x: number; y: number }[] = [];
+    for (let i = 0; i < points.length - 1; i++) {
+      newPoints.push({
+        x: points[i].x * (1 - t) + points[i + 1].x * t,
+        y: points[i].y * (1 - t) + points[i + 1].y * t
+      });
+    }
+    
+    return this.calculateBezierPoint(newPoints, t);
+  }
+
+  private getRandomDelay(): number {
+    const [min, max] = this.currentPattern.delayRange;
+    return min + Math.random() * (max - min);
+  }
+
+  private updateBehaviorScore(): void {
+    const mouseAccuracy = this.mouseHistory.length > 0
+      ? this.mouseHistory.reduce((sum, m) => sum + m.accuracy, 0) / this.mouseHistory.length
+      : 0.8;
+    
+    const typingErrorRate = this.typingHistory.length > 0
+      ? this.typingHistory.reduce((sum, t) => sum + (t.errors / t.text.length), 0) / this.typingHistory.length
+      : 0.05;
+    
+    const accuracyScore = mouseAccuracy * 40;
+    const errorScore = (1 - Math.min(typingErrorRate * 10, 1)) * 30;
+    const patternScore = 30;
+    
+    this.behaviorScore = Math.min(100, accuracyScore + errorScore + patternScore);
+  }
+
+  private getRandomChar(): string {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    return chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  getStats() {
+    return {
+      behaviorScore: Math.round(this.behaviorScore),
+      currentPattern: this.currentPattern.name,
+      totalMouseMovements: this.mouseHistory.length,
+      totalTypingActions: this.typingHistory.length,
+      averageAccuracy: this.mouseHistory.length > 0
+        ? this.mouseHistory.reduce((sum, m) => sum + m.accuracy, 0) / this.mouseHistory.length
+        : 0,
+      availablePatterns: this.patterns.map(p => ({
+        id: p.id,
+        name: p.name,
+        active: p.active
+      }))
+    };
+  }
+
+  getRecentMouseMovements(limit: number = 5): MouseMovement[] {
+    return this.mouseHistory.slice(-limit);
+  }
+
+  getRecentTypingPatterns(limit: number = 5): TypingPattern[] {
+    return this.typingHistory.slice(-limit);
+  }
+}
+
+export default HumanBehaviorSimulator;

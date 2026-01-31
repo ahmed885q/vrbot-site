@@ -1,6 +1,8 @@
+app-desktop/dist/
 dist/
-linux-unpacked/
+out/
 *.exe
+*.msi
 *.AppImage
 *.snap
-*.dmg
+*.zip
