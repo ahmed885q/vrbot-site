@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react'
 import { Badge, Card, Button, Row } from '@/components/bot/ui'
 import { windowsAgentService, VikingBot } from '@/modules/viking-rise/services/windowsAgentService'
-
 interface VikingRiseDashboardProps {
   email: string
   userId: string

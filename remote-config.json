@@ -2,16 +2,21 @@
   "tools": {
     "baseUrl": "https://YOUR-DOMAIN.COM/tools",
     "windows": {
-      "mediamtx": {
+      "mediaMTX": {
         "file": "mediamtx.exe",
         "url": "https://YOUR-DOMAIN.COM/tools/mediamtx.exe"
-      },
-      "ffmpeg": {
-        "file": "ffmpeg.exe",
-        "url": "https://YOUR-DOMAIN.COM/tools/ffmpeg.exe"
       }
+    },
+    "ffmpeg": {
+      "file": "ffmpeg.exe",
+      "url": "https://YOUR-DOMAIN.COM/tools/ffmpeg.exe"
     }
   },
+
+  "ws": {
+    "url": "wss://upgraded-garbanzo-...-8787.app.github.dev/ws"
+  },
+
   "stream": {
     "statusUrl": "http://127.0.0.1:9797/stream/status"
   }

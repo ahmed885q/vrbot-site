@@ -14,7 +14,7 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    
+
     /* Paths لمشروع Viking Rise */
     "baseUrl": ".",
     "paths": {
@@ -25,7 +25,7 @@
       "@lib/*": ["lib/*"],
       "@styles/*": ["styles/*"]
     },
-    
+
     /* إعدادات Next.js */
     "plugins": [
       {
