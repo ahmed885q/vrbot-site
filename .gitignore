@@ -20,3 +20,7 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+
+# Next.js
+.next/
+.vercel/
