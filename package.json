@@ -6,8 +6,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm --workspace @vrbot/web run dev",
-    "build": "npm --workspace @vrbot/web run build",
-    "lint": "npm --workspace @vrbot/web run lint"
+    "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "lint": "next lint"
   }
 }
