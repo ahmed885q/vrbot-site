@@ -1,0 +1,25 @@
+{
+  "name": "viking-rais-agent",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/main.js",
+  "description": "Viking Rais Agent Desktop",
+  "author": "Ahmed",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ahmed885q/vrbot-site.git"
+  },
+  "scripts": {
+    "dev": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.0",
+    "extract-zip": "^2.0.1"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}

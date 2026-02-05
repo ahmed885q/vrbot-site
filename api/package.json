@@ -1,0 +1,11 @@
+{
+  "name": "@vrbot/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node backend/ws-server.js",
+    "start": "node backend/ws-server.js"
+  },
+  "dependencies": {}
+}
