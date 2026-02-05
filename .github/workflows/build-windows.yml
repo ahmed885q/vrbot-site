@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+    on:
   workflow_dispatch:  # للبناء اليدوي
 
 jobs:
@@ -22,6 +23,9 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        - name: Mark repo as safe
+  run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
         with:
           fetch-depth: 0
 
