@@ -6,6 +6,7 @@ on:
     paths:
       - "backend/**"
       - ".github/workflows/ci-backend.yml"
+
   pull_request:
     branches: [ "main" ]
     paths:
@@ -15,25 +16,25 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "yarn"
-          cache-dependency-path: backend/yarn.lock
 
-      - name: Install
-        run: yarn install --frozen-lockfile
+      - name: Install dependencies
+        run: yarn install
 
       - name: Build
         run: yarn build --if-present
 
-      - name: Test
+      - name: Run tests
         run: yarn test --if-present
-
