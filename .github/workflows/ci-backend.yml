@@ -25,17 +25,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
-          cache-dependency-path: backend/package-lock.json
+          cache: "yarn"
+          cache-dependency-path: backend/yarn.lock
 
       - name: Install
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint --if-present
+        run: yarn install --frozen-lockfile
 
       - name: Build
-        run: npm run build --if-present
+        run: yarn build --if-present
 
       - name: Test
-        run: npm test --if-present
+        run: yarn test --if-present
+
