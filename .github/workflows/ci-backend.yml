@@ -14,7 +14,7 @@ on:
       - ".github/workflows/ci-backend.yml"
 
 jobs:
-  build:
+  backend:
     runs-on: ubuntu-latest
 
     defaults:
@@ -31,7 +31,14 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile=false
+        run: |
+          if [ -f yarn.lock ]; then
+            echo "yarn.lock found → using it"
+            yarn install
+          else
+            echo "No yarn.lock → installing without lockfile"
+            yarn install --no-lockfile
+          fi
 
       - name: Build (if exists)
         run: |
