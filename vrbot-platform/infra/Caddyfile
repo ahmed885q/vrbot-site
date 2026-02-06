@@ -1,0 +1,15 @@
+{
+  # Local dev ports: :80 on host is mapped to 8080, :443 mapped to 8443
+  # When you go live on vrbot.me, you'll map 80/443 directly and remove tls internal.
+  auto_https off
+}
+
+:80 {
+  encode gzip
+  handle_path /api/* {
+    reverse_proxy api:3000
+  }
+  handle {
+    respond "VRBOT edge is up. (Stage 1 API behind /api)" 200
+  }
+}
