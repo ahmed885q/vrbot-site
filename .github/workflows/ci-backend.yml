@@ -31,10 +31,20 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: yarn install
+        run: yarn install --frozen-lockfile=false
 
-      - name: Build
-        run: yarn build --if-present
+      - name: Build (if exists)
+        run: |
+          if yarn run | grep -q "build"; then
+            yarn build
+          else
+            echo "No build script, skipping"
+          fi
 
-      - name: Run tests
-        run: yarn test --if-present
+      - name: Test (if exists)
+        run: |
+          if yarn run | grep -q "test"; then
+            yarn test
+          else
+            echo "No test script, skipping"
+          fi
