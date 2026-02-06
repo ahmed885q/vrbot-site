@@ -12,9 +12,13 @@ out/
 *.dmg
 *.zip
 *.AppImage
+*.log
+
 
 # Env
 .env
+.env.local
+.env.*.local
 .env.*
 
 # OS
