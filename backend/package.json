@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "tasks:server": "node src/tasks-server.js",
+    "tasks:dev": "nodemon src/tasks-server.js"
+  }
+}
