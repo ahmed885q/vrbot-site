@@ -1,0 +1,110 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// User & Authentication
+// ============================================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  password  String
+  farms     Farm[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// Farm Management
+// ============================================
+
+model Farm {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  server    String?
+  settings  Json     @default("{}")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks Task[] @relation("FarmTasks")
+  
+  @@index([userId])
+}
+
+// ============================================
+// Viking Rise Task System
+// ============================================
+
+model Task {
+  id             String    @id @default(uuid())
+  farmId         String
+  taskType       String
+  taskName       String
+  priority       Int       @default(3)
+  scheduleType   String
+  scheduleValue  Json      @default("{}")
+  nextRunAt      DateTime?
+  status         String    @default("pending")
+  enabled        Boolean   @default(true)
+  config         Json      @default("{}")
+  lastRunAt      DateTime?
+  lastSuccessAt  DateTime?
+  lastError      String?
+  runCount       Int       @default(0)
+  successCount   Int       @default(0)
+  failCount      Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  farm       Farm            @relation("FarmTasks", fields: [farmId], references: [id], onDelete: Cascade)
+  executions TaskExecution[]
+  
+  @@index([farmId])
+  @@index([status])
+  @@index([nextRunAt])
+  @@index([taskType])
+}
+
+model TaskExecution {
+  id          String    @id @default(uuid())
+  taskId      String
+  status      String
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  durationMs  Int?
+  result      Json?
+  error       String?
+  workerId    String?
+  retryCount  Int       @default(0)
+  createdAt   DateTime  @default(now())
+  
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  @@index([taskId, createdAt])
+}
+
+model TaskTemplate {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  description     String?
+  taskType        String
+  defaultConfig   Json     @default("{}")
+  defaultPriority Int      @default(3)
+  category        String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
