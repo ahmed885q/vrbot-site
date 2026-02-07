@@ -1,25 +1,84 @@
 {
   "name": "vrbot-site",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "start": "next start -p 3000",
+    "ws:hub": "node backend/ws-server.js",
+    "agent": "node backend/agent-client.js",
+    "viking:dev": "next dev --experimental-https",
+    "viking:build": "next build",
+    "viking:start": "next start",
+    "viking:tasks": "tsx modules/viking-rise/scripts/run-tasks.ts",
+    "viking:test": "jest modules/viking-rise/__tests__",
+    "viking:integration": "tsx modules/viking-rise/scripts/integration-test.ts"
   },
   "dependencies": {
-    "next": "^14.2.0",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
-    "@supabase/supabase-js": "^2.45.0",
-    "@supabase/ssr": "^0.5.2",
-    "antd": "^5.20.0",
-    "@ant-design/icons": "^5.5.0",
-    "hls.js": "^1.5.15",
-    "next-auth": "^4.24.7",
-    "stripe": "^16.2.0"
+    "@supabase/auth-helpers-nextjs": "^0.15.0",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.90.1",
+    "antd": "^6.2.1",
+    "axios": "^1.7.9",
+    "canvas": "^3.1.0",
+    "hls.js": "^1.6.15",
+    "jimp": "^0.22.12",
+    "next": "^14.2.35",
+    "next-auth": "^4.24.13",
+    "node-cron": "^3.0.3",
+    "puppeteer": "^23.6.1",
+    "puppeteer-core": "^23.6.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.3.1",
+    "sharp": "^0.33.5",
+    "stripe": "^20.2.0",
+    "tsx": "^4.19.3",
+    "usb": "^2.12.0",
+    "uuid": "^11.0.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.0.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/puppeteer": "^5.4.7",
+    "@types/react": "19.2.7",
+    "@types/stripe": "^8.0.416",
+    "@types/uuid": "^10.0.0",
+    "autoprefixer": "^10.4.23",
+    "eslint": "9.39.2",
+    "eslint-config-next": "16.1.4",
+    "jest": "^29.7.0",
+    "playwright": "^1.49.0",
+    "postcss": "^8.5.6",
+    "supabase": "^0.5.0",
+    "tailwindcss": "^4.1.18",
+    "ts-jest": "^29.2.5",
+    "typescript": "5.9.3"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "vikingRise": {
+    "version": "1.0.0",
+    "features": [
+      "behavior-simulation",
+      "ban-protection",
+      "adb-integration",
+      "image-recognition",
+      "task-scheduling",
+      "multi-device-support"
+    ],
+    "supportedGames": [
+      "Viking Rise"
+    ],
+    "requirements": {
+      "node": ">=18.0.0",
+      "adb": ">=1.0.41",
+      "opencv": "optional"
+    }
   }
 }
