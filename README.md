@@ -1,31 +1,53 @@
-# VRBOT (Professional Split)
+=== Viking Rise Windows Agent ===
+Version: 2.0.0
 
-This package is a **clean, production-friendly split** of the original project to avoid future build/deploy issues.
+1) Install Node.js 18 or higher on Windows
+   Download from: https://nodejs.org/
 
-## Structure
+2) Open Command Prompt or PowerShell
 
-- `apps/web` — Next.js UI only (no agent/backend code imported)
-- `apps/api` — Backend / WS hub (server-side only)
-- `apps/agent-windows` — Windows Agent (runs on Windows host / Windows VM)
-- `apps/desktop` — Desktop app (Electron)
-- `packages/shared` — shared types/contracts (optional)
-- `packages/viking-rise-core` — game automation core (agent-side)
+3) Navigate to the agent folder:
+   cd "C:\path\to\agent-windows"
 
-## Why this split?
-Next.js **must not** directly import Windows/agent code. UI talks to API over HTTP.
-This removes the recurring `Module not found` and build failures.
+4) Install dependencies (if needed):
+   npm install node-fetch@2
 
-## Quick start (Web)
+5) Run the agent:
+   node agent.js
 
-```bash
-cd apps/web
-npm install
-cp .env.example .env.local
-npm run dev
-```
+6) On first run, you'll be asked for:
+   - APP_URL: Your Viking Rise application URL
+   - DEVICE TOKEN: Get this from the /bot page -> Devices tab
 
-## Next steps
-1. Implement real API proxy in `apps/web/app/api/agent/*` to call `apps/api`.
-2. Run `apps/api` on server (Linux).
-3. Run `apps/agent-windows` on Windows (local PC / Windows Server) and connect it to `apps/api`.
+7) The agent will:
+   - Register your device with the server
+   - Send regular heartbeats every 30 seconds
+   - Monitor system resources
+   - Send logs to the dashboard
+   - Check for updates automatically
 
+8) To run as a Windows Service (optional):
+   - Use PM2: npm install -g pm2
+   - pm2 start agent.js --name "viking-rise-agent"
+   - pm2 save
+   - pm2 startup
+
+9) View logs:
+   - Real-time logs: pm2 logs viking-rise-agent
+   - File logs: Check agent.log in the same folder
+
+10) For troubleshooting:
+    - Check agent.log file
+    - Verify network connectivity to APP_URL
+    - Ensure token is valid and not expired
+
+=== Features ===
+- Automatic device registration
+- System monitoring
+- Heartbeat and status updates
+- Remote logging
+- Automatic update checks
+- Graceful shutdown
+
+=== Support ===
+For issues or questions, contact: ahmed85q@hotmail.com
