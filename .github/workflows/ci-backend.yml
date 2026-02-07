@@ -6,7 +6,7 @@ on:
       - "backend/**"
       - ".github/workflows/ci-backend.yml"
   push:
-    branches: [ "main" ]
+    branches: ["main"]
     paths:
       - "backend/**"
       - ".github/workflows/ci-backend.yml"
@@ -14,30 +14,29 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
-
     defaults:
       run:
         working-directory: backend
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js (npm)
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: 20
+          cache: npm
           cache-dependency-path: backend/package-lock.json
 
-      - name: Install dependencies
+      - name: Install
         run: npm ci
 
-      - name: Lint (optional)
-        run: npm run lint --if-present
+      - name: Lint
+        run: npm run lint
 
-      - name: Test (optional)
-        run: npm test --if-present
+      - name: Test
+        run: npm test
 
       - name: Build
         run: npm run build
