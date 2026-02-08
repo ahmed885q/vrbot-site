@@ -25,7 +25,7 @@ async function baseProcessor(job) {
         status: 'success',
         completedAt: new Date(),
         durationMs: duration,
-        result,
+        result: JSON.stringify(result),  // ← التعديل هنا
       },
     });
 
