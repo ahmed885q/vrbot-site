@@ -44,5 +44,5 @@
     "modules/**/*",
     "lib/**/*"
   ],
-  "exclude": ["node_modules", ".next"]
+  "exclude": ["node_modules", ".next", "modules/viking-rise/scripts", "packages/viking-rise-core/scripts", "scripts"]
 }
