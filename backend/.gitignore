@@ -1,0 +1,22 @@
+
+# Database files
+*.db
+*.db-journal
+
+# Test files
+test-*.js
+seed-*.js
+
+# Environment
+.env.local
+
+# Database files
+*.db
+*.db-journal
+
+# Test files
+test-*.js
+seed-*.js
+
+# Environment
+.env.local

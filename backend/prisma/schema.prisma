@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -33,7 +33,7 @@ model Farm {
   userId    String
   name      String
   server    String?
-  settings  Json     @default("{}")
+  settings  String     @default("{}")
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -55,11 +55,11 @@ model Task {
   taskName       String
   priority       Int       @default(3)
   scheduleType   String
-  scheduleValue  Json      @default("{}")
+  scheduleValue  String      @default("{}")
   nextRunAt      DateTime?
   status         String    @default("pending")
   enabled        Boolean   @default(true)
-  config         Json      @default("{}")
+  config         String      @default("{}")
   lastRunAt      DateTime?
   lastSuccessAt  DateTime?
   lastError      String?
@@ -85,7 +85,7 @@ model TaskExecution {
   startedAt   DateTime  @default(now())
   completedAt DateTime?
   durationMs  Int?
-  result      Json?
+  result      String?
   error       String?
   workerId    String?
   retryCount  Int       @default(0)
@@ -101,7 +101,7 @@ model TaskTemplate {
   name            String   @unique
   description     String?
   taskType        String
-  defaultConfig   Json     @default("{}")
+  defaultConfig   String     @default("{}")
   defaultPriority Int      @default(3)
   category        String?
   isActive        Boolean  @default(true)

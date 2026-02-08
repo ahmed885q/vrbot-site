@@ -2,5 +2,14 @@
   "scripts": {
     "tasks:server": "node src/tasks-server.js",
     "tasks:dev": "nodemon src/tasks-server.js"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bull": "^4.16.5",
+    "express": "^5.2.1",
+    "node-cron": "^4.2.1"
   }
 }
