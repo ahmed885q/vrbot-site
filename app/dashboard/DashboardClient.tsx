@@ -2,744 +2,606 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-type Props = {
-  email: string;
-  plan: string;
-  status: string;
-  formattedPeriodEnd: string;
+type WsStatus = "idle" | "connecting" | "online" | "offline" | "error";
+
+type HubMsg = {
+  type: string;
+  id?: string;
+  ts?: number;
+  payload?: any;
+  meta?: any;
 };
 
-type TokenPayload = {
-  role?: string;
-  wsBase?: string;        // wss://.../ws
-  wsBaseUrl?: string;     // alias
-  baseUrl?: string;       // alias
+type AgentPeer = {
+  clientId: string;
+  deviceId?: string;
+  name?: string;
+  lastSeen?: number;
+  status: "online" | "offline";
 };
 
-const LS_TOKEN = "dashboard_token";
-const LS_WSBASE = "dashboard_wsbase";
-const LS_AUTOCONNECT = "dashboard_autoconnect";
-
-type WsState = "offline" | "connecting" | "online";
-
-function safeTrim(v?: string | null) {
-  return (v ?? "").trim();
+function clamp(n: number, a: number, b: number) {
+  return Math.max(a, Math.min(b, n));
 }
 
-function nowTime() {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+function fmtTime(ts?: number) {
+  if (!ts) return "—";
+  return new Date(ts).toLocaleString();
 }
 
-function tryJsonParse<T>(txt: string): T | null {
-  try {
-    return JSON.parse(txt) as T;
-  } catch {
-    return null;
-  }
+function msAgo(ts?: number) {
+  if (!ts) return "—";
+  const diff = Date.now() - ts;
+  if (diff < 1000) return `${diff}ms`;
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  return `${h}h`;
 }
 
-function tryDecodeDashboardToken(raw: string): TokenPayload | null {
-  const t = safeTrim(raw);
-  if (!t) return null;
-
-  // direct JSON?
-  const direct = tryJsonParse<TokenPayload>(t);
-  if (direct && typeof direct === "object") return direct;
-
-  // base64 or base64url JSON
-  const normalized = t.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
-
-  try {
-    const decoded = atob(padded);
-    const asJson = tryJsonParse<TokenPayload>(decoded);
-    if (asJson && typeof asJson === "object") return asJson;
-  } catch {
-    // ignore
-  }
-
-  return null;
+function normalizeWsBase(input: string): string {
+  const v = (input || "").trim();
+  if (!v) return "";
+  if (v.startsWith("https://")) return "wss://" + v.slice("https://".length);
+  if (v.startsWith("http://")) return "ws://" + v.slice("http://".length);
+  if (v.startsWith("ws://") || v.startsWith("wss://")) return v;
+  return `wss://${v}`;
 }
 
-function getWsBaseFromEnvOrLocation(): string {
-  // env first
-  const env = safeTrim(process.env.NEXT_PUBLIC_WS_BASE);
-  if (env) return env;
-
-  // codespaces/local fallback: same host but ws on :8787
-  const { protocol, hostname } = window.location;
-  const wsProto = protocol === "https:" ? "wss:" : "ws:";
-  return `${wsProto}//${hostname}:8787/ws`;
-}
-
-function normalizeWsBase(base: string) {
-  let b = safeTrim(base);
-
-  // allow user to paste host only
-  if (b && !/^wss?:\/\//i.test(b)) {
-    b = `wss://${b}`;
-  }
-
-  // ensure ends with /ws
-  try {
-    const u = new URL(b);
-    if (!u.pathname || u.pathname === "/") u.pathname = "/ws";
-    if (!u.pathname.endsWith("/ws")) {
-      // if ends with /ws/ etc.
-      u.pathname = u.pathname.replace(/\/+$/, "");
-      if (!u.pathname.endsWith("/ws")) u.pathname = `${u.pathname}/ws`.replace(/\/{2,}/g, "/");
-    }
-    return u.toString();
-  } catch {
-    return b;
-  }
-}
-
-function buildWsUrl(wsBase: string, token: string) {
+function buildWsUrl(wsBase: string, params: Record<string, string>) {
   const base = normalizeWsBase(wsBase);
-  const tok = safeTrim(token);
-
   const u = new URL(base);
-  u.searchParams.set("role", "dashboard");
-  if (tok) u.searchParams.set("token", tok);
+  Object.entries(params).forEach(([k, val]) => {
+    if (val && val.trim().length > 0) u.searchParams.set(k, val.trim());
+  });
   return u.toString();
 }
 
-// Exponential backoff with cap + jitter
-function computeBackoffMs(attempt: number) {
-  const base = 800;                // start
-  const cap = 15000;               // max
-  const exp = Math.min(cap, base * Math.pow(2, attempt));
-  const jitter = Math.floor(Math.random() * 350); // small random
-  return exp + jitter;
-}
-
-export default function DashboardClient({
-  email,
-  plan,
-  status,
-  formattedPeriodEnd,
-}: Props) {
-  // UI state
-  const [tokenInput, setTokenInput] = useState("");
-  const [wsBaseOverride, setWsBaseOverride] = useState("");
-  const [autoConnect, setAutoConnect] = useState(true);
-
-  const [wsState, setWsState] = useState<WsState>("offline");
-  const [wsError, setWsError] = useState<string>("");
-  const [wsUrl, setWsUrl] = useState<string>("");
-  const [lastEvent, setLastEvent] = useState<string>("");
-
-  const [devicesCount, setDevicesCount] = useState<number>(0);
-  const [streamStatus, setStreamStatus] = useState<string>("No stream status yet.");
-
-  // Refs for WS lifecycle
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<number | null>(null);
-  const heartbeatTimerRef = useRef<number | null>(null);
-  const reconnectAttemptRef = useRef<number>(0);
-  const manualCloseRef = useRef<boolean>(false);
-  const lastPongRef = useRef<number>(0);
-
-  // logs (lightweight)
-  const [logs, setLogs] = useState<string[]>([]);
-  const pushLog = (msg: string) => {
-    setLogs((prev) => {
-      const next = [`[${nowTime()}] ${msg}`, ...prev];
-      return next.slice(0, 60); // keep 60
-    });
-  };
-
-  // Badges
-  const planStyles: Record<string, { bg: string; color: string; label: string; icon: string }> = {
-    trial: { bg: "#e0f2fe", color: "#075985", label: "TRIAL", icon: "⏳" },
-    free: { bg: "#e5e7eb", color: "#374151", label: "FREE", icon: "•" },
-    pro: { bg: "#dcfce7", color: "#166534", label: "PRO", icon: "⚡" },
-    enterprise: { bg: "#ede9fe", color: "#5b21b6", label: "ENTERPRISE", icon: "◆" },
-  };
-  const statusStyles: Record<string, { bg: string; color: string; label: string; icon: string }> = {
-    active: { bg: "#dcfce7", color: "#166534", label: "ACTIVE", icon: "✓" },
-    trialing: { bg: "#e0f2fe", color: "#075985", label: "TRIALING", icon: "⏳" },
-    expired: { bg: "#fee2e2", color: "#991b1b", label: "EXPIRED", icon: "✕" },
-    canceled: { bg: "#fee2e2", color: "#991b1b", label: "CANCELED", icon: "✕" },
-    past_due: { bg: "#fef3c7", color: "#92400e", label: "PAST DUE", icon: "!" },
-    "-": { bg: "#e5e7eb", color: "#374151", label: "NONE", icon: "•" },
-  };
-  const planBadge = planStyles[plan] ?? {
-    bg: "#e5e7eb",
-    color: "#374151",
-    label: String(plan).toUpperCase(),
-    icon: "•",
-  };
-  const statusBadge = statusStyles[status] ?? {
-    bg: "#e5e7eb",
-    color: "#374151",
-    label: String(status).toUpperCase(),
-    icon: "•",
-  };
-
-  // Styles
-  const badgeStyleBase: React.CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    padding: "7px 12px",
-    borderRadius: 999,
-    fontSize: 12,
-    fontWeight: 800,
-    lineHeight: 1,
-    whiteSpace: "nowrap",
-    border: "1px solid rgba(0,0,0,0.06)",
-  };
-
-  const cardStyle: React.CSSProperties = {
-    marginTop: 14,
-    padding: 16,
-    borderRadius: 16,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
-    boxShadow: "0 8px 30px rgba(0,0,0,0.04)",
-  };
-
-  const rowStyle: React.CSSProperties = {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    padding: "10px 0",
-    borderTop: "1px solid #f1f5f9",
-    flexWrap: "wrap",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    fontSize: 12,
-    letterSpacing: 0.6,
-    fontWeight: 900,
-    color: "#334155",
-    textTransform: "uppercase",
-  };
-
-  const valueStyle: React.CSSProperties = {
-    fontSize: 14,
+// ====== Styles ======
+const styles = {
+  page: {
+    minHeight: '100vh',
+    background: '#f8f9fa',
+    padding: '24px',
+  } as React.CSSProperties,
+  container: {
+    maxWidth: '1200px',
+    margin: '0 auto',
+  } as React.CSSProperties,
+  card: {
+    background: '#ffffff',
+    borderRadius: '12px',
+    border: '1px solid #e8e8e8',
+    padding: '20px',
+    marginBottom: '20px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+  } as React.CSSProperties,
+  cardTitle: {
+    fontSize: '20px',
     fontWeight: 700,
-    color: "#0f172a",
-    wordBreak: "break-word",
-  };
+    color: '#1a1a2e',
+    marginBottom: '4px',
+  } as React.CSSProperties,
+  cardSubtitle: {
+    fontSize: '13px',
+    color: '#888',
+    marginBottom: '16px',
+  } as React.CSSProperties,
+  label: {
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#555',
+    display: 'block',
+    marginBottom: '4px',
+  } as React.CSSProperties,
+  input: {
+    width: '100%',
+    padding: '8px 12px',
+    border: '1px solid #d9d9d9',
+    borderRadius: '8px',
+    fontSize: '14px',
+    outline: 'none',
+    fontFamily: "'Times New Roman', Times, serif",
+    boxSizing: 'border-box' as const,
+  } as React.CSSProperties,
+  textarea: {
+    width: '100%',
+    padding: '8px 12px',
+    border: '1px solid #d9d9d9',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontFamily: 'monospace',
+    outline: 'none',
+    resize: 'vertical' as const,
+    boxSizing: 'border-box' as const,
+  } as React.CSSProperties,
+  btnPrimary: {
+    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+    color: '#fff',
+    border: 'none',
+    padding: '10px 20px',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: "'Times New Roman', Times, serif",
+  } as React.CSSProperties,
+  btnDanger: {
+    background: '#ff4d4f',
+    color: '#fff',
+    border: 'none',
+    padding: '10px 20px',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: "'Times New Roman', Times, serif",
+  } as React.CSSProperties,
+  btnSuccess: {
+    background: '#52c41a',
+    color: '#fff',
+    border: 'none',
+    padding: '10px 20px',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: "'Times New Roman', Times, serif",
+  } as React.CSSProperties,
+  btnOutline: {
+    background: '#f5f5f5',
+    color: '#333',
+    border: '1px solid #d9d9d9',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: "'Times New Roman', Times, serif",
+  } as React.CSSProperties,
+  statusBadge: (status: WsStatus) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 14px',
+    borderRadius: '20px',
+    fontSize: '13px',
+    fontWeight: 600,
+    background: status === 'online' ? '#f6ffed' : status === 'connecting' ? '#e6f7ff' : status === 'error' ? '#fff2f0' : '#f5f5f5',
+    color: status === 'online' ? '#52c41a' : status === 'connecting' ? '#1890ff' : status === 'error' ? '#ff4d4f' : '#888',
+    border: `1px solid ${status === 'online' ? '#b7eb8f' : status === 'connecting' ? '#91d5ff' : status === 'error' ? '#ffccc7' : '#d9d9d9'}`,
+  }) as React.CSSProperties,
+  agentCard: (isOnline: boolean) => ({
+    padding: '12px 16px',
+    borderRadius: '8px',
+    border: `1px solid ${isOnline ? '#b7eb8f' : '#e8e8e8'}`,
+    background: isOnline ? '#f6ffed' : '#fafafa',
+    marginBottom: '8px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  }) as React.CSSProperties,
+  logBox: {
+    background: '#1a1a2e',
+    borderRadius: '8px',
+    padding: '12px',
+    height: '400px',
+    overflowY: 'auto' as const,
+    marginTop: '12px',
+  } as React.CSSProperties,
+  logLine: {
+    fontSize: '12px',
+    color: '#a0e4a0',
+    fontFamily: 'monospace',
+    marginBottom: '2px',
+    wordBreak: 'break-all' as const,
+  } as React.CSSProperties,
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '20px',
+  } as React.CSSProperties,
+  grid3: {
+    display: 'grid',
+    gridTemplateColumns: '2fr 1.5fr 1fr',
+    gap: '16px',
+    alignItems: 'end',
+  } as React.CSSProperties,
+  flexBetween: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  } as React.CSSProperties,
+  flexGap: {
+    display: 'flex',
+    gap: '8px',
+  } as React.CSSProperties,
+  sessionInfo: {
+    background: '#f0f7ff',
+    borderRadius: '8px',
+    padding: '12px 16px',
+    marginTop: '16px',
+    fontSize: '13px',
+    color: '#333',
+    border: '1px solid #d6e4ff',
+  } as React.CSSProperties,
+  checkboxRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '8px',
+  } as React.CSSProperties,
+  emptyState: {
+    padding: '24px',
+    textAlign: 'center' as const,
+    color: '#999',
+    fontSize: '14px',
+    border: '2px dashed #e8e8e8',
+    borderRadius: '8px',
+  } as React.CSSProperties,
+  hint: {
+    fontSize: '12px',
+    color: '#999',
+    marginTop: '4px',
+  } as React.CSSProperties,
+};
 
-  // Load saved settings
-  useEffect(() => {
-    try {
-      const savedToken = localStorage.getItem(LS_TOKEN) ?? "";
-      const savedBase = localStorage.getItem(LS_WSBASE) ?? "";
-      const savedAuto = localStorage.getItem(LS_AUTOCONNECT);
-      if (savedToken) setTokenInput(savedToken);
-      if (savedBase) setWsBaseOverride(savedBase);
-      if (savedAuto !== null) setAutoConnect(savedAuto === "1");
-    } catch {}
-  }, []);
+export default function DashboardPage() {
+  const envBase = (process.env.NEXT_PUBLIC_WS_BASE || "").trim();
+  const [wsBase, setWsBase] = useState<string>("");
+  const [token, setToken] = useState<string>("change-me");
 
-  // Effective WS base
+  const [status, setStatus] = useState<WsStatus>("idle");
+  const [statusMsg, setStatusMsg] = useState<string>("");
+  const [autoReconnect, setAutoReconnect] = useState<boolean>(true);
+
+  const [welcome, setWelcome] = useState<any>(null);
+  const [agents, setAgents] = useState<Record<string, AgentPeer>>({});
+  const [logs, setLogs] = useState<string[]>([]);
+
+  const [outType, setOutType] = useState<string>("dashboard_cmd");
+  const [outPayload, setOutPayload] = useState<string>('{"action":"ping"}');
+
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<any>(null);
+  const attemptRef = useRef<number>(0);
+
   const effectiveWsBase = useMemo(() => {
-    const manual = safeTrim(wsBaseOverride);
-    if (manual) return normalizeWsBase(manual);
-    return normalizeWsBase(getWsBaseFromEnvOrLocation());
-  }, [wsBaseOverride]);
+    return wsBase.trim() || envBase || "ws://127.0.0.1:8787/ws";
+  }, [wsBase, envBase]);
 
-  // --- WS lifecycle helpers ---
-  const clearReconnectTimer = () => {
+  function pushLog(line: string) {
+    setLogs((prev) => [line, ...prev].slice(0, 300));
+  }
+
+  function clearReconnectTimer() {
     if (reconnectTimerRef.current) {
-      window.clearTimeout(reconnectTimerRef.current);
+      clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
     }
-  };
+  }
 
-  const clearHeartbeatTimer = () => {
-    if (heartbeatTimerRef.current) {
-      window.clearInterval(heartbeatTimerRef.current);
-      heartbeatTimerRef.current = null;
-    }
-  };
+  function setAgentOnline(payload: any) {
+    const clientId = String(payload?.clientId || "");
+    if (!clientId) return;
+    setAgents((prev) => {
+      const current = prev[clientId];
+      const next: AgentPeer = {
+        clientId,
+        deviceId: payload?.deviceId || current?.deviceId,
+        name: payload?.name || current?.name,
+        lastSeen: payload?.lastSeen || Date.now(),
+        status: "online",
+      };
+      return { ...prev, [clientId]: next };
+    });
+  }
 
-  const closeWs = (reason: string) => {
+  function setAgentOffline(payload: any) {
+    const clientId = String(payload?.clientId || "");
+    if (!clientId) return;
+    setAgents((prev) => {
+      const current = prev[clientId];
+      if (!current) return prev;
+      return { ...prev, [clientId]: { ...current, status: "offline", lastSeen: payload?.lastSeen || current.lastSeen } };
+    });
+  }
+
+  function markAllOffline() {
+    setAgents((prev) => {
+      const out: Record<string, AgentPeer> = {};
+      Object.values(prev).forEach((a) => (out[a.clientId] = { ...a, status: "offline" }));
+      return out;
+    });
+  }
+
+  function scheduleReconnect(reason: string) {
+    if (!autoReconnect) return;
+    attemptRef.current += 1;
+    const delay = clamp(1000 * Math.pow(2, attemptRef.current - 1), 1000, 15000);
     clearReconnectTimer();
-    clearHeartbeatTimer();
+    setStatus("offline");
+    setStatusMsg(`${reason} — reconnect in ${Math.round(delay / 1000)}s`);
+    pushLog(`[reconnect] ${reason} | attempt=${attemptRef.current} | delay=${delay}ms`);
+    reconnectTimerRef.current = setTimeout(() => connect(), delay);
+  }
 
-    const ws = wsRef.current;
+  function disconnect(reason = "manual disconnect") {
+    clearReconnectTimer();
+    attemptRef.current = 0;
+    try { wsRef.current?.close(1000, reason); } catch {}
     wsRef.current = null;
+    setStatus("offline");
+    setStatusMsg(reason);
+    markAllOffline();
+    pushLog(`[ws] disconnected (${reason})`);
+  }
 
-    if (ws) {
-      try {
-        ws.onopen = null;
-        ws.onmessage = null;
-        ws.onerror = null;
-        ws.onclose = null;
-        ws.close();
-      } catch {}
+  function connect() {
+    if (!token.trim()) {
+      setStatus("error");
+      setStatusMsg("Token is required");
+      return;
     }
-
-    setWsState("offline");
-    pushLog(`WS closed: ${reason}`);
-  };
-
-  const scheduleReconnect = (why: string) => {
-    if (!autoConnect) return;
-    if (manualCloseRef.current) return;
-
     clearReconnectTimer();
-    const attempt = reconnectAttemptRef.current;
-    const delay = computeBackoffMs(attempt);
-
-    pushLog(`Reconnecting in ${Math.round(delay)}ms (${why})`);
-    setLastEvent(`Reconnect scheduled (${Math.round(delay)}ms)`);
-
-    reconnectTimerRef.current = window.setTimeout(() => {
-      reconnectAttemptRef.current += 1;
-      connectInternal("auto-reconnect");
-    }, delay);
-  };
-
-  const handleIncomingMessage = (raw: string) => {
-    // Many backends send JSON events. We support:
-    // {type:"pong"} / {type:"devices",count:..} / {type:"stream",status:"..."} / other
-    const obj = tryJsonParse<any>(raw);
-
-    if (obj && typeof obj === "object") {
-      const type = String(obj.type ?? obj.event ?? "").toLowerCase();
-
-      if (type === "pong") {
-        lastPongRef.current = Date.now();
-        setLastEvent("PONG");
-        return;
-      }
-
-      if (type === "devices" && typeof obj.count === "number") {
-        setDevicesCount(obj.count);
-        setLastEvent(`Devices: ${obj.count}`);
-        return;
-      }
-
-      if (type === "stream" && typeof obj.status === "string") {
-        setStreamStatus(obj.status);
-        setLastEvent(`Stream: ${obj.status}`);
-        return;
-      }
-    }
-
-    // fallback: show minimal
-    setLastEvent("Message received");
-  };
-
-  const startHeartbeat = () => {
-    clearHeartbeatTimer();
-    lastPongRef.current = Date.now();
-
-    // Every 10s ping. If no pong for 30s -> reconnect
-    heartbeatTimerRef.current = window.setInterval(() => {
-      const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-      // send ping
-      try {
-        ws.send(JSON.stringify({ type: "ping", t: Date.now() }));
-        pushLog("PING");
-      } catch {}
-
-      // check stale
-      const sincePong = Date.now() - lastPongRef.current;
-      if (sincePong > 30000) {
-        pushLog("Heartbeat stale (>30s). Forcing reconnect.");
-        setWsError("Heartbeat timeout. Reconnecting…");
-        closeWs("heartbeat timeout");
-        scheduleReconnect("heartbeat-timeout");
-      }
-    }, 10000);
-  };
-
-  const connectInternal = (mode: "manual" | "auto-reconnect") => {
-    setWsError("");
-    setLastEvent("");
-    setWsState("connecting");
-
-    manualCloseRef.current = false;
-
-    const token = safeTrim(tokenInput);
-
-    // token can include wsBase
-    const decoded = tryDecodeDashboardToken(token);
-    const tokenWsBase =
-      safeTrim(decoded?.wsBase) || safeTrim(decoded?.wsBaseUrl) || safeTrim(decoded?.baseUrl);
-
-    const finalWsBase = tokenWsBase ? normalizeWsBase(tokenWsBase) : effectiveWsBase;
-    const url = buildWsUrl(finalWsBase, token);
-
-    setWsUrl(url);
-    pushLog(`${mode === "manual" ? "Manual connect" : "Auto connect"} -> ${finalWsBase}`);
-
-    // Close existing first
-    if (wsRef.current) closeWs("reconnecting");
+    const wsUrl = buildWsUrl(effectiveWsBase, { role: "dashboard", token: token.trim() });
+    try { wsRef.current?.close(1000, "reconnect"); } catch {}
+    setStatus("connecting");
+    setStatusMsg("Connecting…");
+    pushLog(`[ws] connecting: ${wsUrl}`);
 
     let ws: WebSocket;
     try {
-      ws = new WebSocket(url);
+      ws = new WebSocket(wsUrl);
     } catch (e: any) {
-      setWsState("offline");
-      setWsError(e?.message || "Failed to create WebSocket");
-      pushLog(`WS create error: ${e?.message || "unknown"}`);
-      scheduleReconnect("create-failed");
+      setStatus("error");
+      setStatusMsg(String(e?.message || e));
+      scheduleReconnect("create socket failed");
       return;
     }
-
     wsRef.current = ws;
 
     ws.onopen = () => {
-      reconnectAttemptRef.current = 0;
-      setWsState("online");
-      setWsError("");
-      setLastEvent("Connected");
-      pushLog("WS OPEN ✓");
-
-      // save settings
-      try {
-        localStorage.setItem(LS_TOKEN, token);
-        localStorage.setItem(LS_WSBASE, safeTrim(wsBaseOverride));
-        localStorage.setItem(LS_AUTOCONNECT, autoConnect ? "1" : "0");
-      } catch {}
-
-      // start heartbeat
-      startHeartbeat();
-
-      // optional: ask for initial info
-      try {
-        ws.send(JSON.stringify({ type: "hello", role: "dashboard" }));
-      } catch {}
+      setStatus("online");
+      setStatusMsg("Connected ✅");
+      attemptRef.current = 0;
+      pushLog("[ws] connected ✅");
+      try { ws.send(JSON.stringify({ type: "ping", ts: Date.now() })); } catch {}
     };
 
     ws.onmessage = (ev) => {
-      const data = typeof ev.data === "string" ? ev.data : "";
-      if (!data) return;
+      let msg: HubMsg | null = null;
+      try { msg = JSON.parse(String(ev.data)); } catch { return; }
+      if (!msg?.type) return;
 
-      // update pong if server echoes "pong" raw
-      if (data === "pong") {
-        lastPongRef.current = Date.now();
-        setLastEvent("PONG");
-        pushLog("PONG");
-        return;
+      if (msg.type === "hub_welcome") {
+        setWelcome(msg.payload || null);
+        if (Array.isArray(msg.payload?.agents)) {
+          msg.payload.agents.forEach((a: any) => setAgentOnline(a));
+        }
+        pushLog(`[in] hub_welcome — clientId=${msg.payload?.clientId}`);
+      } else if (msg.type === "agent_online") {
+        setAgentOnline(msg.payload);
+        pushLog(`[in] agent_online — ${msg.payload?.clientId}`);
+      } else if (msg.type === "agent_offline") {
+        setAgentOffline(msg.payload);
+        pushLog(`[in] agent_offline — ${msg.payload?.clientId}`);
+      } else if (msg.type === "pong") {
+        pushLog(`[in] pong`);
+      } else {
+        pushLog(`[in] ${msg.type}`);
       }
-
-      handleIncomingMessage(data);
     };
 
     ws.onerror = () => {
-      setWsState("offline");
-      setWsError("WebSocket error (check WS server / token / port visibility).");
-      pushLog("WS ERROR");
-      try {
-        ws.close();
-      } catch {}
+      pushLog("[ws] error");
     };
 
-    ws.onclose = (e) => {
-      setWsState("offline");
-      clearHeartbeatTimer();
-      const code = e?.code ?? 0;
-      const reason = e?.reason ? ` - ${e.reason}` : "";
-      pushLog(`WS CLOSE (code ${code})${reason}`);
-
-      if (!manualCloseRef.current) {
-        scheduleReconnect(`close-${code}`);
-      }
+    ws.onclose = (ev) => {
+      setStatus("offline");
+      markAllOffline();
+      const reason = ev.reason || `code=${ev.code}`;
+      pushLog(`[ws] closed (${reason})`);
+      if (ev.code !== 1000) scheduleReconnect(reason);
     };
-  };
+  }
 
-  // Public actions
-  const onApply = () => {
-    reconnectAttemptRef.current = 0;
-    connectInternal("manual");
-  };
-
-  const onDisconnect = () => {
-    manualCloseRef.current = true;
-    closeWs("manual disconnect");
-  };
-
-  const onClear = () => {
-    manualCloseRef.current = true;
-    closeWs("clear");
-    setTokenInput("");
-    setWsBaseOverride("");
-    setWsUrl("");
-    setWsError("");
-    setLastEvent("");
-    setDevicesCount(0);
-    setStreamStatus("No stream status yet.");
+  function sendMessage() {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      pushLog("[out] not connected");
+      return;
+    }
+    let payloadObj: any;
+    try { payloadObj = JSON.parse(outPayload); } catch { payloadObj = outPayload; }
+    const msg: HubMsg = { type: outType.trim() || "dashboard_cmd", ts: Date.now(), payload: payloadObj };
     try {
-      localStorage.removeItem(LS_TOKEN);
-      localStorage.removeItem(LS_WSBASE);
-      localStorage.removeItem(LS_AUTOCONNECT);
-    } catch {}
-  };
+      ws.send(JSON.stringify(msg));
+      pushLog(`[out] ${msg.type}`);
+    } catch {
+      pushLog("[out] send failed");
+    }
+  }
 
-  // Auto connect on load (if enabled and token exists)
-  useEffect(() => {
-    if (!autoConnect) return;
-    if (!safeTrim(tokenInput)) return;
-
-    // Wait a tick (UI stable)
-    const t = window.setTimeout(() => connectInternal("auto-reconnect"), 400);
-    return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoConnect]);
-
-  // Persist autoConnect toggle
   useEffect(() => {
     try {
-      localStorage.setItem(LS_AUTOCONNECT, autoConnect ? "1" : "0");
+      const savedToken = localStorage.getItem("vrbot_dashboard_token");
+      const savedBase = localStorage.getItem("vrbot_ws_base");
+      if (savedToken) setToken(savedToken);
+      if (savedBase) setWsBase(savedBase);
     } catch {}
-  }, [autoConnect]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      manualCloseRef.current = true;
-      closeWs("unmount");
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const wsBadge =
-    wsState === "online" ? (
-      <span style={{ color: "#166534" }}>Online ✓</span>
-    ) : wsState === "connecting" ? (
-      <span style={{ color: "#92400e" }}>Connecting…</span>
-    ) : (
-      <span style={{ color: "#991b1b" }}>Offline ✕</span>
-    );
+  useEffect(() => { try { localStorage.setItem("vrbot_dashboard_token", token); } catch {} }, [token]);
+  useEffect(() => { try { localStorage.setItem("vrbot_ws_base", wsBase); } catch {} }, [wsBase]);
+  useEffect(() => { return () => { clearReconnectTimer(); try { wsRef.current?.close(1000, "unmount"); } catch {} }; }, []);
+
+  const agentList = useMemo(() => {
+    const arr = Object.values(agents);
+    arr.sort((a, b) => {
+      if (a.status !== b.status) return a.status === "online" ? -1 : 1;
+      return (b.lastSeen || 0) - (a.lastSeen || 0);
+    });
+    return arr;
+  }, [agents]);
+
+  const onlineCount = agentList.filter((a) => a.status === "online").length;
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
-      <h1 style={{ fontSize: 30, fontWeight: 900, margin: 0 }}>Viking Rais | Dashboard</h1>
-      <p style={{ marginTop: 6, color: "#475569", fontWeight: 600 }}>
-        WebSocket Dashboard (Auto-Reconnect + Heartbeat)
-      </p>
+    <div style={styles.page}>
+      <div style={styles.container}>
+        {/* ====== Connection Card ====== */}
+        <div style={styles.card}>
+          <div style={styles.flexBetween}>
+            <div>
+              <h1 style={styles.cardTitle}>🖥️ Dashboard</h1>
+              <p style={styles.cardSubtitle}>Presence • Auto-Reconnect • Live Agents</p>
+            </div>
+            <div style={styles.statusBadge(status)}>
+              {status === 'online' ? '🟢' : status === 'connecting' ? '🔵' : status === 'error' ? '🔴' : '⚪'}
+              {' '}{status} — {statusMsg}
+            </div>
+          </div>
 
-      {/* Subscription */}
-      <div style={cardStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div style={styles.grid3}>
+            <div>
+              <label style={styles.label}>WS Base</label>
+              <input
+                value={wsBase}
+                onChange={(e) => setWsBase(e.target.value)}
+                placeholder={effectiveWsBase}
+                style={styles.input}
+              />
+              <p style={styles.hint}>اتركه فارغاً لاستخدام NEXT_PUBLIC_WS_BASE أو local.</p>
+            </div>
+            <div>
+              <label style={styles.label}>Token</label>
+              <input
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                style={styles.input}
+              />
+            </div>
+            <div>
+              <div style={styles.checkboxRow}>
+                <input type="checkbox" checked={autoReconnect} onChange={(e) => setAutoReconnect(e.target.checked)} />
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#555' }}>Auto-Reconnect</span>
+              </div>
+              <div style={styles.flexGap}>
+                <button onClick={connect} style={styles.btnPrimary}>🔗 Connect</button>
+                <button onClick={() => disconnect()} style={styles.btnDanger}>⛔ Disconnect</button>
+              </div>
+            </div>
+          </div>
+
+          {welcome && (
+            <div style={styles.sessionInfo}>
+              <strong>Session Info:</strong>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginTop: '8px' }}>
+                <div><span style={{ color: '#888' }}>clientId:</span> {welcome.clientId}</div>
+                <div><span style={{ color: '#888' }}>role:</span> {welcome.role}</div>
+                <div><span style={{ color: '#888' }}>serverTs:</span> {fmtTime(welcome.serverTs)}</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ====== Main Grid ====== */}
+        <div style={styles.grid2}>
+          {/* Left Column */}
           <div>
-            <div style={{ fontWeight: 900, fontSize: 16, color: "#0f172a" }}>Subscription</div>
-            <div style={{ marginTop: 4, color: "#64748b", fontWeight: 600, fontSize: 13 }}>
-              Your plan and current billing state
+            {/* Agents */}
+            <div style={styles.card}>
+              <div style={styles.flexBetween}>
+                <h2 style={styles.cardTitle}>👥 Agents</h2>
+                <span style={{
+                  background: '#f0f0f0',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#333',
+                }}>
+                  Online: {onlineCount} / {agentList.length}
+                </span>
+              </div>
+
+              {agentList.length === 0 ? (
+                <div style={styles.emptyState}>
+                  لا يوجد Agents متصلين. شغّل خدمة VRBOT-AGENT.
+                </div>
+              ) : (
+                agentList.map((a) => (
+                  <div key={a.clientId} style={styles.agentCard(a.status === 'online')}>
+                    <div>
+                      <div style={{ fontWeight: 600, color: '#1a1a2e', marginBottom: '4px' }}>
+                        {a.name || a.deviceId || a.clientId}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#888' }}>
+                        deviceId: <span style={{ fontFamily: 'monospace' }}>{a.deviceId || "—"}</span>
+                        {' '} • last seen: {msAgo(a.lastSeen)} ago
+                      </div>
+                    </div>
+                    <span style={{
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      background: a.status === 'online' ? '#52c41a' : '#d9d9d9',
+                      color: '#fff',
+                    }}>
+                      {a.status}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Send */}
+            <div style={styles.card}>
+              <h2 style={styles.cardTitle}>📤 Send</h2>
+              <p style={styles.cardSubtitle}>رسائل عامة إلى agents عبر hub.</p>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={styles.label}>Type</label>
+                <input value={outType} onChange={(e) => setOutType(e.target.value)} style={styles.input} />
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={styles.label}>Payload</label>
+                <textarea value={outPayload} onChange={(e) => setOutPayload(e.target.value)} rows={5} style={styles.textarea} />
+              </div>
+
+              <button onClick={sendMessage} style={styles.btnSuccess}>📤 Send Message</button>
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <span style={{ ...badgeStyleBase, backgroundColor: planBadge.bg, color: planBadge.color }}>
-              <span aria-hidden="true">{planBadge.icon}</span>
-              {planBadge.label}
-            </span>
-            <span style={{ ...badgeStyleBase, backgroundColor: statusBadge.bg, color: statusBadge.color }}>
-              <span aria-hidden="true">{statusBadge.icon}</span>
-              {statusBadge.label}
-            </span>
-          </div>
-        </div>
-
-        <div style={{ marginTop: 12 }}>
-          <div style={rowStyle}>
-            <div style={labelStyle}>PERIOD END</div>
-            <div style={valueStyle}>{formattedPeriodEnd}</div>
-          </div>
-          <div style={rowStyle}>
-            <div style={labelStyle}>EMAIL</div>
-            <div style={valueStyle}>{email}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* WS Setup */}
-      <div style={cardStyle}>
-        <div style={{ fontWeight: 900, fontSize: 16, color: "#0f172a" }}>Connection</div>
-        <div style={{ marginTop: 6, color: "#64748b", fontWeight: 600, fontSize: 13 }}>
-          الصق التوكن ثم Apply. يوجد Auto-Connect و Auto-Reconnect + Heartbeat تلقائيًا.
-        </div>
-
-        <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <input
-            value={tokenInput}
-            onChange={(e) => setTokenInput(e.target.value)}
-            placeholder="Paste dashboard token (or base64 JSON token)…"
-            style={{
-              flex: "1 1 650px",
-              padding: "10px 12px",
-              borderRadius: 12,
-              border: "1px solid #e5e7eb",
-              outline: "none",
-              fontWeight: 700,
-            }}
-          />
-        </div>
-
-        <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <input
-            value={wsBaseOverride}
-            onChange={(e) => setWsBaseOverride(e.target.value)}
-            placeholder="(Optional) Override WS Base e.g. wss://.../ws"
-            style={{
-              flex: "1 1 520px",
-              padding: "10px 12px",
-              borderRadius: 12,
-              border: "1px solid #e5e7eb",
-              outline: "none",
-              fontWeight: 700,
-            }}
-          />
-
-          <button
-            onClick={onApply}
-            style={{
-              padding: "10px 14px",
-              borderRadius: 12,
-              border: "1px solid #0f172a",
-              background: "#0f172a",
-              color: "#fff",
-              fontWeight: 900,
-              cursor: "pointer",
-            }}
-          >
-            Apply
-          </button>
-
-          <button
-            onClick={onDisconnect}
-            style={{
-              padding: "10px 14px",
-              borderRadius: 12,
-              border: "1px solid #e5e7eb",
-              background: "#fff",
-              color: "#0f172a",
-              fontWeight: 900,
-              cursor: "pointer",
-            }}
-          >
-            Disconnect
-          </button>
-
-          <button
-            onClick={onClear}
-            style={{
-              padding: "10px 14px",
-              borderRadius: 12,
-              border: "1px solid #e5e7eb",
-              background: "#f8fafc",
-              color: "#0f172a",
-              fontWeight: 900,
-              cursor: "pointer",
-            }}
-          >
-            Clear
-          </button>
-
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 900, color: "#0f172a" }}>
-            <input
-              type="checkbox"
-              checked={autoConnect}
-              onChange={(e) => setAutoConnect(e.target.checked)}
-            />
-            Auto-Connect
-          </label>
-        </div>
-
-        <div style={{ marginTop: 12, color: "#0f172a", fontWeight: 900 }}>
-          WS: {wsBadge}
-        </div>
-
-        <div style={{ marginTop: 8, color: "#475569", fontWeight: 700, fontSize: 13 }}>
-          Effective WS Base:{" "}
-          <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
-            {effectiveWsBase}
-          </span>
-        </div>
-
-        {wsUrl ? (
-          <div style={{ marginTop: 8, color: "#475569", fontWeight: 700, fontSize: 13 }}>
-            WS URL:{" "}
-            <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
-              {wsUrl}
-            </span>
-          </div>
-        ) : null}
-
-        <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <div style={{ flex: "1 1 300px", padding: 12, borderRadius: 12, background: "#f8fafc", border: "1px solid #e5e7eb" }}>
-            <div style={{ fontWeight: 900, color: "#0f172a" }}>Devices</div>
-            <div style={{ marginTop: 6, fontWeight: 900, fontSize: 22, color: "#0f172a" }}>{devicesCount}</div>
-            <div style={{ marginTop: 4, color: "#64748b", fontWeight: 700, fontSize: 12 }}>
-              Refresh happens via WS events
-            </div>
-          </div>
-
-          <div style={{ flex: "2 1 520px", padding: 12, borderRadius: 12, background: "#f8fafc", border: "1px solid #e5e7eb" }}>
-            <div style={{ fontWeight: 900, color: "#0f172a" }}>Streaming</div>
-            <div style={{ marginTop: 6, fontWeight: 800, color: "#0f172a" }}>{streamStatus}</div>
-            <div style={{ marginTop: 4, color: "#64748b", fontWeight: 700, fontSize: 12 }}>
-              Last event: {lastEvent || "-"}
-            </div>
-          </div>
-        </div>
-
-        {wsError ? (
-          <div style={{ marginTop: 12, color: "#991b1b", fontWeight: 900 }}>
-            {wsError}
-            <div style={{ marginTop: 6, color: "#64748b", fontWeight: 700, fontSize: 12 }}>
-              تأكد أن Port 8787 = Public داخل Codespaces، وأن ws-server يعمل.
-            </div>
-          </div>
-        ) : null}
-      </div>
-
-      {/* Logs */}
-      <div style={cardStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          {/* Right Column - Logs */}
           <div>
-            <div style={{ fontWeight: 900, fontSize: 16, color: "#0f172a" }}>Logs</div>
-            <div style={{ marginTop: 4, color: "#64748b", fontWeight: 700, fontSize: 12 }}>
-              Lightweight connection logs (auto-reconnect, ping/pong)
+            <div style={styles.card}>
+              <div style={styles.flexBetween}>
+                <h2 style={styles.cardTitle}>📋 Logs</h2>
+                <button onClick={() => setLogs([])} style={styles.btnOutline}>🗑️ Clear</button>
+              </div>
+
+              <div style={styles.logBox}>
+                {logs.length === 0 ? (
+                  <div style={{ color: '#666', fontSize: '13px' }}>No logs yet…</div>
+                ) : (
+                  logs.map((l, idx) => (
+                    <div key={idx} style={styles.logLine}>{l}</div>
+                  ))
+                )}
+              </div>
+
+              <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>
+                WS Base: <span style={{ fontFamily: 'monospace' }}>{normalizeWsBase(effectiveWsBase)}</span>
+              </div>
             </div>
           </div>
-          <button
-            onClick={() => setLogs([])}
-            style={{
-              padding: "10px 14px",
-              borderRadius: 12,
-              border: "1px solid #e5e7eb",
-              background: "#fff",
-              color: "#0f172a",
-              fontWeight: 900,
-              cursor: "pointer",
-            }}
-          >
-            Clear Logs
-          </button>
-        </div>
-
-        <div
-          style={{
-            marginTop: 12,
-            padding: 12,
-            borderRadius: 12,
-            border: "1px solid #e5e7eb",
-            background: "#0b1020",
-            color: "#e5e7eb",
-            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-            fontSize: 12,
-            lineHeight: 1.5,
-            maxHeight: 260,
-            overflow: "auto",
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {logs.length ? logs.join("\n") : "No logs yet."}
         </div>
       </div>
     </div>
