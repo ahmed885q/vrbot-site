@@ -1,10 +1,30 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+const PROTECTED_ROUTES = [
+  '/dashboard',
+  '/farms',
+  '/billing',
+  '/viking-rise',
+  '/admin',
+]
+
+function isProtectedRoute(pathname: string): boolean {
+  return PROTECTED_ROUTES.some((route) => pathname === route || pathname.startsWith(route + '/'))
+}
+
+function isExcluded(pathname: string) {
+  if (pathname.startsWith('/_next')) return true
+  if (pathname.startsWith('/favicon')) return true
+  if (pathname.startsWith('/robots.txt')) return true
+  if (pathname.startsWith('/sitemap')) return true
+  if (pathname.startsWith('/assets')) return true
+  if (/\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|woff|woff2)$/.test(pathname)) return true
+  if (pathname.startsWith('/api/auth')) return true
+  if (pathname.startsWith('/api/stripe/webhook')) return true
+  if (pathname.startsWith('/api/billing/paypal-success')) return true
+  return false
+}
 
 function getIp(req: NextRequest) {
   const xff = req.headers.get('x-forwarded-for')
@@ -14,48 +34,40 @@ function getIp(req: NextRequest) {
   return '0.0.0.0'
 }
 
-function isExcluded(pathname: string) {
-  // استثناءات “لازم”
-  if (pathname.startsWith('/_next')) return true
-  if (pathname.startsWith('/favicon')) return true
-  if (pathname.startsWith('/robots.txt')) return true
-  if (pathname.startsWith('/sitemap')) return true
-  if (pathname.startsWith('/assets')) return true
-
-  // ملفات ثابتة شائعة
-  if (/\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|woff|woff2)$/.test(pathname))
-    return true
-
-  // استثناءات حسب مشروعك (مهم)
-  if (pathname.startsWith('/api/auth')) return true // لو عندك auth callbacks
-  if (pathname.startsWith('/api/stripe/webhook')) return true // لو عندك Stripe webhook
-
-  return false
-}
-
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
   if (isExcluded(pathname)) return NextResponse.next()
 
-  const ip = getIp(req)
+  if (isProtectedRoute(pathname)) {
+    const supabaseAuthToken = req.cookies.get('sb-xmanyfpojzkjlwatkrcc-auth-token')?.value
+      || req.cookies.get('sb-xmanyfpojzkjlwatkrcc-auth-token.0')?.value
 
-  const { data, error } = await supabase.rpc('vrbot_check_request', { p_ip: ip })
-
-  // لو صار خطأ بالاتصال — لا نكسر الموقع
-  if (error || !data) return NextResponse.next()
-
-  if (data.allowed === false) {
-    // صفحة حظر بسيطة (بدون redirect loops)
-    return new NextResponse(
-      `Too Many Requests. Try again later.\nBlocked until: ${data.blocked_until ?? ''}`,
-      { status: 429 }
-    )
+    if (!supabaseAuthToken) {
+      const loginUrl = new URL('/login', req.url)
+      loginUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
   }
+
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (supabaseUrl && supabaseKey) {
+      const supabase = createClient(supabaseUrl, supabaseKey)
+      const ip = getIp(req)
+      const { data, error } = await supabase.rpc('vrbot_check_request', { p_ip: ip })
+      if (!error && data && data.allowed === false) {
+        return new NextResponse(
+          `Too Many Requests. Try again later.\nBlocked until: ${data.blocked_until ?? ''}`,
+          { status: 429 }
+        )
+      }
+    }
+  } catch {}
 
   return NextResponse.next()
 }
 
-// ✅ يطبق على كل شيء “ما عدا” assets / _next / ملفات ثابتة (بالـ regex)
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|assets).*)',
