@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+export const dynamic = "force-dynamic";
 import { NextResponse, type NextRequest } from 'next/server'
 import { protectApi } from '@/lib/protection/api-guard'
 
