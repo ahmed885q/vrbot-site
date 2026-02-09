@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 // app/api/license/redeem/route.ts
 import { NextResponse } from "next/server";
 import { supabaseService } from "../../../../lib/supabase/server";

@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 // app/api/subscription/ensure-trial/route.ts
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
