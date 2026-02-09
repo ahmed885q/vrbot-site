@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 // app/api/ai/chat/route.ts
 import { NextResponse } from 'next/server'
 
