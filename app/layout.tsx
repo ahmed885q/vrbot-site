@@ -1,4 +1,5 @@
 import './styles/globals.css';
+import SiteHeader from '@/components/SiteHeader';
 
 export const metadata = {
   title: 'VRBOT - Viking Rise Bot',
@@ -12,7 +13,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
-      <body>{children}</body>
+      <body>
+        <SiteHeader />
+        {children}
+      </body>
     </html>
   );
 }
