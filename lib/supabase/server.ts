@@ -13,3 +13,5 @@ export function supabaseService() {
 
   return createClient(url, key, { auth: { persistSession: false } })
 }
+
+export const createSupabaseServerClient = supabaseService;
