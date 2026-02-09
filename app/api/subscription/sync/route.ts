@@ -4,13 +4,13 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export const runtime = 'nodejs'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+function getStripe() { return new Stripe(process.env.STRIPE_SECRET_KEY!) }
 
 export async function POST(req: Request) {
   const { subscriptionId, userId } = await req.json()
 
   // بعض نسخ stripe ترجع Response، وبعضها ترجع Subscription مباشرة
-  const res = await stripe.subscriptions.retrieve(subscriptionId as string)
+  const res = await getStripe().subscriptions.retrieve(subscriptionId as string)
   const sub = (res as any).data ?? res
 
   const currentPeriodEnd =
