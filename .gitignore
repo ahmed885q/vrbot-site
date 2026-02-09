@@ -24,3 +24,4 @@ Thumbs.db
 # Next.js
 .next/
 .vercel/
+.env.local
