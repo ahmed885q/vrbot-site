@@ -5,7 +5,7 @@ import Stripe from 'stripe'
 
 export const runtime = 'nodejs'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, )
+function getStripe() { return new Stripe(process.env.STRIPE_SECRET_KEY!) }
 
 export async function POST(req: Request) {
   try {

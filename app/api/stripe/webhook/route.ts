@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export const runtime = 'nodejs'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+function getStripe() { return new Stripe(process.env.STRIPE_SECRET_KEY!) }
 
 export async function POST(req: Request) {
   const sig = req.headers.get('stripe-signature')
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(body, sig, secret)
+    event = getStripe().webhooks.constructEvent(body, sig, secret)
   } catch (err: any) {
     console.error('Webhook signature failed:', err?.message)
     return NextResponse.json({ error: `Invalid signature: ${err?.message || 'unknown'}` }, { status: 400 })
