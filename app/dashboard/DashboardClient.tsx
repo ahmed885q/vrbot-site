@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createSupabaseBrowserClient } from "../../lib/supabase/client";
 
 type WsStatus = "idle" | "connecting" | "online" | "offline" | "error";
 type Lang = "ar" | "en" | "ru" | "zh";
@@ -22,13 +23,14 @@ type AgentPeer = {
 };
 
 // ====== Translations ======
-const t: Record<Lang, Record<string, string>> = {
+const tr: Record<Lang, Record<string, string>> = {
   ar: {
     title: '🖥️ لوحة التحكم',
     subtitle: 'الاتصال • إعادة الاتصال التلقائي • الوكلاء المباشرين',
     wsBase: 'عنوان WS',
-    wsHint: 'اتركه فارغاً لاستخدام NEXT_PUBLIC_WS_BASE أو local.',
+    wsHint: 'يُملأ تلقائياً من إعدادات السيرفر.',
     token: 'رمز الدخول',
+    tokenHint: 'يُؤخذ تلقائياً من جلسة تسجيل الدخول.',
     autoReconnect: 'إعادة اتصال تلقائي',
     connect: '🔗 اتصال',
     disconnect: '⛔ قطع',
@@ -45,13 +47,17 @@ const t: Record<Lang, Record<string, string>> = {
     session: 'معلومات الجلسة',
     type: 'النوع',
     payload: 'البيانات',
+    loadingToken: '⏳ جارٍ تحميل رمز الدخول...',
+    noSession: '⚠️ يرجى تسجيل الدخول أولاً',
+    user: 'المستخدم',
   },
   en: {
     title: '🖥️ Dashboard',
     subtitle: 'Presence • Auto-Reconnect • Live Agents',
     wsBase: 'WS Base',
-    wsHint: 'Leave empty to use NEXT_PUBLIC_WS_BASE or local.',
+    wsHint: 'Auto-filled from server settings.',
     token: 'Token',
+    tokenHint: 'Auto-fetched from login session.',
     autoReconnect: 'Auto-Reconnect',
     connect: '🔗 Connect',
     disconnect: '⛔ Disconnect',
@@ -68,13 +74,17 @@ const t: Record<Lang, Record<string, string>> = {
     session: 'Session Info',
     type: 'Type',
     payload: 'Payload',
+    loadingToken: '⏳ Loading token...',
+    noSession: '⚠️ Please login first',
+    user: 'User',
   },
   ru: {
     title: '🖥️ Панель управления',
     subtitle: 'Подключение • Авто-переподключение • Агенты',
     wsBase: 'WS Адрес',
-    wsHint: 'Оставьте пустым для NEXT_PUBLIC_WS_BASE или local.',
+    wsHint: 'Заполняется автоматически.',
     token: 'Токен',
+    tokenHint: 'Получен автоматически из сессии.',
     autoReconnect: 'Авто-переподключение',
     connect: '🔗 Подключить',
     disconnect: '⛔ Отключить',
@@ -91,13 +101,17 @@ const t: Record<Lang, Record<string, string>> = {
     session: 'Информация о сессии',
     type: 'Тип',
     payload: 'Данные',
+    loadingToken: '⏳ Загрузка токена...',
+    noSession: '⚠️ Войдите в систему',
+    user: 'Пользователь',
   },
   zh: {
     title: '🖥️ 控制面板',
     subtitle: '连接 • 自动重连 • 实时代理',
     wsBase: 'WS 地址',
-    wsHint: '留空使用 NEXT_PUBLIC_WS_BASE 或本地。',
+    wsHint: '从服务器设置自动填充。',
     token: '令牌',
+    tokenHint: '从登录会话自动获取。',
     autoReconnect: '自动重连',
     connect: '🔗 连接',
     disconnect: '⛔ 断开',
@@ -114,6 +128,9 @@ const t: Record<Lang, Record<string, string>> = {
     session: '会话信息',
     type: '类型',
     payload: '数据',
+    loadingToken: '⏳ 正在加载令牌...',
+    noSession: '⚠️ 请先登录',
+    user: '用户',
   },
 };
 
@@ -157,9 +174,11 @@ function buildWsUrl(wsBase: string, params: Record<string, string>) {
 }
 
 export default function DashboardClient() {
-  const envBase = (process.env.NEXT_PUBLIC_WS_BASE || "").trim();
+  const envWsUrl = (process.env.NEXT_PUBLIC_WS_URL || "").trim();
   const [wsBase, setWsBase] = useState<string>("");
-  const [token, setToken] = useState<string>("change-me");
+  const [token, setToken] = useState<string>("");
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [tokenLoading, setTokenLoading] = useState<boolean>(true);
   const [lang, setLang] = useState<Lang>("ar");
 
   const [status, setStatus] = useState<WsStatus>("idle");
@@ -177,19 +196,43 @@ export default function DashboardClient() {
   const reconnectTimerRef = useRef<any>(null);
   const attemptRef = useRef<number>(0);
 
-  // Load language from localStorage
+  const tx = tr[lang] || tr.ar;
+
+  // ====== Auto-load Supabase session token ======
+  useEffect(() => {
+    async function loadSession() {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          setToken(session.access_token);
+          setUserEmail(session.user?.email || "");
+        }
+      } catch (err) {
+        console.error("Failed to get Supabase session:", err);
+      } finally {
+        setTokenLoading(false);
+      }
+    }
+    loadSession();
+  }, []);
+
+  // Load language
   useEffect(() => {
     try {
       const saved = localStorage.getItem("vrbot_lang") as Lang;
-      if (saved && t[saved]) setLang(saved);
+      if (saved && tr[saved]) setLang(saved);
     } catch {}
   }, []);
 
-  const tr = t[lang] || t.ar;
+  // Set WS Base from env
+  useEffect(() => {
+    if (envWsUrl) setWsBase(envWsUrl);
+  }, [envWsUrl]);
 
   const effectiveWsBase = useMemo(() => {
-    return wsBase.trim() || envBase || "ws://127.0.0.1:8787/ws";
-  }, [wsBase, envBase]);
+    return wsBase.trim() || envWsUrl || "ws://127.0.0.1:8787/ws";
+  }, [wsBase, envWsUrl]);
 
   function pushLog(line: string) {
     setLogs((prev) => [line, ...prev].slice(0, 300));
@@ -244,7 +287,7 @@ export default function DashboardClient() {
     setStatus("offline");
     setStatusMsg(`${reason} — reconnect in ${Math.round(delay / 1000)}s`);
     pushLog(`[reconnect] ${reason} | attempt=${attemptRef.current} | delay=${delay}ms`);
-    reconnectTimerRef.current = setTimeout(() => connect(), delay);
+    reconnectTimerRef.current = setTimeout(() => doConnect(), delay);
   }
 
   function disconnect(reason = "manual disconnect") {
@@ -258,10 +301,10 @@ export default function DashboardClient() {
     pushLog(`[ws] disconnected (${reason})`);
   }
 
-  function connect() {
+  function doConnect() {
     if (!token.trim()) {
       setStatus("error");
-      setStatusMsg("Token is required");
+      setStatusMsg("Token is required — please login");
       return;
     }
     clearReconnectTimer();
@@ -269,7 +312,7 @@ export default function DashboardClient() {
     try { wsRef.current?.close(1000, "reconnect"); } catch {}
     setStatus("connecting");
     setStatusMsg("Connecting…");
-    pushLog(`[ws] connecting: ${wsUrl}`);
+    pushLog(`[ws] connecting...`);
 
     let ws: WebSocket;
     try {
@@ -314,9 +357,7 @@ export default function DashboardClient() {
       }
     };
 
-    ws.onerror = () => {
-      pushLog("[ws] error");
-    };
+    ws.onerror = () => { pushLog("[ws] error"); };
 
     ws.onclose = (ev) => {
       setStatus("offline");
@@ -344,17 +385,6 @@ export default function DashboardClient() {
     }
   }
 
-  useEffect(() => {
-    try {
-      const savedToken = localStorage.getItem("vrbot_dashboard_token");
-      const savedBase = localStorage.getItem("vrbot_ws_base");
-      if (savedToken) setToken(savedToken);
-      if (savedBase) setWsBase(savedBase);
-    } catch {}
-  }, []);
-
-  useEffect(() => { try { localStorage.setItem("vrbot_dashboard_token", token); } catch {} }, [token]);
-  useEffect(() => { try { localStorage.setItem("vrbot_ws_base", wsBase); } catch {} }, [wsBase]);
   useEffect(() => { return () => { clearReconnectTimer(); try { wsRef.current?.close(1000, "unmount"); } catch {} }; }, []);
 
   const agentList = useMemo(() => {
@@ -368,9 +398,6 @@ export default function DashboardClient() {
 
   const onlineCount = agentList.filter((a) => a.status === "online").length;
 
-  const statusColor = status === 'online' ? '#52c41a' : status === 'connecting' ? '#1890ff' : status === 'error' ? '#ff4d4f' : '#888';
-  const statusIcon = status === 'online' ? '🟢' : status === 'connecting' ? '🔵' : status === 'error' ? '🔴' : '⚪';
-
   return (
     <div dir="ltr" style={{ minHeight: '100vh', background: '#f8f9fa', padding: '24px' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -379,45 +406,60 @@ export default function DashboardClient() {
         <div style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{tr.title}</h1>
-              <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0' }}>{tr.subtitle}</p>
+              <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{tx.title}</h1>
+              <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0' }}>{tx.subtitle}</p>
             </div>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px',
-              padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 600,
-              background: status === 'online' ? '#f6ffed' : status === 'error' ? '#fff2f0' : '#f5f5f5',
-              color: statusColor,
-              border: `1px solid ${status === 'online' ? '#b7eb8f' : status === 'error' ? '#ffccc7' : '#d9d9d9'}`,
-            }}>
-              {statusIcon} {status} {statusMsg && `— ${statusMsg}`}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {userEmail && (
+                <span style={{ fontSize: '13px', color: '#555', background: '#f0f7ff', padding: '6px 12px', borderRadius: '20px', border: '1px solid #d6e4ff' }}>
+                  👤 {userEmail}
+                </span>
+              )}
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 600,
+                background: status === 'online' ? '#f6ffed' : status === 'error' ? '#fff2f0' : '#f5f5f5',
+                color: status === 'online' ? '#52c41a' : status === 'error' ? '#ff4d4f' : '#888',
+                border: `1px solid ${status === 'online' ? '#b7eb8f' : status === 'error' ? '#ffccc7' : '#d9d9d9'}`,
+              }}>
+                {status === 'online' ? '🟢' : status === 'connecting' ? '🔵' : status === 'error' ? '🔴' : '⚪'}
+                {' '}{status} {statusMsg && `— ${statusMsg}`}
+              </div>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr', gap: '16px', alignItems: 'end' }}>
-            <div>
-              <label style={labelStyle}>{tr.wsBase}</label>
-              <input value={wsBase} onChange={(e) => setWsBase(e.target.value)} placeholder={effectiveWsBase} style={inputStyle} />
-              <p style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>{tr.wsHint}</p>
+          {/* Token Status */}
+          {tokenLoading ? (
+            <div style={{ padding: '12px', background: '#fffbe6', borderRadius: '8px', border: '1px solid #ffe58f', fontSize: '14px', color: '#ad8b00', marginBottom: '16px' }}>
+              {tx.loadingToken}
             </div>
+          ) : !token ? (
+            <div style={{ padding: '12px', background: '#fff2f0', borderRadius: '8px', border: '1px solid #ffccc7', fontSize: '14px', color: '#ff4d4f', marginBottom: '16px' }}>
+              {tx.noSession} — <a href="/login" style={{ color: '#1890ff', textDecoration: 'underline' }}>Login</a>
+            </div>
+          ) : null}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', alignItems: 'end' }}>
             <div>
-              <label style={labelStyle}>{tr.token}</label>
-              <input value={token} onChange={(e) => setToken(e.target.value)} style={inputStyle} />
+              <label style={labelStyle}>{tx.wsBase}</label>
+              <input value={wsBase} onChange={(e) => setWsBase(e.target.value)} placeholder={effectiveWsBase} style={inputStyle} />
+              <p style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>{tx.wsHint}</p>
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                 <input type="checkbox" checked={autoReconnect} onChange={(e) => setAutoReconnect(e.target.checked)} />
-                <span style={{ fontSize: '13px', fontWeight: 600, color: '#555' }}>{tr.autoReconnect}</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#555' }}>{tx.autoReconnect}</span>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={connect} style={btnPrimary}>{tr.connect}</button>
-                <button onClick={() => disconnect()} style={btnDanger}>{tr.disconnect}</button>
+                <button onClick={doConnect} disabled={!token || tokenLoading} style={{ ...btnPrimary, opacity: (!token || tokenLoading) ? 0.5 : 1 }}>{tx.connect}</button>
+                <button onClick={() => disconnect()} style={btnDanger}>{tx.disconnect}</button>
               </div>
             </div>
           </div>
 
           {welcome && (
             <div style={{ background: '#f0f7ff', borderRadius: '8px', padding: '12px 16px', marginTop: '16px', fontSize: '13px', border: '1px solid #d6e4ff' }}>
-              <strong>{tr.session}:</strong>
+              <strong>{tx.session}:</strong>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginTop: '8px' }}>
                 <div><span style={{ color: '#888' }}>clientId:</span> {welcome.clientId}</div>
                 <div><span style={{ color: '#888' }}>role:</span> {welcome.role}</div>
@@ -427,23 +469,22 @@ export default function DashboardClient() {
           )}
         </div>
 
-        {/* ====== Main Grid: Agents+Send LEFT, Logs RIGHT ====== */}
+        {/* ====== Main Grid ====== */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
 
           {/* LEFT: Agents + Send */}
           <div>
-            {/* Agents */}
             <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{tr.agents}</h2>
+                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{tx.agents}</h2>
                 <span style={{ background: '#f0f0f0', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 600 }}>
-                  {tr.online}: {onlineCount} / {agentList.length}
+                  {tx.online}: {onlineCount} / {agentList.length}
                 </span>
               </div>
 
               {agentList.length === 0 ? (
                 <div style={{ padding: '24px', textAlign: 'center', color: '#999', fontSize: '14px', border: '2px dashed #e8e8e8', borderRadius: '8px' }}>
-                  {tr.noAgents}
+                  {tx.noAgents}
                 </div>
               ) : (
                 agentList.map((a) => (
@@ -466,31 +507,30 @@ export default function DashboardClient() {
                       padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 600,
                       background: a.status === 'online' ? '#52c41a' : '#d9d9d9', color: '#fff',
                     }}>
-                      {a.status === 'online' ? tr.online : tr.offline}
+                      {a.status === 'online' ? tx.online : tx.offline}
                     </span>
                   </div>
                 ))
               )}
             </div>
 
-            {/* Send */}
             <div style={cardStyle}>
-              <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1a1a2e', margin: '0 0 4px' }}>{tr.send}</h2>
-              <p style={{ fontSize: '13px', color: '#888', marginBottom: '16px' }}>{tr.sendHint}</p>
+              <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1a1a2e', margin: '0 0 4px' }}>{tx.send}</h2>
+              <p style={{ fontSize: '13px', color: '#888', marginBottom: '16px' }}>{tx.sendHint}</p>
 
               <div style={{ marginBottom: '12px' }}>
-                <label style={labelStyle}>{tr.type}</label>
+                <label style={labelStyle}>{tx.type}</label>
                 <input value={outType} onChange={(e) => setOutType(e.target.value)} style={inputStyle} />
               </div>
 
               <div style={{ marginBottom: '12px' }}>
-                <label style={labelStyle}>{tr.payload}</label>
+                <label style={labelStyle}>{tx.payload}</label>
                 <textarea value={outPayload} onChange={(e) => setOutPayload(e.target.value)} rows={5} style={{
                   ...inputStyle, fontFamily: 'monospace', resize: 'vertical' as const,
                 }} />
               </div>
 
-              <button onClick={sendMessage} style={btnSuccess}>{tr.sendBtn}</button>
+              <button onClick={sendMessage} style={btnSuccess}>{tx.sendBtn}</button>
             </div>
           </div>
 
@@ -498,8 +538,8 @@ export default function DashboardClient() {
           <div>
             <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{tr.logs}</h2>
-                <button onClick={() => setLogs([])} style={btnOutline}>{tr.clear}</button>
+                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{tx.logs}</h2>
+                <button onClick={() => setLogs([])} style={btnOutline}>{tx.clear}</button>
               </div>
 
               <div style={{
@@ -507,7 +547,7 @@ export default function DashboardClient() {
                 height: '500px', overflowY: 'auto',
               }}>
                 {logs.length === 0 ? (
-                  <div style={{ color: '#666', fontSize: '13px' }}>{tr.noLogs}</div>
+                  <div style={{ color: '#666', fontSize: '13px' }}>{tx.noLogs}</div>
                 ) : (
                   logs.map((l, idx) => (
                     <div key={idx} style={{ fontSize: '12px', color: '#a0e4a0', fontFamily: 'monospace', marginBottom: '2px', wordBreak: 'break-all' }}>{l}</div>
@@ -528,77 +568,31 @@ export default function DashboardClient() {
 
 // ====== Shared Styles ======
 const cardStyle: React.CSSProperties = {
-  background: '#ffffff',
-  borderRadius: '12px',
-  border: '1px solid #e8e8e8',
-  padding: '20px',
-  marginBottom: '20px',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+  background: '#ffffff', borderRadius: '12px', border: '1px solid #e8e8e8',
+  padding: '20px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
 };
-
 const labelStyle: React.CSSProperties = {
-  fontSize: '13px',
-  fontWeight: 600,
-  color: '#555',
-  display: 'block',
-  marginBottom: '4px',
+  fontSize: '13px', fontWeight: 600, color: '#555', display: 'block', marginBottom: '4px',
 };
-
 const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 12px',
-  border: '1px solid #d9d9d9',
-  borderRadius: '8px',
-  fontSize: '14px',
-  outline: 'none',
-  fontFamily: "'Times New Roman', Times, serif",
-  boxSizing: 'border-box',
+  width: '100%', padding: '8px 12px', border: '1px solid #d9d9d9', borderRadius: '8px',
+  fontSize: '14px', outline: 'none', fontFamily: "'Times New Roman', Times, serif", boxSizing: 'border-box',
 };
-
 const btnPrimary: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-  color: '#fff',
-  border: 'none',
-  padding: '10px 16px',
-  borderRadius: '8px',
-  fontSize: '14px',
-  fontWeight: 600,
-  cursor: 'pointer',
+  background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', color: '#fff', border: 'none',
+  padding: '10px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
   fontFamily: "'Times New Roman', Times, serif",
 };
-
 const btnDanger: React.CSSProperties = {
-  background: '#ff4d4f',
-  color: '#fff',
-  border: 'none',
-  padding: '10px 16px',
-  borderRadius: '8px',
-  fontSize: '14px',
-  fontWeight: 600,
-  cursor: 'pointer',
-  fontFamily: "'Times New Roman', Times, serif",
+  background: '#ff4d4f', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '8px',
+  fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Times New Roman', Times, serif",
 };
-
 const btnSuccess: React.CSSProperties = {
-  background: '#52c41a',
-  color: '#fff',
-  border: 'none',
-  padding: '10px 20px',
-  borderRadius: '8px',
-  fontSize: '14px',
-  fontWeight: 600,
-  cursor: 'pointer',
-  fontFamily: "'Times New Roman', Times, serif",
+  background: '#52c41a', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px',
+  fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Times New Roman', Times, serif",
 };
-
 const btnOutline: React.CSSProperties = {
-  background: '#f5f5f5',
-  color: '#333',
-  border: '1px solid #d9d9d9',
-  padding: '8px 16px',
-  borderRadius: '8px',
-  fontSize: '13px',
-  fontWeight: 600,
-  cursor: 'pointer',
+  background: '#f5f5f5', color: '#333', border: '1px solid #d9d9d9', padding: '8px 16px',
+  borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
   fontFamily: "'Times New Roman', Times, serif",
 };
