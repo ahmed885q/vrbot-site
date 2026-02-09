@@ -33,3 +33,4 @@ export interface VikingBot {
   type?: string;
   lastActive?: Date;
 }
+export const windowsAgentService = new VikingRiseSystem();

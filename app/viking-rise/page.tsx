@@ -7,7 +7,7 @@ import {
   StopOutlined, 
   EyeOutlined, 
   SettingOutlined,
-  ShieldOutlined,
+  SafetyCertificateOutlined,
   TeamOutlined,
   CloudDownloadOutlined,
   DashboardOutlined
@@ -164,7 +164,7 @@ export default function VikingRisePage() {
         <Space size="small">
           <Button 
             size="small" 
-            icon={<ShieldOutlined />}
+            icon={<SafetyCertificateOutlined />}
             onClick={() => executeTask(record.id, 'shield')}
             disabled={record.status !== 'active'}
           >
@@ -262,7 +262,7 @@ export default function VikingRisePage() {
             <Statistic
               title="Total Shields Applied"
               value={statistics.totalShieldsApplied || 0}
-              prefix={<ShieldOutlined />}
+              prefix={<SafetyCertificateOutlined />}
             />
           </Card>
         </Col>
@@ -347,7 +347,7 @@ export default function VikingRisePage() {
               disabled={bots.length === 0}
             >
               <div className="text-center">
-                <ShieldOutlined className="text-3xl mb-2 text-blue-500" />
+                <SafetyCertificateOutlined className="text-3xl mb-2 text-blue-500" />
                 <h3>Apply Shield to All</h3>
                 <p className="text-gray-500">Apply shield protection to all active bots</p>
               </div>
