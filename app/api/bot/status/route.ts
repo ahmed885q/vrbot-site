@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from 'next/server'
 import { validateSession } from '@/lib/session'
 import { isRunnerRunning } from '../../../../lib/bot/runner'

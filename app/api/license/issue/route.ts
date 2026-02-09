@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import crypto from 'crypto'
 
 function base64url(input: Buffer | string) {
