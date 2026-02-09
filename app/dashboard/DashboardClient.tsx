@@ -231,7 +231,7 @@ export default function DashboardClient() {
   }, [envWsUrl]);
 
   const effectiveWsBase = useMemo(() => {
-    return wsBase.trim() || envWsUrl || "ws://127.0.0.1:8787/ws";
+    return wsBase.trim() || envWsUrl || "ws://88.99.64.19:8787/ws";
   }, [wsBase, envWsUrl]);
 
   function pushLog(line: string) {
@@ -439,21 +439,14 @@ export default function DashboardClient() {
             </div>
           ) : null}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', alignItems: 'end' }}>
-            <div>
-              <label style={labelStyle}>{tx.wsBase}</label>
-              <input value={wsBase} onChange={(e) => setWsBase(e.target.value)} placeholder={effectiveWsBase} style={inputStyle} />
-              <p style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>{tx.wsHint}</p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <input type="checkbox" checked={autoReconnect} onChange={(e) => setAutoReconnect(e.target.checked)} />
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#555' }}>{tx.autoReconnect}</span>
             </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                <input type="checkbox" checked={autoReconnect} onChange={(e) => setAutoReconnect(e.target.checked)} />
-                <span style={{ fontSize: '13px', fontWeight: 600, color: '#555' }}>{tx.autoReconnect}</span>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={doConnect} disabled={!token || tokenLoading} style={{ ...btnPrimary, opacity: (!token || tokenLoading) ? 0.5 : 1 }}>{tx.connect}</button>
-                <button onClick={() => disconnect()} style={btnDanger}>{tx.disconnect}</button>
-              </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={doConnect} disabled={!token || tokenLoading} style={{ ...btnPrimary, opacity: (!token || tokenLoading) ? 0.5 : 1 }}>{tx.connect}</button>
+              <button onClick={() => disconnect()} style={btnDanger}>{tx.disconnect}</button>
             </div>
           </div>
 
@@ -555,9 +548,6 @@ export default function DashboardClient() {
                 )}
               </div>
 
-              <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>
-                WS Base: <span style={{ fontFamily: 'monospace' }}>{normalizeWsBase(effectiveWsBase)}</span>
-              </div>
             </div>
           </div>
         </div>
