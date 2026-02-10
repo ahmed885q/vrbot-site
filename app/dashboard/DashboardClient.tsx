@@ -148,6 +148,8 @@ function normalizeWsBase(input: string): string {
   return `wss://${v}`;
 }
 
+function buildWsUrl(wsBase: string, params: Record<string, string>) {
+
   const base = normalizeWsBase(wsBase);
   const u = new URL(base);
   Object.entries(params).forEach(([k, val]) => {
