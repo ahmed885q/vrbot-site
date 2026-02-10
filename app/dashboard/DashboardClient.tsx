@@ -27,10 +27,6 @@ const tr: Record<Lang, Record<string, string>> = {
   ar: {
     title: '🖥️ لوحة التحكم',
     subtitle: 'الاتصال • إعادة الاتصال التلقائي • الوكلاء المباشرين',
-    wsBase: 'عنوان WS',
-    wsHint: 'يُملأ تلقائياً من إعدادات السيرفر.',
-    token: 'رمز الدخول',
-    tokenHint: 'يُؤخذ تلقائياً من جلسة تسجيل الدخول.',
     autoReconnect: 'إعادة اتصال تلقائي',
     connect: '🔗 اتصال',
     disconnect: '⛔ قطع',
@@ -54,10 +50,6 @@ const tr: Record<Lang, Record<string, string>> = {
   en: {
     title: '🖥️ Dashboard',
     subtitle: 'Presence • Auto-Reconnect • Live Agents',
-    wsBase: 'WS Base',
-    wsHint: 'Auto-filled from server settings.',
-    token: 'Token',
-    tokenHint: 'Auto-fetched from login session.',
     autoReconnect: 'Auto-Reconnect',
     connect: '🔗 Connect',
     disconnect: '⛔ Disconnect',
@@ -81,10 +73,6 @@ const tr: Record<Lang, Record<string, string>> = {
   ru: {
     title: '🖥️ Панель управления',
     subtitle: 'Подключение • Авто-переподключение • Агенты',
-    wsBase: 'WS Адрес',
-    wsHint: 'Заполняется автоматически.',
-    token: 'Токен',
-    tokenHint: 'Получен автоматически из сессии.',
     autoReconnect: 'Авто-переподключение',
     connect: '🔗 Подключить',
     disconnect: '⛔ Отключить',
@@ -108,10 +96,6 @@ const tr: Record<Lang, Record<string, string>> = {
   zh: {
     title: '🖥️ 控制面板',
     subtitle: '连接 • 自动重连 • 实时代理',
-    wsBase: 'WS 地址',
-    wsHint: '从服务器设置自动填充。',
-    token: '令牌',
-    tokenHint: '从登录会话自动获取。',
     autoReconnect: '自动重连',
     connect: '🔗 连接',
     disconnect: '⛔ 断开',
@@ -164,7 +148,6 @@ function normalizeWsBase(input: string): string {
   return `wss://${v}`;
 }
 
-function buildWsUrl(wsBase: string, params: Record<string, string>) {
   const base = normalizeWsBase(wsBase);
   const u = new URL(base);
   Object.entries(params).forEach(([k, val]) => {
@@ -308,7 +291,6 @@ export default function DashboardClient() {
       return;
     }
     clearReconnectTimer();
-    const wsUrl = buildWsUrl(effectiveWsBase, { role: "dashboard", token: token.trim() });
     try { wsRef.current?.close(1000, "reconnect"); } catch {}
     setStatus("connecting");
     setStatusMsg("Connecting…");
