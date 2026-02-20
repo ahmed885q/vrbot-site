@@ -1,17 +1,8 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
+import { requireAdmin } from '@/lib/admin-guard'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
-
-function isAdminEmail(email?: string | null) {
-  const admins = (process.env.ADMIN_EMAILS || '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean)
-  return !!email && admins.includes(email.toLowerCase())
-}
 
 export async function GET(req: Request) {
   const url = new URL(req.url)
@@ -30,13 +21,13 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ ok: false, error: 'NOT_AUTHENTICATED' }, { status: 401 })
   if (!isAdminEmail(user.email)) return NextResponse.json({ ok: false, error: 'NOT_ADMIN' }, { status: 403 })
 
-  const adminDb = createClient(
+  const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false } }
   )
 
-  const { data: rows, error } = await adminDb
+  const { data: rows, error } = await supabaseAdmin
     .from('pro_keys')
     .select('delivered_to')
     .eq('batch_tag', batch)

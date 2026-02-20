@@ -1,17 +1,8 @@
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
+import { requireAdmin } from '@/lib/admin-guard'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
-
-function isAdminEmail(email?: string | null) {
-  const admins = (process.env.ADMIN_EMAILS || '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean)
-  return !!email && admins.includes(email.toLowerCase())
-}
 
 function csvEscape(v: any) {
   const s = String(v ?? '')
@@ -51,13 +42,13 @@ export async function GET(req: Request) {
   if (!user) return new NextResponse('NOT_AUTHENTICATED', { status: 401 })
   if (!isAdminEmail(user.email)) return new NextResponse('NOT_ADMIN', { status: 403 })
 
-  const adminDb = createClient(
+  const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false } }
   )
 
-  let q = adminDb
+  let q = supabaseAdmin
     .from('pro_keys')
     .select('code, batch_tag, note, is_used, used_by, used_at, created_at, created_by, revoked_at, revoked_by, delivered_at, delivered_by, delivered_to, delivered_note')
     .order('created_at', { ascending: false })

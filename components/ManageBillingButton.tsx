@@ -15,7 +15,7 @@ export default function ManageBillingButton({ userId }: Props) {
     setErr(null)
 
     try {
-      const res = await fetch('/api/stripe/portal', {
+      const res = await fetch('/billing', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ userId }),
@@ -48,7 +48,7 @@ export default function ManageBillingButton({ userId }: Props) {
           cursor: loading ? 'not-allowed' : 'pointer',
         }}
       >
-        {loading ? 'Opening…' : 'Manage Billing'}
+        {loading ? 'Openingâ€¦' : 'Manage Billing'}
       </button>
 
       {err ? <p style={{ marginTop: 10, color: 'red' }}>{err}</p> : null}

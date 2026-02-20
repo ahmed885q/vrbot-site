@@ -1,17 +1,8 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
+import { requireAdmin } from '@/lib/admin-guard'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
-
-function isAdminEmail(email?: string | null) {
-  const admins = (process.env.ADMIN_EMAILS || '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean)
-  return !!email && admins.includes(email.toLowerCase())
-}
 
 function cleanText(v: any, max: number) {
   const s = String(v ?? '').trim()
@@ -39,15 +30,15 @@ export async function POST(req: Request) {
   const { data: userData } = await supabaseAuth.auth.getUser()
   const adminUser = userData?.user
   if (!adminUser) return NextResponse.json({ ok: false, error: 'NOT_AUTHENTICATED' }, { status: 401 })
-  if (!isAdminEmail(adminUser.email)) return NextResponse.json({ ok: false, error: 'NOT_ADMIN' }, { status: 403 })
+  if (!isAdminEmail(auth.user.email)) return NextResponse.json({ ok: false, error: 'NOT_ADMIN' }, { status: 403 })
 
-  const adminDb = createClient(
+  const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false } }
   )
 
-  const { data: rows, error: fetchErr } = await adminDb
+  const { data: rows, error: fetchErr } = await supabaseAdmin
     .from('pro_keys')
     .select('code')
     .eq('batch_tag', batch)
@@ -64,12 +55,12 @@ export async function POST(req: Request) {
 
   const updateObj = {
     delivered_at: new Date().toISOString(),
-    delivered_by: adminUser.id,
+    delivered_by: auth.user.id,
     delivered_to: deliveredTo,
     delivered_note: deliveredNote,
   }
 
-  const { error: updErr } = await adminDb
+  const { error: updErr } = await supabaseAdmin
     .from('pro_keys')
     .update(updateObj)
     .in('code', codes)

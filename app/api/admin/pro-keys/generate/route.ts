@@ -1,18 +1,9 @@
 import { NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/admin-guard'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 import crypto from 'crypto'
-import { cookies } from 'next/headers'
-import { createServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
-
-function isAdminEmail(email?: string | null) {
-  const admins = (process.env.ADMIN_EMAILS || '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean)
-  return !!email && admins.includes(email.toLowerCase())
-}
 
 function genKey() {
   return crypto.randomBytes(16).toString('hex').toUpperCase()
@@ -54,7 +45,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ ok: false, error: 'NOT_AUTHENTICATED' }, { status: 401 })
   if (!isAdminEmail(user.email)) return NextResponse.json({ ok: false, error: 'NOT_ADMIN' }, { status: 403 })
 
-  const adminDb = createClient(
+  const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false } }
@@ -62,12 +53,12 @@ export async function POST(req: Request) {
 
   const rows = Array.from({ length: count }, () => ({
     code: genKey(),
-    created_by: user.id,
+    created_by: auth.user.id,
     batch_tag: batchTag,
     note,
   }))
 
-  const { error } = await adminDb.from('pro_keys').insert(rows)
+  const { error } = await supabaseAdmin.from('pro_keys').insert(rows)
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
 
   return NextResponse.json({ ok: true, generated: rows.length, batchTag, note })

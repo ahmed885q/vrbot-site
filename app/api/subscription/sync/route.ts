@@ -9,7 +9,7 @@ function getStripe() { return new Stripe(process.env.STRIPE_SECRET_KEY!) }
 export async function POST(req: Request) {
   const { subscriptionId, userId } = await req.json()
 
-  // Ø¨Ø¹Ø¶ Ù†Ø³Ø® stripe ØªØ±Ø¬Ø¹ ResponseØŒ ÙˆØ¨Ø¹Ø¶Ù‡Ø§ ØªØ±Ø¬Ø¹ Subscription Ù…Ø¨Ø§Ø´Ø±Ø©
+  // Ã˜Â¨Ã˜Â¹Ã˜Â¶ Ã™â€ Ã˜Â³Ã˜Â® stripe Ã˜ÂªÃ˜Â±Ã˜Â¬Ã˜Â¹ ResponseÃ˜Å’ Ã™Ë†Ã˜Â¨Ã˜Â¹Ã˜Â¶Ã™â€¡Ã˜Â§ Ã˜ÂªÃ˜Â±Ã˜Â¬Ã˜Â¹ Subscription Ã™â€¦Ã˜Â¨Ã˜Â§Ã˜Â´Ã˜Â±Ã˜Â©
   const res = await getStripe().subscriptions.retrieve(subscriptionId as string)
   const sub = (res as any).data ?? res
 
