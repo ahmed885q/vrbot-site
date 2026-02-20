@@ -1,18 +1,20 @@
 /* ====== VRBOT Global Styles ====== */
 
-/* Times New Roman for entire project */
 * {
-  font-family: 'Times New Roman', Times, serif !important;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-  font-family: 'Times New Roman', Times, serif !important;
   font-size: 16px;
   line-height: 1.6;
   color: #1a1a2e;
-  background: #f8f9fa;
+  background: #08071b;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* RTL Support for Arabic */
@@ -21,17 +23,13 @@ body {
 }
 
 /* ====== Better Table Styling ====== */
-.ant-table {
-  font-family: 'Times New Roman', Times, serif !important;
-}
-
 .ant-table-thead > tr > th {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
   color: #ffffff !important;
   font-weight: 700 !important;
   font-size: 15px !important;
   padding: 14px 16px !important;
-  border-bottom: 3px solid #e94560 !important;
+  border-bottom: 3px solid #7c3aed !important;
   text-align: center !important;
   letter-spacing: 0.5px;
 }
@@ -59,19 +57,11 @@ body {
   background: #e6f7ff !important;
 }
 
-.ant-table-tbody > tr.ant-table-row:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
-}
-
 /* Table wrapper */
 .ant-table-wrapper {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-}
-
-.ant-table-container {
-  border-radius: 8px;
 }
 
 /* ====== Card Styling ====== */
@@ -82,23 +72,23 @@ body {
 }
 
 .ant-card-head {
-  border-bottom: 2px solid #e94560 !important;
+  border-bottom: 2px solid #7c3aed !important;
   font-weight: 700 !important;
   font-size: 17px !important;
 }
 
 /* ====== Button Styling ====== */
 .ant-btn-primary {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
+  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%) !important;
   border: none !important;
   font-weight: 600 !important;
   border-radius: 6px !important;
 }
 
 .ant-btn-primary:hover {
-  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%) !important;
+  background: linear-gradient(135deg, #6d28d9 0%, #4f46e5 100%) !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(26, 26, 46, 0.3);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
 /* ====== Tag Styling ====== */
@@ -121,7 +111,7 @@ body {
 
 /* ====== Modal ====== */
 .ant-modal-header {
-  border-bottom: 2px solid #e94560 !important;
+  border-bottom: 2px solid #7c3aed !important;
 }
 
 .ant-modal-title {
@@ -134,69 +124,26 @@ body {
   border-radius: 8px !important;
 }
 
-/* ====== Headings ====== */
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Times New Roman', Times, serif !important;
-  font-weight: 700;
-  color: #1a1a2e;
-}
-
-/* ====== Language Switcher ====== */
-.lang-switcher {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: #ffffff;
-  border: 1px solid #d9d9d9;
-  border-radius: 8px;
-  padding: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-.lang-btn {
-  padding: 6px 12px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  font-family: 'Times New Roman', Times, serif !important;
-  color: #666;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.lang-btn:hover {
-  background: #f0f0f0;
-  color: #1a1a2e;
-}
-
-.lang-btn.active {
-  background: #1a1a2e;
-  color: #ffffff;
-}
-
 /* ====== Scrollbar ====== */
 ::-webkit-scrollbar {
   width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #0a0920;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: #2d2b5e;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #4a46a0;
 }
 
 /* ====== Selection ====== */
 ::selection {
-  background: #e94560;
+  background: #7c3aed;
   color: #ffffff;
 }
