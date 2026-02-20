@@ -66,8 +66,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // ✅ هنا مكان التنفيذ الفعلي (اختياري)
-  // مثال: إرسال للـ worker queue / webhook
+  // âœ… Ù‡Ù†Ø§ Ù…ÙƒØ§Ù† Ø§Ù„ØªÙ†ÙÙŠØ° Ø§Ù„ÙØ¹Ù„ÙŠ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)
+  // Ù…Ø«Ø§Ù„: Ø¥Ø±Ø³Ø§Ù„ Ù„Ù„Ù€ worker queue / webhook
   // await fetch(process.env.TRANSFER_WORKER_URL!, { method:"POST", body: JSON.stringify({transferId: data.id}) })
 
   return NextResponse.json({ transfer: data });

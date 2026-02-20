@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "transferId is required" }, { status: 400 });
   }
 
-  // فقط queued يسمح بالإلغاء
+  // ÙÙ‚Ø· queued ÙŠØ³Ù…Ø­ Ø¨Ø§Ù„Ø¥Ù„ØºØ§Ø¡
   const { data: existing, error: readErr } = await supabase
     .from("transfers")
     .select("id,status,user_id")

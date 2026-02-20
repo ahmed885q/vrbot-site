@@ -1,9 +1,9 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { authOptions } from '@/lib/supabase/server'
 
-// أنواع الإجراءات الممكنة
+// Ø£Ù†ÙˆØ§Ø¹ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø§Ù„Ù…Ù…ÙƒÙ†Ø©
 type ActionType = 
   | 'click' 
   | 'type' 
@@ -35,23 +35,23 @@ interface ActionRequest {
   }
 }
 
-// ذاكرة مؤقتة لتخزين إحصاءات الإجراءات (استخدم Redis في الإنتاج)
+// Ø°Ø§ÙƒØ±Ø© Ù…Ø¤Ù‚ØªØ© Ù„ØªØ®Ø²ÙŠÙ† Ø¥Ø­ØµØ§Ø¡Ø§Øª Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª (Ø§Ø³ØªØ®Ø¯Ù… Redis ÙÙŠ Ø§Ù„Ø¥Ù†ØªØ§Ø¬)
 const actionStats = new Map<string, {
   count: number
   lastReset: number
   actions: Array<{ type: ActionType; timestamp: number }>
 }>()
 
-// قائمة بالمهام المحظورة (للأنماط المتكررة)
+// Ù‚Ø§Ø¦Ù…Ø© Ø¨Ø§Ù„Ù…Ù‡Ø§Ù… Ø§Ù„Ù…Ø­Ø¸ÙˆØ±Ø© (Ù„Ù„Ø£Ù†Ù…Ø§Ø· Ø§Ù„Ù…ØªÙƒØ±Ø±Ø©)
 const forbiddenPatterns = [
-  ['click', 'click', 'click'], // 3 نقرات متتالية
-  ['gather', 'gather', 'gather'], // 3 عمليات جمع متتالية
-  ['click', 'type', 'click', 'type'], // نمط متكرر
+  ['click', 'click', 'click'], // 3 Ù†Ù‚Ø±Ø§Øª Ù…ØªØªØ§Ù„ÙŠØ©
+  ['gather', 'gather', 'gather'], // 3 Ø¹Ù…Ù„ÙŠØ§Øª Ø¬Ù…Ø¹ Ù…ØªØªØ§Ù„ÙŠØ©
+  ['click', 'type', 'click', 'type'], // Ù†Ù…Ø· Ù…ØªÙƒØ±Ø±
 ]
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. التحقق من المصادقة
+    // 1. Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ù…ØµØ§Ø¯Ù‚Ø©
     const session = await getServerSession(authOptions)
     
     if (!session?.user) {
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const userId = session.user.id
     
-    // 2. قراءة البيانات من الطلب
+    // 2. Ù‚Ø±Ø§Ø¡Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ù…Ù† Ø§Ù„Ø·Ù„Ø¨
     const body: ActionRequest = await request.json()
     
     if (!body.action || !body.settings) {
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     const { action, farmId, coordinates, data, settings } = body
     const { security } = settings
 
-    // 3. تطبيق Anti-Detection إذا كان مفعلاً
+    // 3. ØªØ·Ø¨ÙŠÙ‚ Anti-Detection Ø¥Ø°Ø§ ÙƒØ§Ù† Ù…ÙØ¹Ù„Ø§Ù‹
     let securityApplied = false
     let appliedDelays: number[] = []
     let patternChecks: string[] = []
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     if (security.antiDetection) {
       securityApplied = true
       
-      // 3.1. التحقق من الحد الأقصى للإجراءات في الساعة
+      // 3.1. Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ù„Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª ÙÙŠ Ø§Ù„Ø³Ø§Ø¹Ø©
       const isRateLimited = await checkRateLimit(userId, security.maxActionsPerHour)
       if (isRateLimited) {
         return NextResponse.json(
@@ -104,41 +104,41 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // 3.2. تطبيق تأخيرات عشوائية
+      // 3.2. ØªØ·Ø¨ÙŠÙ‚ ØªØ£Ø®ÙŠØ±Ø§Øª Ø¹Ø´ÙˆØ§Ø¦ÙŠØ©
       if (security.randomDelays) {
         const delay = applyRandomDelay(action)
         await sleep(delay)
         appliedDelays.push(delay)
       }
 
-      // 3.3. التحقق من الأنماط المتكررة
+      // 3.3. Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø£Ù†Ù…Ø§Ø· Ø§Ù„Ù…ØªÙƒØ±Ø±Ø©
       if (security.avoidPatterns) {
         const patternDetected = detectPattern(userId, action)
         if (patternDetected.detected) {
           patternChecks.push(`Pattern detected: ${patternDetected.pattern}`)
           
-          // إضافة تأخير إضافي إذا اكتشفنا نمطاً
-          const extraDelay = Math.floor(Math.random() * 3000) + 2000 // 2-5 ثواني إضافية
+          // Ø¥Ø¶Ø§ÙØ© ØªØ£Ø®ÙŠØ± Ø¥Ø¶Ø§ÙÙŠ Ø¥Ø°Ø§ Ø§ÙƒØªØ´ÙÙ†Ø§ Ù†Ù…Ø·Ø§Ù‹
+          const extraDelay = Math.floor(Math.random() * 3000) + 2000 // 2-5 Ø«ÙˆØ§Ù†ÙŠ Ø¥Ø¶Ø§ÙÙŠØ©
           await sleep(extraDelay)
           appliedDelays.push(extraDelay)
         }
       }
 
-      // 3.4. تطبيق تحويلات إحداثيات للفأرة (إذا كانت موجودة)
+      // 3.4. ØªØ·Ø¨ÙŠÙ‚ ØªØ­ÙˆÙŠÙ„Ø§Øª Ø¥Ø­Ø¯Ø§Ø«ÙŠØ§Øª Ù„Ù„ÙØ£Ø±Ø© (Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ù…ÙˆØ¬ÙˆØ¯Ø©)
       let adjustedCoordinates = coordinates
       if (security.humanizeMouse && coordinates) {
         adjustedCoordinates = humanizeMouseMovement(coordinates)
       }
 
-      // 3.5. استخدام البروكسي إذا كان مفعلاً
+      // 3.5. Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø¨Ø±ÙˆÙƒØ³ÙŠ Ø¥Ø°Ø§ ÙƒØ§Ù† Ù…ÙØ¹Ù„Ø§Ù‹
       let proxyUsed = false
       if (security.useProxy && security.proxyAddress) {
         proxyUsed = true
-        // في الإنتاج، هنا ستستخدم مكتبة مثل 'proxy-agent'
+        // ÙÙŠ Ø§Ù„Ø¥Ù†ØªØ§Ø¬ØŒ Ù‡Ù†Ø§ Ø³ØªØ³ØªØ®Ø¯Ù… Ù…ÙƒØªØ¨Ø© Ù…Ø«Ù„ 'proxy-agent'
         console.log(`Using proxy: ${security.proxyAddress}`)
       }
 
-      // تسجيل الإجراء مع معلومات الأمان
+      // ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ù…Ø¹ Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø£Ù…Ø§Ù†
       logAction(userId, action, {
         securityApplied: true,
         delays: appliedDelays,
@@ -148,17 +148,17 @@ export async function POST(request: NextRequest) {
         adjustedCoordinates
       })
     } else {
-      // تسجيل الإجراء بدون أمان
+      // ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ø¨Ø¯ÙˆÙ† Ø£Ù…Ø§Ù†
       logAction(userId, action, { securityApplied: false })
     }
 
-    // 4. محاكاة تنفيذ الإجراء (في الإنتاج، هنا ستتصل بلعبة Viking Rise)
+    // 4. Ù…Ø­Ø§ÙƒØ§Ø© ØªÙ†ÙÙŠØ° Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ (ÙÙŠ Ø§Ù„Ø¥Ù†ØªØ§Ø¬ØŒ Ù‡Ù†Ø§ Ø³ØªØªØµÙ„ Ø¨Ù„Ø¹Ø¨Ø© Viking Rise)
     const result = await simulateActionExecution(action, farmId, data)
 
-    // 5. زيادة عداد الإجراءات
+    // 5. Ø²ÙŠØ§Ø¯Ø© Ø¹Ø¯Ø§Ø¯ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª
     incrementActionCount(userId)
 
-    // 6. إرجاع النتيجة
+    // 6. Ø¥Ø±Ø¬Ø§Ø¹ Ø§Ù„Ù†ØªÙŠØ¬Ø©
     return NextResponse.json({
       success: true,
       message: 'Action executed successfully',
@@ -196,23 +196,23 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ==================== دوال المساعدة ====================
+// ==================== Ø¯ÙˆØ§Ù„ Ø§Ù„Ù…Ø³Ø§Ø¹Ø¯Ø© ====================
 
 /**
- * تطبيق تأخير عشوائي بناءً على نوع الإجراء
+ * ØªØ·Ø¨ÙŠÙ‚ ØªØ£Ø®ÙŠØ± Ø¹Ø´ÙˆØ§Ø¦ÙŠ Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ Ù†ÙˆØ¹ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡
  */
 function applyRandomDelay(action: ActionType): number {
   const delayRanges: Record<ActionType, [number, number]> = {
-    click: [200, 800],        // 0.2-0.8 ثانية للنقرات
-    type: [50, 200],          // 0.05-0.2 ثانية للكتابة
-    scroll: [300, 1500],      // 0.3-1.5 ثانية للتمرير
-    navigate: [1000, 3000],   // 1-3 ثواني للتنقل
-    collect: [500, 2000],     // 0.5-2 ثانية للجمع
-    upgrade: [1000, 5000],    // 1-5 ثواني للترقية
-    train: [2000, 8000],      // 2-8 ثواني للتدريب
-    attack: [3000, 10000],    // 3-10 ثواني للهجوم
-    gather: [1500, 4000],     // 1.5-4 ثواني لجمع الموارد
-    heal: [1000, 3000]        // 1-3 ثواني للشفاء
+    click: [200, 800],        // 0.2-0.8 Ø«Ø§Ù†ÙŠØ© Ù„Ù„Ù†Ù‚Ø±Ø§Øª
+    type: [50, 200],          // 0.05-0.2 Ø«Ø§Ù†ÙŠØ© Ù„Ù„ÙƒØªØ§Ø¨Ø©
+    scroll: [300, 1500],      // 0.3-1.5 Ø«Ø§Ù†ÙŠØ© Ù„Ù„ØªÙ…Ø±ÙŠØ±
+    navigate: [1000, 3000],   // 1-3 Ø«ÙˆØ§Ù†ÙŠ Ù„Ù„ØªÙ†Ù‚Ù„
+    collect: [500, 2000],     // 0.5-2 Ø«Ø§Ù†ÙŠØ© Ù„Ù„Ø¬Ù…Ø¹
+    upgrade: [1000, 5000],    // 1-5 Ø«ÙˆØ§Ù†ÙŠ Ù„Ù„ØªØ±Ù‚ÙŠØ©
+    train: [2000, 8000],      // 2-8 Ø«ÙˆØ§Ù†ÙŠ Ù„Ù„ØªØ¯Ø±ÙŠØ¨
+    attack: [3000, 10000],    // 3-10 Ø«ÙˆØ§Ù†ÙŠ Ù„Ù„Ù‡Ø¬ÙˆÙ…
+    gather: [1500, 4000],     // 1.5-4 Ø«ÙˆØ§Ù†ÙŠ Ù„Ø¬Ù…Ø¹ Ø§Ù„Ù…ÙˆØ§Ø±Ø¯
+    heal: [1000, 3000]        // 1-3 Ø«ÙˆØ§Ù†ÙŠ Ù„Ù„Ø´ÙØ§Ø¡
   }
 
   const [min, max] = delayRanges[action] || [500, 2000]
@@ -220,11 +220,11 @@ function applyRandomDelay(action: ActionType): number {
 }
 
 /**
- * التحقق من الحد الأقصى للإجراءات في الساعة
+ * Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ù„Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª ÙÙŠ Ø§Ù„Ø³Ø§Ø¹Ø©
  */
 async function checkRateLimit(userId: string, maxPerHour: number): Promise<boolean> {
   const now = Date.now()
-  const hourStart = Math.floor(now / 3600000) * 3600000 // بداية الساعة الحالية
+  const hourStart = Math.floor(now / 3600000) * 3600000 // Ø¨Ø¯Ø§ÙŠØ© Ø§Ù„Ø³Ø§Ø¹Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ©
   
   const userStats = actionStats.get(userId) || {
     count: 0,
@@ -232,19 +232,19 @@ async function checkRateLimit(userId: string, maxPerHour: number): Promise<boole
     actions: []
   }
 
-  // إعادة التعيين إذا تغيرت الساعة
+  // Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„ØªØ¹ÙŠÙŠÙ† Ø¥Ø°Ø§ ØªØºÙŠØ±Øª Ø§Ù„Ø³Ø§Ø¹Ø©
   if (now - userStats.lastReset >= 3600000) {
     userStats.count = 0
     userStats.lastReset = hourStart
     userStats.actions = []
   }
 
-  // التحقق من الحد
+  // Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø­Ø¯
   return userStats.count >= maxPerHour
 }
 
 /**
- * الحصول على عدد الإجراءات الحالي في الساعة
+ * Ø§Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ø¹Ø¯Ø¯ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø§Ù„Ø­Ø§Ù„ÙŠ ÙÙŠ Ø§Ù„Ø³Ø§Ø¹Ø©
  */
 function getCurrentHourCount(userId: string): number {
   const userStats = actionStats.get(userId)
@@ -252,7 +252,7 @@ function getCurrentHourCount(userId: string): number {
 }
 
 /**
- * زيادة عداد الإجراءات
+ * Ø²ÙŠØ§Ø¯Ø© Ø¹Ø¯Ø§Ø¯ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª
  */
 function incrementActionCount(userId: string): void {
   const now = Date.now()
@@ -264,7 +264,7 @@ function incrementActionCount(userId: string): void {
     actions: []
   }
 
-  // إعادة التعيين إذا تغيرت الساعة
+  // Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„ØªØ¹ÙŠÙŠÙ† Ø¥Ø°Ø§ ØªØºÙŠØ±Øª Ø§Ù„Ø³Ø§Ø¹Ø©
   if (now - userStats.lastReset >= 3600000) {
     userStats.count = 0
     userStats.lastReset = hourStart
@@ -272,12 +272,12 @@ function incrementActionCount(userId: string): void {
   }
 
   userStats.count++
-  userStats.actions.push({ type: 'click' as ActionType, timestamp: now }) // نوع الإجراء سيتم تسجيله بشكل صحيح
+  userStats.actions.push({ type: 'click' as ActionType, timestamp: now }) // Ù†ÙˆØ¹ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ø³ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„Ù‡ Ø¨Ø´ÙƒÙ„ ØµØ­ÙŠØ­
   actionStats.set(userId, userStats)
 }
 
 /**
- * اكتشاف الأنماط المتكررة
+ * Ø§ÙƒØªØ´Ø§Ù Ø§Ù„Ø£Ù†Ù…Ø§Ø· Ø§Ù„Ù…ØªÙƒØ±Ø±Ø©
  */
 function detectPattern(userId: string, currentAction: ActionType): {
   detected: boolean
@@ -288,10 +288,10 @@ function detectPattern(userId: string, currentAction: ActionType): {
     return { detected: false }
   }
 
-  // الحصول على آخر 10 إجراءات
+  // Ø§Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ø¢Ø®Ø± 10 Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª
   const recentActions = userStats.actions.slice(-10).map(a => a.type)
   
-  // التحقق من كل نمط محظور
+  // Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ÙƒÙ„ Ù†Ù…Ø· Ù…Ø­Ø¸ÙˆØ±
   for (const pattern of forbiddenPatterns) {
     if (pattern.length > recentActions.length) continue
     
@@ -300,12 +300,12 @@ function detectPattern(userId: string, currentAction: ActionType): {
     if (arraysEqual(pattern, lastActions)) {
       return {
         detected: true,
-        pattern: pattern.join(' → ')
+        pattern: pattern.join(' â†’ ')
       }
     }
   }
 
-  // التحقق من التكرار المفرط لنفس الإجراء
+  // Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„ØªÙƒØ±Ø§Ø± Ø§Ù„Ù…ÙØ±Ø· Ù„Ù†ÙØ³ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡
   const lastThree = recentActions.slice(-3)
   if (lastThree.length === 3 && lastThree.every(a => a === currentAction)) {
     return {
@@ -318,12 +318,12 @@ function detectPattern(userId: string, currentAction: ActionType): {
 }
 
 /**
- * محاكاة حركات الفأرة البشرية
+ * Ù…Ø­Ø§ÙƒØ§Ø© Ø­Ø±ÙƒØ§Øª Ø§Ù„ÙØ£Ø±Ø© Ø§Ù„Ø¨Ø´Ø±ÙŠØ©
  */
 function humanizeMouseMovement(coordinates: { x: number; y: number }): { x: number; y: number } {
-  // إضافة اختلافات طفيفة في الإحداثيات
-  const jitterX = (Math.random() - 0.5) * 15 // ±7.5 بكسل
-  const jitterY = (Math.random() - 0.5) * 15 // ±7.5 بكسل
+  // Ø¥Ø¶Ø§ÙØ© Ø§Ø®ØªÙ„Ø§ÙØ§Øª Ø·ÙÙŠÙØ© ÙÙŠ Ø§Ù„Ø¥Ø­Ø¯Ø§Ø«ÙŠØ§Øª
+  const jitterX = (Math.random() - 0.5) * 15 // Â±7.5 Ø¨ÙƒØ³Ù„
+  const jitterY = (Math.random() - 0.5) * 15 // Â±7.5 Ø¨ÙƒØ³Ù„
   
   return {
     x: Math.round(coordinates.x + jitterX),
@@ -332,14 +332,14 @@ function humanizeMouseMovement(coordinates: { x: number; y: number }): { x: numb
 }
 
 /**
- * محاكاة تنفيذ الإجراء
+ * Ù…Ø­Ø§ÙƒØ§Ø© ØªÙ†ÙÙŠØ° Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡
  */
 async function simulateActionExecution(
   action: ActionType,
   farmId?: string,
   data?: any
 ): Promise<any> {
-  // تأخير محاكاة لوقت التنفيذ
+  // ØªØ£Ø®ÙŠØ± Ù…Ø­Ø§ÙƒØ§Ø© Ù„ÙˆÙ‚Øª Ø§Ù„ØªÙ†ÙÙŠØ°
   const executionTime = Math.floor(Math.random() * 1000) + 500
   
   await sleep(executionTime)
@@ -356,7 +356,7 @@ async function simulateActionExecution(
         ...baseResult,
         type: 'click',
         element: data?.element || 'button',
-        success: Math.random() > 0.1 // 90% نجاح
+        success: Math.random() > 0.1 // 90% Ù†Ø¬Ø§Ø­
       }
     
     case 'gather':
@@ -396,7 +396,7 @@ async function simulateActionExecution(
         type: 'building_upgrade',
         building: data?.building || 'Farm',
         level: data?.level || 1,
-        timeRequired: Math.floor(Math.random() * 3600000) + 1800000, // 30-90 دقيقة
+        timeRequired: Math.floor(Math.random() * 3600000) + 1800000, // 30-90 Ø¯Ù‚ÙŠÙ‚Ø©
         resourcesRequired: {
           wood: Math.floor(Math.random() * 10000) + 5000,
           food: Math.floor(Math.random() * 10000) + 5000,
@@ -416,7 +416,7 @@ async function simulateActionExecution(
 }
 
 /**
- * توليد توصيات بناءً على النشاط
+ * ØªÙˆÙ„ÙŠØ¯ ØªÙˆØµÙŠØ§Øª Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ Ø§Ù„Ù†Ø´Ø§Ø·
  */
 function generateRecommendations(userId: string, action: ActionType): string[] {
   const recommendations: string[] = []
@@ -426,7 +426,7 @@ function generateRecommendations(userId: string, action: ActionType): string[] {
 
   const hourCount = userStats.count
   
-  // توصيات بناءً على عدد الإجراءات
+  // ØªÙˆØµÙŠØ§Øª Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ Ø¹Ø¯Ø¯ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª
   if (hourCount > 200) {
     recommendations.push('High action rate detected. Consider reducing max actions per hour to avoid detection.')
   }
@@ -435,7 +435,7 @@ function generateRecommendations(userId: string, action: ActionType): string[] {
     recommendations.push('Take a short break to mimic human behavior patterns.')
   }
   
-  // توصيات بناءً على نوع الإجراء
+  // ØªÙˆØµÙŠØ§Øª Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ Ù†ÙˆØ¹ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡
   if (action === 'attack') {
     recommendations.push('After attacking monsters, remember to heal troops in hospital.')
   }
@@ -448,7 +448,7 @@ function generateRecommendations(userId: string, action: ActionType): string[] {
 }
 
 /**
- * تسجيل الإجراءات للسجلات
+ * ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ù„Ù„Ø³Ø¬Ù„Ø§Øª
  */
 function logAction(
   userId: string,
@@ -471,26 +471,26 @@ function logAction(
   
   console.log('[Bot Action]', JSON.stringify(logEntry, null, 2))
   
-  // في الإنتاج، هنا ستخزن في قاعدة البيانات
+  // ÙÙŠ Ø§Ù„Ø¥Ù†ØªØ§Ø¬ØŒ Ù‡Ù†Ø§ Ø³ØªØ®Ø²Ù† ÙÙŠ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª
   // await prisma.actionLog.create({ data: logEntry })
 }
 
 /**
- * دالة مساعدة للتأخير
+ * Ø¯Ø§Ù„Ø© Ù…Ø³Ø§Ø¹Ø¯Ø© Ù„Ù„ØªØ£Ø®ÙŠØ±
  */
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 /**
- * مقارنة مصفوفتين
+ * Ù…Ù‚Ø§Ø±Ù†Ø© Ù…ØµÙÙˆÙØªÙŠÙ†
  */
 function arraysEqual<T>(a: T[], b: T[]): boolean {
   if (a.length !== b.length) return false
   return a.every((val, index) => val === b[index])
 }
 
-// ==================== نقطة نهاية GET للتحقق من الحالة ====================
+// ==================== Ù†Ù‚Ø·Ø© Ù†Ù‡Ø§ÙŠØ© GET Ù„Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø­Ø§Ù„Ø© ====================
 
 export async function GET(request: NextRequest) {
   try {
@@ -528,8 +528,8 @@ export async function GET(request: NextRequest) {
     if (includeDetails && userStats) {
       response.details = {
         recentActions: userStats.actions.slice(-20),
-        patterns: forbiddenPatterns.map(p => p.join(' → ')),
-        recommendations: generateRecommendations(userId, 'click') // نوع عشوائي للعرض
+        patterns: forbiddenPatterns.map(p => p.join(' â†’ ')),
+        recommendations: generateRecommendations(userId, 'click') // Ù†ÙˆØ¹ Ø¹Ø´ÙˆØ§Ø¦ÙŠ Ù„Ù„Ø¹Ø±Ø¶
       }
     }
 
