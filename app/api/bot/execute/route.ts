@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/supabase/server'
 
-// Ø£Ù†ÙˆØ§Ø¹ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø§Ù„Ù…Ù…ÙƒÙ†Ø©
+// Ã˜Â£Ã™â€ Ã™Ë†Ã˜Â§Ã˜Â¹ Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™â€¦Ã™â€¦Ã™Æ’Ã™â€ Ã˜Â©
 type ActionType = 
   | 'click' 
   | 'type' 
@@ -35,24 +35,26 @@ interface ActionRequest {
   }
 }
 
-// Ø°Ø§ÙƒØ±Ø© Ù…Ø¤Ù‚ØªØ© Ù„ØªØ®Ø²ÙŠÙ† Ø¥Ø­ØµØ§Ø¡Ø§Øª Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª (Ø§Ø³ØªØ®Ø¯Ù… Redis ÙÙŠ Ø§Ù„Ø¥Ù†ØªØ§Ø¬)
+// Ã˜Â°Ã˜Â§Ã™Æ’Ã˜Â±Ã˜Â© Ã™â€¦Ã˜Â¤Ã™â€šÃ˜ÂªÃ˜Â© Ã™â€žÃ˜ÂªÃ˜Â®Ã˜Â²Ã™Å Ã™â€  Ã˜Â¥Ã˜Â­Ã˜ÂµÃ˜Â§Ã˜Â¡Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡Ã˜Â§Ã˜Âª (Ã˜Â§Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â¯Ã™â€¦ Redis Ã™ÂÃ™Å  Ã˜Â§Ã™â€žÃ˜Â¥Ã™â€ Ã˜ÂªÃ˜Â§Ã˜Â¬)
 const actionStats = new Map<string, {
   count: number
   lastReset: number
   actions: Array<{ type: ActionType; timestamp: number }>
 }>()
 
-// Ù‚Ø§Ø¦Ù…Ø© Ø¨Ø§Ù„Ù…Ù‡Ø§Ù… Ø§Ù„Ù…Ø­Ø¸ÙˆØ±Ø© (Ù„Ù„Ø£Ù†Ù…Ø§Ø· Ø§Ù„Ù…ØªÙƒØ±Ø±Ø©)
+// Ã™â€šÃ˜Â§Ã˜Â¦Ã™â€¦Ã˜Â© Ã˜Â¨Ã˜Â§Ã™â€žÃ™â€¦Ã™â€¡Ã˜Â§Ã™â€¦ Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â­Ã˜Â¸Ã™Ë†Ã˜Â±Ã˜Â© (Ã™â€žÃ™â€žÃ˜Â£Ã™â€ Ã™â€¦Ã˜Â§Ã˜Â· Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂªÃ™Æ’Ã˜Â±Ã˜Â±Ã˜Â©)
 const forbiddenPatterns = [
-  ['click', 'click', 'click'], // 3 Ù†Ù‚Ø±Ø§Øª Ù…ØªØªØ§Ù„ÙŠØ©
-  ['gather', 'gather', 'gather'], // 3 Ø¹Ù…Ù„ÙŠØ§Øª Ø¬Ù…Ø¹ Ù…ØªØªØ§Ù„ÙŠØ©
-  ['click', 'type', 'click', 'type'], // Ù†Ù…Ø· Ù…ØªÙƒØ±Ø±
+  ['click', 'click', 'click'], // 3 Ã™â€ Ã™â€šÃ˜Â±Ã˜Â§Ã˜Âª Ã™â€¦Ã˜ÂªÃ˜ÂªÃ˜Â§Ã™â€žÃ™Å Ã˜Â©
+  ['gather', 'gather', 'gather'], // 3 Ã˜Â¹Ã™â€¦Ã™â€žÃ™Å Ã˜Â§Ã˜Âª Ã˜Â¬Ã™â€¦Ã˜Â¹ Ã™â€¦Ã˜ÂªÃ˜ÂªÃ˜Â§Ã™â€žÃ™Å Ã˜Â©
+  ['click', 'type', 'click', 'type'], // Ã™â€ Ã™â€¦Ã˜Â· Ã™â€¦Ã˜ÂªÃ™Æ’Ã˜Â±Ã˜Â±
 ]
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ù…ØµØ§Ø¯Ù‚Ø©
-    const session = await getServerSession(authOptions)
+    // 1. Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â­Ã™â€šÃ™â€š Ã™â€¦Ã™â€  Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂµÃ˜Â§Ã˜Â¯Ã™â€šÃ˜Â©
+    const supabase = createSupabaseServerClient()
+    const { data: { user: sbUser } } = await supabase.auth.getUser()
+    const session = sbUser ? { user: { email: sbUser.email, id: sbUser.id } } : null
     
     if (!session?.user) {
       return NextResponse.json(
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     const userId = session.user.id
     
-    // 2. Ù‚Ø±Ø§Ø¡Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ù…Ù† Ø§Ù„Ø·Ù„Ø¨
+    // 2. Ã™â€šÃ˜Â±Ã˜Â§Ã˜Â¡Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â¨Ã™Å Ã˜Â§Ã™â€ Ã˜Â§Ã˜Âª Ã™â€¦Ã™â€  Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨
     const body: ActionRequest = await request.json()
     
     if (!body.action || !body.settings) {
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
     const { action, farmId, coordinates, data, settings } = body
     const { security } = settings
 
-    // 3. ØªØ·Ø¨ÙŠÙ‚ Anti-Detection Ø¥Ø°Ø§ ÙƒØ§Ù† Ù…ÙØ¹Ù„Ø§Ù‹
+    // 3. Ã˜ÂªÃ˜Â·Ã˜Â¨Ã™Å Ã™â€š Anti-Detection Ã˜Â¥Ã˜Â°Ã˜Â§ Ã™Æ’Ã˜Â§Ã™â€  Ã™â€¦Ã™ÂÃ˜Â¹Ã™â€žÃ˜Â§Ã™â€¹
     let securityApplied = false
     let appliedDelays: number[] = []
     let patternChecks: string[] = []
@@ -90,7 +92,7 @@ export async function POST(request: NextRequest) {
     if (security.antiDetection) {
       securityApplied = true
       
-      // 3.1. Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ù„Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª ÙÙŠ Ø§Ù„Ø³Ø§Ø¹Ø©
+      // 3.1. Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â­Ã™â€šÃ™â€š Ã™â€¦Ã™â€  Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â¯ Ã˜Â§Ã™â€žÃ˜Â£Ã™â€šÃ˜ÂµÃ™â€° Ã™â€žÃ™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡Ã˜Â§Ã˜Âª Ã™ÂÃ™Å  Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â§Ã˜Â¹Ã˜Â©
       const isRateLimited = await checkRateLimit(userId, security.maxActionsPerHour)
       if (isRateLimited) {
         return NextResponse.json(
@@ -104,41 +106,41 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // 3.2. ØªØ·Ø¨ÙŠÙ‚ ØªØ£Ø®ÙŠØ±Ø§Øª Ø¹Ø´ÙˆØ§Ø¦ÙŠØ©
+      // 3.2. Ã˜ÂªÃ˜Â·Ã˜Â¨Ã™Å Ã™â€š Ã˜ÂªÃ˜Â£Ã˜Â®Ã™Å Ã˜Â±Ã˜Â§Ã˜Âª Ã˜Â¹Ã˜Â´Ã™Ë†Ã˜Â§Ã˜Â¦Ã™Å Ã˜Â©
       if (security.randomDelays) {
         const delay = applyRandomDelay(action)
         await sleep(delay)
         appliedDelays.push(delay)
       }
 
-      // 3.3. Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø£Ù†Ù…Ø§Ø· Ø§Ù„Ù…ØªÙƒØ±Ø±Ø©
+      // 3.3. Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â­Ã™â€šÃ™â€š Ã™â€¦Ã™â€  Ã˜Â§Ã™â€žÃ˜Â£Ã™â€ Ã™â€¦Ã˜Â§Ã˜Â· Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂªÃ™Æ’Ã˜Â±Ã˜Â±Ã˜Â©
       if (security.avoidPatterns) {
         const patternDetected = detectPattern(userId, action)
         if (patternDetected.detected) {
           patternChecks.push(`Pattern detected: ${patternDetected.pattern}`)
           
-          // Ø¥Ø¶Ø§ÙØ© ØªØ£Ø®ÙŠØ± Ø¥Ø¶Ø§ÙÙŠ Ø¥Ø°Ø§ Ø§ÙƒØªØ´ÙÙ†Ø§ Ù†Ù…Ø·Ø§Ù‹
-          const extraDelay = Math.floor(Math.random() * 3000) + 2000 // 2-5 Ø«ÙˆØ§Ù†ÙŠ Ø¥Ø¶Ø§ÙÙŠØ©
+          // Ã˜Â¥Ã˜Â¶Ã˜Â§Ã™ÂÃ˜Â© Ã˜ÂªÃ˜Â£Ã˜Â®Ã™Å Ã˜Â± Ã˜Â¥Ã˜Â¶Ã˜Â§Ã™ÂÃ™Å  Ã˜Â¥Ã˜Â°Ã˜Â§ Ã˜Â§Ã™Æ’Ã˜ÂªÃ˜Â´Ã™ÂÃ™â€ Ã˜Â§ Ã™â€ Ã™â€¦Ã˜Â·Ã˜Â§Ã™â€¹
+          const extraDelay = Math.floor(Math.random() * 3000) + 2000 // 2-5 Ã˜Â«Ã™Ë†Ã˜Â§Ã™â€ Ã™Å  Ã˜Â¥Ã˜Â¶Ã˜Â§Ã™ÂÃ™Å Ã˜Â©
           await sleep(extraDelay)
           appliedDelays.push(extraDelay)
         }
       }
 
-      // 3.4. ØªØ·Ø¨ÙŠÙ‚ ØªØ­ÙˆÙŠÙ„Ø§Øª Ø¥Ø­Ø¯Ø§Ø«ÙŠØ§Øª Ù„Ù„ÙØ£Ø±Ø© (Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ù…ÙˆØ¬ÙˆØ¯Ø©)
+      // 3.4. Ã˜ÂªÃ˜Â·Ã˜Â¨Ã™Å Ã™â€š Ã˜ÂªÃ˜Â­Ã™Ë†Ã™Å Ã™â€žÃ˜Â§Ã˜Âª Ã˜Â¥Ã˜Â­Ã˜Â¯Ã˜Â§Ã˜Â«Ã™Å Ã˜Â§Ã˜Âª Ã™â€žÃ™â€žÃ™ÂÃ˜Â£Ã˜Â±Ã˜Â© (Ã˜Â¥Ã˜Â°Ã˜Â§ Ã™Æ’Ã˜Â§Ã™â€ Ã˜Âª Ã™â€¦Ã™Ë†Ã˜Â¬Ã™Ë†Ã˜Â¯Ã˜Â©)
       let adjustedCoordinates = coordinates
       if (security.humanizeMouse && coordinates) {
         adjustedCoordinates = humanizeMouseMovement(coordinates)
       }
 
-      // 3.5. Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø¨Ø±ÙˆÙƒØ³ÙŠ Ø¥Ø°Ø§ ÙƒØ§Ù† Ù…ÙØ¹Ù„Ø§Ù‹
+      // 3.5. Ã˜Â§Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â¯Ã˜Â§Ã™â€¦ Ã˜Â§Ã™â€žÃ˜Â¨Ã˜Â±Ã™Ë†Ã™Æ’Ã˜Â³Ã™Å  Ã˜Â¥Ã˜Â°Ã˜Â§ Ã™Æ’Ã˜Â§Ã™â€  Ã™â€¦Ã™ÂÃ˜Â¹Ã™â€žÃ˜Â§Ã™â€¹
       let proxyUsed = false
       if (security.useProxy && security.proxyAddress) {
         proxyUsed = true
-        // ÙÙŠ Ø§Ù„Ø¥Ù†ØªØ§Ø¬ØŒ Ù‡Ù†Ø§ Ø³ØªØ³ØªØ®Ø¯Ù… Ù…ÙƒØªØ¨Ø© Ù…Ø«Ù„ 'proxy-agent'
+        // Ã™ÂÃ™Å  Ã˜Â§Ã™â€žÃ˜Â¥Ã™â€ Ã˜ÂªÃ˜Â§Ã˜Â¬Ã˜Å’ Ã™â€¡Ã™â€ Ã˜Â§ Ã˜Â³Ã˜ÂªÃ˜Â³Ã˜ÂªÃ˜Â®Ã˜Â¯Ã™â€¦ Ã™â€¦Ã™Æ’Ã˜ÂªÃ˜Â¨Ã˜Â© Ã™â€¦Ã˜Â«Ã™â€ž 'proxy-agent'
         console.log(`Using proxy: ${security.proxyAddress}`)
       }
 
-      // ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ù…Ø¹ Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø£Ù…Ø§Ù†
+      // Ã˜ÂªÃ˜Â³Ã˜Â¬Ã™Å Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡ Ã™â€¦Ã˜Â¹ Ã™â€¦Ã˜Â¹Ã™â€žÃ™Ë†Ã™â€¦Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â£Ã™â€¦Ã˜Â§Ã™â€ 
       logAction(userId, action, {
         securityApplied: true,
         delays: appliedDelays,
@@ -148,17 +150,17 @@ export async function POST(request: NextRequest) {
         adjustedCoordinates
       })
     } else {
-      // ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ø¨Ø¯ÙˆÙ† Ø£Ù…Ø§Ù†
+      // Ã˜ÂªÃ˜Â³Ã˜Â¬Ã™Å Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡ Ã˜Â¨Ã˜Â¯Ã™Ë†Ã™â€  Ã˜Â£Ã™â€¦Ã˜Â§Ã™â€ 
       logAction(userId, action, { securityApplied: false })
     }
 
-    // 4. Ù…Ø­Ø§ÙƒØ§Ø© ØªÙ†ÙÙŠØ° Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ (ÙÙŠ Ø§Ù„Ø¥Ù†ØªØ§Ø¬ØŒ Ù‡Ù†Ø§ Ø³ØªØªØµÙ„ Ø¨Ù„Ø¹Ø¨Ø© Viking Rise)
+    // 4. Ã™â€¦Ã˜Â­Ã˜Â§Ã™Æ’Ã˜Â§Ã˜Â© Ã˜ÂªÃ™â€ Ã™ÂÃ™Å Ã˜Â° Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡ (Ã™ÂÃ™Å  Ã˜Â§Ã™â€žÃ˜Â¥Ã™â€ Ã˜ÂªÃ˜Â§Ã˜Â¬Ã˜Å’ Ã™â€¡Ã™â€ Ã˜Â§ Ã˜Â³Ã˜ÂªÃ˜ÂªÃ˜ÂµÃ™â€ž Ã˜Â¨Ã™â€žÃ˜Â¹Ã˜Â¨Ã˜Â© Viking Rise)
     const result = await simulateActionExecution(action, farmId, data)
 
-    // 5. Ø²ÙŠØ§Ø¯Ø© Ø¹Ø¯Ø§Ø¯ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª
+    // 5. Ã˜Â²Ã™Å Ã˜Â§Ã˜Â¯Ã˜Â© Ã˜Â¹Ã˜Â¯Ã˜Â§Ã˜Â¯ Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡Ã˜Â§Ã˜Âª
     incrementActionCount(userId)
 
-    // 6. Ø¥Ø±Ø¬Ø§Ø¹ Ø§Ù„Ù†ØªÙŠØ¬Ø©
+    // 6. Ã˜Â¥Ã˜Â±Ã˜Â¬Ã˜Â§Ã˜Â¹ Ã˜Â§Ã™â€žÃ™â€ Ã˜ÂªÃ™Å Ã˜Â¬Ã˜Â©
     return NextResponse.json({
       success: true,
       message: 'Action executed successfully',
@@ -196,23 +198,23 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ==================== Ø¯ÙˆØ§Ù„ Ø§Ù„Ù…Ø³Ø§Ø¹Ø¯Ø© ====================
+// ==================== Ã˜Â¯Ã™Ë†Ã˜Â§Ã™â€ž Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜Â§Ã˜Â¹Ã˜Â¯Ã˜Â© ====================
 
 /**
- * ØªØ·Ø¨ÙŠÙ‚ ØªØ£Ø®ÙŠØ± Ø¹Ø´ÙˆØ§Ø¦ÙŠ Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ Ù†ÙˆØ¹ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡
+ * Ã˜ÂªÃ˜Â·Ã˜Â¨Ã™Å Ã™â€š Ã˜ÂªÃ˜Â£Ã˜Â®Ã™Å Ã˜Â± Ã˜Â¹Ã˜Â´Ã™Ë†Ã˜Â§Ã˜Â¦Ã™Å  Ã˜Â¨Ã™â€ Ã˜Â§Ã˜Â¡Ã™â€¹ Ã˜Â¹Ã™â€žÃ™â€° Ã™â€ Ã™Ë†Ã˜Â¹ Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡
  */
 function applyRandomDelay(action: ActionType): number {
   const delayRanges: Record<ActionType, [number, number]> = {
-    click: [200, 800],        // 0.2-0.8 Ø«Ø§Ù†ÙŠØ© Ù„Ù„Ù†Ù‚Ø±Ø§Øª
-    type: [50, 200],          // 0.05-0.2 Ø«Ø§Ù†ÙŠØ© Ù„Ù„ÙƒØªØ§Ø¨Ø©
-    scroll: [300, 1500],      // 0.3-1.5 Ø«Ø§Ù†ÙŠØ© Ù„Ù„ØªÙ…Ø±ÙŠØ±
-    navigate: [1000, 3000],   // 1-3 Ø«ÙˆØ§Ù†ÙŠ Ù„Ù„ØªÙ†Ù‚Ù„
-    collect: [500, 2000],     // 0.5-2 Ø«Ø§Ù†ÙŠØ© Ù„Ù„Ø¬Ù…Ø¹
-    upgrade: [1000, 5000],    // 1-5 Ø«ÙˆØ§Ù†ÙŠ Ù„Ù„ØªØ±Ù‚ÙŠØ©
-    train: [2000, 8000],      // 2-8 Ø«ÙˆØ§Ù†ÙŠ Ù„Ù„ØªØ¯Ø±ÙŠØ¨
-    attack: [3000, 10000],    // 3-10 Ø«ÙˆØ§Ù†ÙŠ Ù„Ù„Ù‡Ø¬ÙˆÙ…
-    gather: [1500, 4000],     // 1.5-4 Ø«ÙˆØ§Ù†ÙŠ Ù„Ø¬Ù…Ø¹ Ø§Ù„Ù…ÙˆØ§Ø±Ø¯
-    heal: [1000, 3000]        // 1-3 Ø«ÙˆØ§Ù†ÙŠ Ù„Ù„Ø´ÙØ§Ø¡
+    click: [200, 800],        // 0.2-0.8 Ã˜Â«Ã˜Â§Ã™â€ Ã™Å Ã˜Â© Ã™â€žÃ™â€žÃ™â€ Ã™â€šÃ˜Â±Ã˜Â§Ã˜Âª
+    type: [50, 200],          // 0.05-0.2 Ã˜Â«Ã˜Â§Ã™â€ Ã™Å Ã˜Â© Ã™â€žÃ™â€žÃ™Æ’Ã˜ÂªÃ˜Â§Ã˜Â¨Ã˜Â©
+    scroll: [300, 1500],      // 0.3-1.5 Ã˜Â«Ã˜Â§Ã™â€ Ã™Å Ã˜Â© Ã™â€žÃ™â€žÃ˜ÂªÃ™â€¦Ã˜Â±Ã™Å Ã˜Â±
+    navigate: [1000, 3000],   // 1-3 Ã˜Â«Ã™Ë†Ã˜Â§Ã™â€ Ã™Å  Ã™â€žÃ™â€žÃ˜ÂªÃ™â€ Ã™â€šÃ™â€ž
+    collect: [500, 2000],     // 0.5-2 Ã˜Â«Ã˜Â§Ã™â€ Ã™Å Ã˜Â© Ã™â€žÃ™â€žÃ˜Â¬Ã™â€¦Ã˜Â¹
+    upgrade: [1000, 5000],    // 1-5 Ã˜Â«Ã™Ë†Ã˜Â§Ã™â€ Ã™Å  Ã™â€žÃ™â€žÃ˜ÂªÃ˜Â±Ã™â€šÃ™Å Ã˜Â©
+    train: [2000, 8000],      // 2-8 Ã˜Â«Ã™Ë†Ã˜Â§Ã™â€ Ã™Å  Ã™â€žÃ™â€žÃ˜ÂªÃ˜Â¯Ã˜Â±Ã™Å Ã˜Â¨
+    attack: [3000, 10000],    // 3-10 Ã˜Â«Ã™Ë†Ã˜Â§Ã™â€ Ã™Å  Ã™â€žÃ™â€žÃ™â€¡Ã˜Â¬Ã™Ë†Ã™â€¦
+    gather: [1500, 4000],     // 1.5-4 Ã˜Â«Ã™Ë†Ã˜Â§Ã™â€ Ã™Å  Ã™â€žÃ˜Â¬Ã™â€¦Ã˜Â¹ Ã˜Â§Ã™â€žÃ™â€¦Ã™Ë†Ã˜Â§Ã˜Â±Ã˜Â¯
+    heal: [1000, 3000]        // 1-3 Ã˜Â«Ã™Ë†Ã˜Â§Ã™â€ Ã™Å  Ã™â€žÃ™â€žÃ˜Â´Ã™ÂÃ˜Â§Ã˜Â¡
   }
 
   const [min, max] = delayRanges[action] || [500, 2000]
@@ -220,11 +222,11 @@ function applyRandomDelay(action: ActionType): number {
 }
 
 /**
- * Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ù„Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª ÙÙŠ Ø§Ù„Ø³Ø§Ø¹Ø©
+ * Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â­Ã™â€šÃ™â€š Ã™â€¦Ã™â€  Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â¯ Ã˜Â§Ã™â€žÃ˜Â£Ã™â€šÃ˜ÂµÃ™â€° Ã™â€žÃ™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡Ã˜Â§Ã˜Âª Ã™ÂÃ™Å  Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â§Ã˜Â¹Ã˜Â©
  */
 async function checkRateLimit(userId: string, maxPerHour: number): Promise<boolean> {
   const now = Date.now()
-  const hourStart = Math.floor(now / 3600000) * 3600000 // Ø¨Ø¯Ø§ÙŠØ© Ø§Ù„Ø³Ø§Ø¹Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ©
+  const hourStart = Math.floor(now / 3600000) * 3600000 // Ã˜Â¨Ã˜Â¯Ã˜Â§Ã™Å Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â§Ã˜Â¹Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â§Ã™â€žÃ™Å Ã˜Â©
   
   const userStats = actionStats.get(userId) || {
     count: 0,
@@ -232,19 +234,19 @@ async function checkRateLimit(userId: string, maxPerHour: number): Promise<boole
     actions: []
   }
 
-  // Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„ØªØ¹ÙŠÙŠÙ† Ø¥Ø°Ø§ ØªØºÙŠØ±Øª Ø§Ù„Ø³Ø§Ø¹Ø©
+  // Ã˜Â¥Ã˜Â¹Ã˜Â§Ã˜Â¯Ã˜Â© Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â¹Ã™Å Ã™Å Ã™â€  Ã˜Â¥Ã˜Â°Ã˜Â§ Ã˜ÂªÃ˜ÂºÃ™Å Ã˜Â±Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â§Ã˜Â¹Ã˜Â©
   if (now - userStats.lastReset >= 3600000) {
     userStats.count = 0
     userStats.lastReset = hourStart
     userStats.actions = []
   }
 
-  // Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø­Ø¯
+  // Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â­Ã™â€šÃ™â€š Ã™â€¦Ã™â€  Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â¯
   return userStats.count >= maxPerHour
 }
 
 /**
- * Ø§Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ø¹Ø¯Ø¯ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø§Ù„Ø­Ø§Ù„ÙŠ ÙÙŠ Ø§Ù„Ø³Ø§Ø¹Ø©
+ * Ã˜Â§Ã™â€žÃ˜Â­Ã˜ÂµÃ™Ë†Ã™â€ž Ã˜Â¹Ã™â€žÃ™â€° Ã˜Â¹Ã˜Â¯Ã˜Â¯ Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â§Ã™â€žÃ™Å  Ã™ÂÃ™Å  Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â§Ã˜Â¹Ã˜Â©
  */
 function getCurrentHourCount(userId: string): number {
   const userStats = actionStats.get(userId)
@@ -252,7 +254,7 @@ function getCurrentHourCount(userId: string): number {
 }
 
 /**
- * Ø²ÙŠØ§Ø¯Ø© Ø¹Ø¯Ø§Ø¯ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª
+ * Ã˜Â²Ã™Å Ã˜Â§Ã˜Â¯Ã˜Â© Ã˜Â¹Ã˜Â¯Ã˜Â§Ã˜Â¯ Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡Ã˜Â§Ã˜Âª
  */
 function incrementActionCount(userId: string): void {
   const now = Date.now()
@@ -264,7 +266,7 @@ function incrementActionCount(userId: string): void {
     actions: []
   }
 
-  // Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„ØªØ¹ÙŠÙŠÙ† Ø¥Ø°Ø§ ØªØºÙŠØ±Øª Ø§Ù„Ø³Ø§Ø¹Ø©
+  // Ã˜Â¥Ã˜Â¹Ã˜Â§Ã˜Â¯Ã˜Â© Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â¹Ã™Å Ã™Å Ã™â€  Ã˜Â¥Ã˜Â°Ã˜Â§ Ã˜ÂªÃ˜ÂºÃ™Å Ã˜Â±Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â§Ã˜Â¹Ã˜Â©
   if (now - userStats.lastReset >= 3600000) {
     userStats.count = 0
     userStats.lastReset = hourStart
@@ -272,12 +274,12 @@ function incrementActionCount(userId: string): void {
   }
 
   userStats.count++
-  userStats.actions.push({ type: 'click' as ActionType, timestamp: now }) // Ù†ÙˆØ¹ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ø³ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„Ù‡ Ø¨Ø´ÙƒÙ„ ØµØ­ÙŠØ­
+  userStats.actions.push({ type: 'click' as ActionType, timestamp: now }) // Ã™â€ Ã™Ë†Ã˜Â¹ Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡ Ã˜Â³Ã™Å Ã˜ÂªÃ™â€¦ Ã˜ÂªÃ˜Â³Ã˜Â¬Ã™Å Ã™â€žÃ™â€¡ Ã˜Â¨Ã˜Â´Ã™Æ’Ã™â€ž Ã˜ÂµÃ˜Â­Ã™Å Ã˜Â­
   actionStats.set(userId, userStats)
 }
 
 /**
- * Ø§ÙƒØªØ´Ø§Ù Ø§Ù„Ø£Ù†Ù…Ø§Ø· Ø§Ù„Ù…ØªÙƒØ±Ø±Ø©
+ * Ã˜Â§Ã™Æ’Ã˜ÂªÃ˜Â´Ã˜Â§Ã™Â Ã˜Â§Ã™â€žÃ˜Â£Ã™â€ Ã™â€¦Ã˜Â§Ã˜Â· Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂªÃ™Æ’Ã˜Â±Ã˜Â±Ã˜Â©
  */
 function detectPattern(userId: string, currentAction: ActionType): {
   detected: boolean
@@ -288,10 +290,10 @@ function detectPattern(userId: string, currentAction: ActionType): {
     return { detected: false }
   }
 
-  // Ø§Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ø¢Ø®Ø± 10 Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª
+  // Ã˜Â§Ã™â€žÃ˜Â­Ã˜ÂµÃ™Ë†Ã™â€ž Ã˜Â¹Ã™â€žÃ™â€° Ã˜Â¢Ã˜Â®Ã˜Â± 10 Ã˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡Ã˜Â§Ã˜Âª
   const recentActions = userStats.actions.slice(-10).map(a => a.type)
   
-  // Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ÙƒÙ„ Ù†Ù…Ø· Ù…Ø­Ø¸ÙˆØ±
+  // Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â­Ã™â€šÃ™â€š Ã™â€¦Ã™â€  Ã™Æ’Ã™â€ž Ã™â€ Ã™â€¦Ã˜Â· Ã™â€¦Ã˜Â­Ã˜Â¸Ã™Ë†Ã˜Â±
   for (const pattern of forbiddenPatterns) {
     if (pattern.length > recentActions.length) continue
     
@@ -300,12 +302,12 @@ function detectPattern(userId: string, currentAction: ActionType): {
     if (arraysEqual(pattern, lastActions)) {
       return {
         detected: true,
-        pattern: pattern.join(' â†’ ')
+        pattern: pattern.join(' Ã¢â€ â€™ ')
       }
     }
   }
 
-  // Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„ØªÙƒØ±Ø§Ø± Ø§Ù„Ù…ÙØ±Ø· Ù„Ù†ÙØ³ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡
+  // Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â­Ã™â€šÃ™â€š Ã™â€¦Ã™â€  Ã˜Â§Ã™â€žÃ˜ÂªÃ™Æ’Ã˜Â±Ã˜Â§Ã˜Â± Ã˜Â§Ã™â€žÃ™â€¦Ã™ÂÃ˜Â±Ã˜Â· Ã™â€žÃ™â€ Ã™ÂÃ˜Â³ Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡
   const lastThree = recentActions.slice(-3)
   if (lastThree.length === 3 && lastThree.every(a => a === currentAction)) {
     return {
@@ -318,12 +320,12 @@ function detectPattern(userId: string, currentAction: ActionType): {
 }
 
 /**
- * Ù…Ø­Ø§ÙƒØ§Ø© Ø­Ø±ÙƒØ§Øª Ø§Ù„ÙØ£Ø±Ø© Ø§Ù„Ø¨Ø´Ø±ÙŠØ©
+ * Ã™â€¦Ã˜Â­Ã˜Â§Ã™Æ’Ã˜Â§Ã˜Â© Ã˜Â­Ã˜Â±Ã™Æ’Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™ÂÃ˜Â£Ã˜Â±Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â¨Ã˜Â´Ã˜Â±Ã™Å Ã˜Â©
  */
 function humanizeMouseMovement(coordinates: { x: number; y: number }): { x: number; y: number } {
-  // Ø¥Ø¶Ø§ÙØ© Ø§Ø®ØªÙ„Ø§ÙØ§Øª Ø·ÙÙŠÙØ© ÙÙŠ Ø§Ù„Ø¥Ø­Ø¯Ø§Ø«ÙŠØ§Øª
-  const jitterX = (Math.random() - 0.5) * 15 // Â±7.5 Ø¨ÙƒØ³Ù„
-  const jitterY = (Math.random() - 0.5) * 15 // Â±7.5 Ø¨ÙƒØ³Ù„
+  // Ã˜Â¥Ã˜Â¶Ã˜Â§Ã™ÂÃ˜Â© Ã˜Â§Ã˜Â®Ã˜ÂªÃ™â€žÃ˜Â§Ã™ÂÃ˜Â§Ã˜Âª Ã˜Â·Ã™ÂÃ™Å Ã™ÂÃ˜Â© Ã™ÂÃ™Å  Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â­Ã˜Â¯Ã˜Â§Ã˜Â«Ã™Å Ã˜Â§Ã˜Âª
+  const jitterX = (Math.random() - 0.5) * 15 // Ã‚Â±7.5 Ã˜Â¨Ã™Æ’Ã˜Â³Ã™â€ž
+  const jitterY = (Math.random() - 0.5) * 15 // Ã‚Â±7.5 Ã˜Â¨Ã™Æ’Ã˜Â³Ã™â€ž
   
   return {
     x: Math.round(coordinates.x + jitterX),
@@ -332,14 +334,14 @@ function humanizeMouseMovement(coordinates: { x: number; y: number }): { x: numb
 }
 
 /**
- * Ù…Ø­Ø§ÙƒØ§Ø© ØªÙ†ÙÙŠØ° Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡
+ * Ã™â€¦Ã˜Â­Ã˜Â§Ã™Æ’Ã˜Â§Ã˜Â© Ã˜ÂªÃ™â€ Ã™ÂÃ™Å Ã˜Â° Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡
  */
 async function simulateActionExecution(
   action: ActionType,
   farmId?: string,
   data?: any
 ): Promise<any> {
-  // ØªØ£Ø®ÙŠØ± Ù…Ø­Ø§ÙƒØ§Ø© Ù„ÙˆÙ‚Øª Ø§Ù„ØªÙ†ÙÙŠØ°
+  // Ã˜ÂªÃ˜Â£Ã˜Â®Ã™Å Ã˜Â± Ã™â€¦Ã˜Â­Ã˜Â§Ã™Æ’Ã˜Â§Ã˜Â© Ã™â€žÃ™Ë†Ã™â€šÃ˜Âª Ã˜Â§Ã™â€žÃ˜ÂªÃ™â€ Ã™ÂÃ™Å Ã˜Â°
   const executionTime = Math.floor(Math.random() * 1000) + 500
   
   await sleep(executionTime)
@@ -356,7 +358,7 @@ async function simulateActionExecution(
         ...baseResult,
         type: 'click',
         element: data?.element || 'button',
-        success: Math.random() > 0.1 // 90% Ù†Ø¬Ø§Ø­
+        success: Math.random() > 0.1 // 90% Ã™â€ Ã˜Â¬Ã˜Â§Ã˜Â­
       }
     
     case 'gather':
@@ -396,7 +398,7 @@ async function simulateActionExecution(
         type: 'building_upgrade',
         building: data?.building || 'Farm',
         level: data?.level || 1,
-        timeRequired: Math.floor(Math.random() * 3600000) + 1800000, // 30-90 Ø¯Ù‚ÙŠÙ‚Ø©
+        timeRequired: Math.floor(Math.random() * 3600000) + 1800000, // 30-90 Ã˜Â¯Ã™â€šÃ™Å Ã™â€šÃ˜Â©
         resourcesRequired: {
           wood: Math.floor(Math.random() * 10000) + 5000,
           food: Math.floor(Math.random() * 10000) + 5000,
@@ -416,7 +418,7 @@ async function simulateActionExecution(
 }
 
 /**
- * ØªÙˆÙ„ÙŠØ¯ ØªÙˆØµÙŠØ§Øª Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ Ø§Ù„Ù†Ø´Ø§Ø·
+ * Ã˜ÂªÃ™Ë†Ã™â€žÃ™Å Ã˜Â¯ Ã˜ÂªÃ™Ë†Ã˜ÂµÃ™Å Ã˜Â§Ã˜Âª Ã˜Â¨Ã™â€ Ã˜Â§Ã˜Â¡Ã™â€¹ Ã˜Â¹Ã™â€žÃ™â€° Ã˜Â§Ã™â€žÃ™â€ Ã˜Â´Ã˜Â§Ã˜Â·
  */
 function generateRecommendations(userId: string, action: ActionType): string[] {
   const recommendations: string[] = []
@@ -426,7 +428,7 @@ function generateRecommendations(userId: string, action: ActionType): string[] {
 
   const hourCount = userStats.count
   
-  // ØªÙˆØµÙŠØ§Øª Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ Ø¹Ø¯Ø¯ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª
+  // Ã˜ÂªÃ™Ë†Ã˜ÂµÃ™Å Ã˜Â§Ã˜Âª Ã˜Â¨Ã™â€ Ã˜Â§Ã˜Â¡Ã™â€¹ Ã˜Â¹Ã™â€žÃ™â€° Ã˜Â¹Ã˜Â¯Ã˜Â¯ Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡Ã˜Â§Ã˜Âª
   if (hourCount > 200) {
     recommendations.push('High action rate detected. Consider reducing max actions per hour to avoid detection.')
   }
@@ -435,7 +437,7 @@ function generateRecommendations(userId: string, action: ActionType): string[] {
     recommendations.push('Take a short break to mimic human behavior patterns.')
   }
   
-  // ØªÙˆØµÙŠØ§Øª Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ Ù†ÙˆØ¹ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡
+  // Ã˜ÂªÃ™Ë†Ã˜ÂµÃ™Å Ã˜Â§Ã˜Âª Ã˜Â¨Ã™â€ Ã˜Â§Ã˜Â¡Ã™â€¹ Ã˜Â¹Ã™â€žÃ™â€° Ã™â€ Ã™Ë†Ã˜Â¹ Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡
   if (action === 'attack') {
     recommendations.push('After attacking monsters, remember to heal troops in hospital.')
   }
@@ -448,7 +450,7 @@ function generateRecommendations(userId: string, action: ActionType): string[] {
 }
 
 /**
- * ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ù„Ù„Ø³Ø¬Ù„Ø§Øª
+ * Ã˜ÂªÃ˜Â³Ã˜Â¬Ã™Å Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡Ã˜Â§Ã˜Âª Ã™â€žÃ™â€žÃ˜Â³Ã˜Â¬Ã™â€žÃ˜Â§Ã˜Âª
  */
 function logAction(
   userId: string,
@@ -471,30 +473,32 @@ function logAction(
   
   console.log('[Bot Action]', JSON.stringify(logEntry, null, 2))
   
-  // ÙÙŠ Ø§Ù„Ø¥Ù†ØªØ§Ø¬ØŒ Ù‡Ù†Ø§ Ø³ØªØ®Ø²Ù† ÙÙŠ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª
+  // Ã™ÂÃ™Å  Ã˜Â§Ã™â€žÃ˜Â¥Ã™â€ Ã˜ÂªÃ˜Â§Ã˜Â¬Ã˜Å’ Ã™â€¡Ã™â€ Ã˜Â§ Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â²Ã™â€  Ã™ÂÃ™Å  Ã™â€šÃ˜Â§Ã˜Â¹Ã˜Â¯Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â¨Ã™Å Ã˜Â§Ã™â€ Ã˜Â§Ã˜Âª
   // await prisma.actionLog.create({ data: logEntry })
 }
 
 /**
- * Ø¯Ø§Ù„Ø© Ù…Ø³Ø§Ø¹Ø¯Ø© Ù„Ù„ØªØ£Ø®ÙŠØ±
+ * Ã˜Â¯Ã˜Â§Ã™â€žÃ˜Â© Ã™â€¦Ã˜Â³Ã˜Â§Ã˜Â¹Ã˜Â¯Ã˜Â© Ã™â€žÃ™â€žÃ˜ÂªÃ˜Â£Ã˜Â®Ã™Å Ã˜Â±
  */
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 /**
- * Ù…Ù‚Ø§Ø±Ù†Ø© Ù…ØµÙÙˆÙØªÙŠÙ†
+ * Ã™â€¦Ã™â€šÃ˜Â§Ã˜Â±Ã™â€ Ã˜Â© Ã™â€¦Ã˜ÂµÃ™ÂÃ™Ë†Ã™ÂÃ˜ÂªÃ™Å Ã™â€ 
  */
 function arraysEqual<T>(a: T[], b: T[]): boolean {
   if (a.length !== b.length) return false
   return a.every((val, index) => val === b[index])
 }
 
-// ==================== Ù†Ù‚Ø·Ø© Ù†Ù‡Ø§ÙŠØ© GET Ù„Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø­Ø§Ù„Ø© ====================
+// ==================== Ã™â€ Ã™â€šÃ˜Â·Ã˜Â© Ã™â€ Ã™â€¡Ã˜Â§Ã™Å Ã˜Â© GET Ã™â€žÃ™â€žÃ˜ÂªÃ˜Â­Ã™â€šÃ™â€š Ã™â€¦Ã™â€  Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â§Ã™â€žÃ˜Â© ====================
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createSupabaseServerClient()
+    const { data: { user: sbUser } } = await supabase.auth.getUser()
+    const session = sbUser ? { user: { email: sbUser.email, id: sbUser.id } } : null
     
     if (!session?.user) {
       return NextResponse.json(
@@ -528,8 +532,8 @@ export async function GET(request: NextRequest) {
     if (includeDetails && userStats) {
       response.details = {
         recentActions: userStats.actions.slice(-20),
-        patterns: forbiddenPatterns.map(p => p.join(' â†’ ')),
-        recommendations: generateRecommendations(userId, 'click') // Ù†ÙˆØ¹ Ø¹Ø´ÙˆØ§Ø¦ÙŠ Ù„Ù„Ø¹Ø±Ø¶
+        patterns: forbiddenPatterns.map(p => p.join(' Ã¢â€ â€™ ')),
+        recommendations: generateRecommendations(userId, 'click') // Ã™â€ Ã™Ë†Ã˜Â¹ Ã˜Â¹Ã˜Â´Ã™Ë†Ã˜Â§Ã˜Â¦Ã™Å  Ã™â€žÃ™â€žÃ˜Â¹Ã˜Â±Ã˜Â¶
       }
     }
 
