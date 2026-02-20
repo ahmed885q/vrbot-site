@@ -11,6 +11,13 @@ const langConfig: Record<Language, { name: string; flag: string; dir: 'rtl' | 'l
   zh: { name: '中文', flag: '🇨🇳', dir: 'ltr' },
 };
 
+const navText: Record<Language, { farms: string; billing: string; download: string; dashboard: string }> = {
+  ar: { farms: '🌾 المزارع', billing: '💳 الدفع', download: '⬇️ تحميل', dashboard: '🎮 الداشبورد' },
+  en: { farms: '🌾 Farms', billing: '💳 Billing', download: '⬇️ Download', dashboard: '🎮 Dashboard' },
+  ru: { farms: '🌾 Фермы', billing: '💳 Оплата', download: '⬇️ Скачать', dashboard: '🎮 Панель' },
+  zh: { farms: '🌾 农场', billing: '💳 付款', download: '⬇️ 下载', dashboard: '🎮 面板' },
+};
+
 export default function SiteHeader() {
   const [lang, setLang] = useState<Language>('ar');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -30,8 +37,9 @@ export default function SiteHeader() {
     document.documentElement.lang = newLang;
     document.documentElement.dir = langConfig[newLang].dir;
     setMenuOpen(false);
-    window.location.reload();
   };
+
+  const t = navText[lang];
 
   return (
     <header style={{
@@ -64,18 +72,10 @@ export default function SiteHeader() {
         alignItems: 'center',
         gap: '16px',
       }}>
-        <a href="/farms" style={navLinkStyle}>
-          {lang === 'ar' ? '🌾 المزارع' : lang === 'ru' ? '🌾 Фермы' : lang === 'zh' ? '🌾 农场' : '🌾 Farms'}
-        </a>
-        <a href="/billing" style={navLinkStyle}>
-          {lang === 'ar' ? '💳 الدفع' : lang === 'ru' ? '💳 Оплата' : lang === 'zh' ? '💳 付款' : '💳 Billing'}
-        </a>
-        <a href="/download" style={navLinkStyle}>
-          {lang === 'ar' ? '⬇️ تحميل' : lang === 'ru' ? '⬇️ Скачать' : lang === 'zh' ? '⬇️ 下载' : '⬇️ Download'}
-        </a>
-        <a href="/viking-rise" style={navLinkStyle}>
-          {lang === 'ar' ? '🎮 الداشبورد' : lang === 'ru' ? '🎮 Панель' : lang === 'zh' ? '🎮 面板' : '🎮 Dashboard'}
-        </a>
+        <a href="/farms" style={navLinkStyle}>{t.farms}</a>
+        <a href="/billing" style={navLinkStyle}>{t.billing}</a>
+        <a href="/download" style={navLinkStyle}>{t.download}</a>
+        <a href="/viking-rise" style={navLinkStyle}>{t.dashboard}</a>
 
         {/* Language Switcher */}
         <div style={{ position: 'relative' }}>
@@ -93,7 +93,6 @@ export default function SiteHeader() {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              fontFamily: "'Times New Roman', Times, serif",
             }}
           >
             {langConfig[lang].flag} {langConfig[lang].name} ▾
@@ -127,7 +126,6 @@ export default function SiteHeader() {
                     fontSize: '14px',
                     fontWeight: lang === l ? 700 : 400,
                     color: '#1a1a2e',
-                    fontFamily: "'Times New Roman', Times, serif",
                     textAlign: 'left',
                   }}
                 >
