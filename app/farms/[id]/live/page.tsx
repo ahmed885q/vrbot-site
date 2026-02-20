@@ -1,6 +1,6 @@
 'use client'
 
-import Hls from 'hls.js'
+import dynamic from 'next/dynamic'
 import { useEffect, useRef } from 'react'
 
 export default function LivePage({ params }: { params: { id: string } }) {
@@ -26,7 +26,7 @@ export default function LivePage({ params }: { params: { id: string } }) {
 
   return (
     <div style={{ padding: 16 }}>
-      <h1 style={{ fontSize: 20, fontWeight: 800 }}>VR Farm Manager — Live</h1>
+      <h1 style={{ fontSize: 20, fontWeight: 800 }}>VR Farm Manager â€” Live</h1>
       <p style={{ opacity: 0.7, marginTop: 6 }}>Farm: {params.id}</p>
 
       <div style={{ marginTop: 12 }}>
