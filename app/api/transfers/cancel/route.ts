@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -9,7 +9,9 @@ const supabase = createClient(
 );
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const supabase = createSupabaseServerClient();
+  const { data: { user: sbUser } } = await supabase.auth.getUser();
+  const session = sbUser ? { user: { email: sbUser.email, id: sbUser.id } } : null;
   const userId = (session?.user as any)?.id || session?.user?.email;
 
   if (!userId) {
@@ -21,7 +23,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "transferId is required" }, { status: 400 });
   }
 
-  // ÙÙ‚Ø· queued ÙŠØ³Ù…Ø­ Ø¨Ø§Ù„Ø¥Ù„ØºØ§Ø¡
+  // Ã™ÂÃ™â€šÃ˜Â· queued Ã™Å Ã˜Â³Ã™â€¦Ã˜Â­ Ã˜Â¨Ã˜Â§Ã™â€žÃ˜Â¥Ã™â€žÃ˜ÂºÃ˜Â§Ã˜Â¡
   const { data: existing, error: readErr } = await supabase
     .from("transfers")
     .select("id,status,user_id")

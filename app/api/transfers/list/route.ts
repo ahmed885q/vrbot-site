@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -9,7 +9,9 @@ const supabase = createClient(
 );
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
+  const supabase = createSupabaseServerClient();
+  const { data: { user: sbUser } } = await supabase.auth.getUser();
+  const session = sbUser ? { user: { email: sbUser.email, id: sbUser.id } } : null;
   const userId = (session?.user as any)?.id || session?.user?.email;
 
   if (!userId) {

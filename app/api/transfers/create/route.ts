@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -18,7 +18,9 @@ type Body = {
 };
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const supabase = createSupabaseServerClient();
+  const { data: { user: sbUser } } = await supabase.auth.getUser();
+  const session = sbUser ? { user: { email: sbUser.email, id: sbUser.id } } : null;
   const userId = (session?.user as any)?.id || session?.user?.email;
 
   if (!userId) {
@@ -66,8 +68,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // âœ… Ù‡Ù†Ø§ Ù…ÙƒØ§Ù† Ø§Ù„ØªÙ†ÙÙŠØ° Ø§Ù„ÙØ¹Ù„ÙŠ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)
-  // Ù…Ø«Ø§Ù„: Ø¥Ø±Ø³Ø§Ù„ Ù„Ù„Ù€ worker queue / webhook
+  // Ã¢Å“â€¦ Ã™â€¡Ã™â€ Ã˜Â§ Ã™â€¦Ã™Æ’Ã˜Â§Ã™â€  Ã˜Â§Ã™â€žÃ˜ÂªÃ™â€ Ã™ÂÃ™Å Ã˜Â° Ã˜Â§Ã™â€žÃ™ÂÃ˜Â¹Ã™â€žÃ™Å  (Ã˜Â§Ã˜Â®Ã˜ÂªÃ™Å Ã˜Â§Ã˜Â±Ã™Å )
+  // Ã™â€¦Ã˜Â«Ã˜Â§Ã™â€ž: Ã˜Â¥Ã˜Â±Ã˜Â³Ã˜Â§Ã™â€ž Ã™â€žÃ™â€žÃ™â‚¬ worker queue / webhook
   // await fetch(process.env.TRANSFER_WORKER_URL!, { method:"POST", body: JSON.stringify({transferId: data.id}) })
 
   return NextResponse.json({ transfer: data });
