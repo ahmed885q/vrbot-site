@@ -1,0 +1,9 @@
+{
+  "bot.title": "لوحة تحكم البوت",
+  "bot.status": "الحالة",
+  "bot.start": "تشغيل",
+  "bot.stop": "إيقاف",
+  "bot.logs": "السجلات",
+  "bot.noLogs": "لا توجد سجلات",
+  "error.unauthorized": "غير مصرح"
+}

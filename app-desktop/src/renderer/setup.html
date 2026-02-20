@@ -1,0 +1,170 @@
+<!-- app-desktop/src/setup.html -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Viking Rais Agent</title>
+    <style>
+      body { font-family: system-ui, Arial; padding: 18px; background: #fafafa; }
+      .card { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 14px; }
+      .row { margin-top: 10px; display: grid; gap: 6px; }
+      label { font-weight: 700; font-size: 13px; }
+      input { padding: 10px; border: 1px solid #ddd; border-radius: 12px; font-size: 14px; }
+      button { padding: 10px 12px; border: 1px solid #ddd; border-radius: 12px; background: #fff; cursor: pointer; font-weight: 700; }
+      .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+      .muted { opacity: .75; font-size: 13px; }
+      .ok { color: green; font-weight: 800; }
+      .err { color: crimson; font-weight: 800; }
+      pre { background: #f6f6f6; border: 1px solid #eee; padding: 10px; border-radius: 12px; overflow: auto; }
+      .pill { display:inline-block; padding: 6px 10px; border-radius: 999px; border: 1px solid #eee; background:#fafafa; font-weight:700; }
+    </style>
+  </head>
+  <body>
+    <h2 style="margin:0;">Viking Rais Agent</h2>
+    <div class="muted" style="margin-top:6px;">
+      First Run Wizard — Device = hostname تلقائي ✅
+    </div>
+
+    <div id="viewSetup" class="card" style="margin-top:14px; display:none;">
+      <div class="row">
+        <label>Device (Auto)</label>
+        <div class="pill" id="deviceAuto">...</div>
+        <div class="muted">هذا الاسم تستخدمه في السيرفر لربط التوكن بهذا الجهاز.</div>
+      </div>
+
+      <div class="row">
+        <label>WS Base URL</label>
+        <input id="wsBaseUrl" placeholder="ws://127.0.0.1:9797 أو wss://domain.com" />
+        <div class="muted">سيتم الاتصال على /ws?role=agent</div>
+      </div>
+
+      <div class="row">
+        <label>Device Token</label>
+        <input id="token" placeholder="ضع توكن هذا الجهاز" />
+      </div>
+
+      <div class="row">
+        <label>Stream Status URL (اختياري)</label>
+        <input id="streamStatusUrl" placeholder="http://127.0.0.1:9797/stream/status" />
+      </div>
+
+      <div class="actions">
+        <button id="btnSave">Save & Start Agent</button>
+        <button id="btnShowPath">Show Config Path</button>
+      </div>
+
+      <div id="msg" style="margin-top:12px;"></div>
+    </div>
+
+    <div id="viewRunning" class="card" style="margin-top:14px; display:none;">
+      <div class="ok">Agent Running ✅</div>
+      <div class="muted" style="margin-top:6px;">يمكنك إيقاف/تشغيل الـ Agent أو تعديل التوكن.</div>
+
+      <div class="actions">
+        <button id="btnStart">Start Agent</button>
+        <button id="btnStop">Stop Agent</button>
+        <button id="btnEdit">Edit Setup</button>
+        <button id="btnShowPath2">Show Config Path</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="muted">Current Config:</div>
+        <pre id="cfgView">{}</pre>
+      </div>
+
+      <div id="msg2" style="margin-top:10px;"></div>
+    </div>
+
+    <script>
+      const qs = new URLSearchParams(location.search);
+      const view = qs.get("view") || "setup";
+
+      const viewSetup = document.getElementById("viewSetup");
+      const viewRunning = document.getElementById("viewRunning");
+
+      const msg = document.getElementById("msg");
+      const msg2 = document.getElementById("msg2");
+
+      const deviceAuto = document.getElementById("deviceAuto");
+      const wsBaseUrl = document.getElementById("wsBaseUrl");
+      const token = document.getElementById("token");
+      const streamStatusUrl = document.getElementById("streamStatusUrl");
+      const cfgView = document.getElementById("cfgView");
+
+      function setMsg(el, text, ok) {
+        el.innerHTML = `<div class="${ok ? "ok" : "err"}">${text}</div>`;
+      }
+
+      function showSetup() { viewSetup.style.display = "block"; viewRunning.style.display = "none"; }
+      function showRunning() { viewSetup.style.display = "none"; viewRunning.style.display = "block"; }
+
+      (async () => {
+        const loaded = await window.VR.loadConfig(); // { cfg, hostname }
+        const cfg = loaded?.cfg || null;
+        const hostname = loaded?.hostname || "unknown";
+        deviceAuto.textContent = hostname;
+
+        if (cfg) {
+          wsBaseUrl.value = cfg.wsBaseUrl || "";
+          token.value = cfg.token || "";
+          streamStatusUrl.value = cfg.streamStatusUrl || "";
+          cfgView.textContent = JSON.stringify(cfg, null, 2);
+        }
+
+        if (view === "running" && cfg) showRunning();
+        else showSetup();
+
+        document.getElementById("btnSave")?.addEventListener("click", async () => {
+          msg.innerHTML = "";
+          try {
+            const cfg2 = {
+              wsBaseUrl: wsBaseUrl.value.trim(),
+              token: token.value.trim(),
+              streamStatusUrl: streamStatusUrl.value.trim(),
+            };
+
+            if (!cfg2.wsBaseUrl || !cfg2.token) {
+              return setMsg(msg, "املأ WS Base URL + Token", false);
+            }
+
+            const r = await window.VR.saveConfig(cfg2);
+            await window.VR.startAgent();
+
+            setMsg(msg, `Saved ✅ Agent started ✅ (device: ${r?.device || hostname})`, true);
+
+            // عرض config بعد الحفظ
+            const loaded2 = await window.VR.loadConfig();
+            cfgView.textContent = JSON.stringify(loaded2?.cfg || cfg2, null, 2);
+
+            showRunning();
+          } catch (e) {
+            setMsg(msg, String(e?.message || e), false);
+          }
+        });
+
+        document.getElementById("btnShowPath")?.addEventListener("click", async () => {
+          await window.VR.revealConfig();
+        });
+        document.getElementById("btnShowPath2")?.addEventListener("click", async () => {
+          await window.VR.revealConfig();
+        });
+
+        document.getElementById("btnStart")?.addEventListener("click", async () => {
+          msg2.innerHTML = "";
+          const r = await window.VR.startAgent();
+          setMsg(msg2, r?.ok ? "Agent started ✅" : (r?.error || "Failed"), !!r?.ok);
+        });
+
+        document.getElementById("btnStop")?.addEventListener("click", async () => {
+          msg2.innerHTML = "";
+          const r = await window.VR.stopAgent();
+          setMsg(msg2, r?.ok ? "Agent stopped ✅" : "Failed", !!r?.ok);
+        });
+
+        document.getElementById("btnEdit")?.addEventListener("click", async () => {
+          showSetup();
+        });
+      })();
+    </script>
+  </body>
+</html>

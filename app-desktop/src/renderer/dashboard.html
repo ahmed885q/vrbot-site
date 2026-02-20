@@ -1,0 +1,53 @@
+<script>
+  const WS_URL = "ws://127.0.0.1:8787/ws"; // عدله حسب عندك
+  let ws;
+  let reconnectAttempt = 0;
+
+  function connect() {
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+      reconnectAttempt = 0;
+      console.log("WS online");
+      send("get_status", {});
+    };
+
+    ws.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data);
+      console.log("WS msg", msg);
+
+      if (msg.type === "agent_hello") {
+        // عرض معلومات الجهاز + المزارع
+      }
+      if (msg.type === "windows_list") {
+        // عرض النوافذ المكتشفة
+      }
+      if (msg.type === "farm_status") {
+        // تحديث حالة مزرعة
+      }
+      if (msg.type === "log") {
+        // عرض اللوق
+      }
+    };
+
+    ws.onclose = () => {
+      const delay = Math.min(30000, 1000 * Math.pow(2, reconnectAttempt)) + Math.floor(Math.random() * 500);
+      reconnectAttempt++;
+      console.log("WS closed, reconnect in", delay);
+      setTimeout(connect, delay);
+    };
+  }
+
+  function send(type, payload) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type, payload, ts: Date.now(), id: crypto.randomUUID?.() || String(Math.random()) }));
+  }
+
+  // أزرار
+  function discover() { send("discover_windows", {}); }
+  function startFarm(farmId) { send("farm_start", { farmId }); }
+  function stopFarm(farmId) { send("farm_stop", { farmId }); }
+  function getLogs() { send("get_logs", {}); }
+
+  connect();
+</script>
