@@ -1,8 +1,0 @@
-app-desktop/dist/
-dist/
-out/
-*.exe
-*.msi
-*.AppImage
-*.snap
-*.zip
