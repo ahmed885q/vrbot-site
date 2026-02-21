@@ -1,5 +1,7 @@
 "use client";
 
+import AgentPanel from "./AgentPanel";
+
 import { useState, useEffect, useCallback } from "react";
 import { createSupabaseBrowserClient } from "../../lib/supabase/client";
 
@@ -558,6 +560,8 @@ export default function DashboardClient() {
             </div>
           ))}
         </div>
+
+        {user && <AgentPanel userId={user.id} farmId={farms[0]?.id} />}
 
         {/* ===== FARMS SECTION ===== */}
         <div style={{
