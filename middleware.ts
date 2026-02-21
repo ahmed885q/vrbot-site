@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const PROTECTED_ROUTES = [
   '/dashboard',
-  '/farms',
+  '/dashboard',
   '/billing',
   '/dashboard',
   '/admin',

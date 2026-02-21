@@ -72,7 +72,7 @@ export default function SiteHeader() {
         alignItems: 'center',
         gap: '16px',
       }}>
-        <a href="/farms" style={navLinkStyle}>{t.farms}</a>
+        <a href="/dashboard" style={navLinkStyle}>{t.farms}</a>
         <a href="/billing" style={navLinkStyle}>{t.billing}</a>
         <a href="/download" style={navLinkStyle}>{t.download}</a>
         <a href="/dashboard" style={navLinkStyle}>{t.dashboard}</a>
