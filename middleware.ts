@@ -5,7 +5,7 @@ const PROTECTED_ROUTES = [
   '/dashboard',
   '/farms',
   '/billing',
-  '/viking-rise',
+  '/dashboard',
   '/admin',
 ]
 
