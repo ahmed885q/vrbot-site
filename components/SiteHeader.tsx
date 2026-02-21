@@ -75,7 +75,7 @@ export default function SiteHeader() {
         <a href="/farms" style={navLinkStyle}>{t.farms}</a>
         <a href="/billing" style={navLinkStyle}>{t.billing}</a>
         <a href="/download" style={navLinkStyle}>{t.download}</a>
-        <a href="/viking-rise" style={navLinkStyle}>{t.dashboard}</a>
+        <a href="/dashboard" style={navLinkStyle}>{t.dashboard}</a>
 
         {/* Language Switcher */}
         <div style={{ position: 'relative' }}>
