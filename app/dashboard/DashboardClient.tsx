@@ -1,572 +1,878 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createSupabaseBrowserClient } from "../../lib/supabase/client";
 
-type WsStatus = "idle" | "connecting" | "online" | "offline" | "error";
 type Lang = "ar" | "en" | "ru" | "zh";
 
-type HubMsg = {
-  type: string;
-  id?: string;
-  ts?: number;
-  payload?: any;
-  meta?: any;
+type TokenInfo = {
+  tokens_total: number;
+  tokens_used: number;
+  tokens_available: number;
+  trial_granted: boolean;
+  trial_expired: boolean;
+  trial_expires_at?: string;
 };
 
-type AgentPeer = {
-  clientId: string;
-  deviceId?: string;
-  name?: string;
-  lastSeen?: number;
-  status: "online" | "offline";
+type Farm = {
+  id: string;
+  name: string;
+  server: string | null;
+  notes: string | null;
+  created_at: string;
 };
 
-// ====== Translations ======
-const tr: Record<Lang, Record<string, string>> = {
+// =========== TRANSLATIONS ===========
+const tx: Record<Lang, Record<string, string>> = {
   ar: {
-    title: '🖥️ لوحة التحكم',
-    subtitle: 'الاتصال • إعادة الاتصال التلقائي • الوكلاء المباشرين',
-    autoReconnect: 'إعادة اتصال تلقائي',
-    connect: '🔗 اتصال',
-    disconnect: '⛔ قطع',
-    agents: '👥 الوكلاء',
-    online: 'متصل',
-    offline: 'غير متصل',
-    noAgents: 'لا يوجد Agents متصلين. شغّل خدمة VRBOT-AGENT.',
-    send: '📤 إرسال',
-    sendHint: 'رسائل عامة إلى agents عبر hub.',
-    sendBtn: '📤 إرسال رسالة',
-    logs: '📋 السجلات',
-    clear: '🗑️ مسح',
-    noLogs: 'لا توجد سجلات بعد...',
-    session: 'معلومات الجلسة',
-    type: 'النوع',
-    payload: 'البيانات',
-    loadingToken: '⏳ جارٍ تحميل رمز الدخول...',
-    noSession: '⚠️ يرجى تسجيل الدخول أولاً',
-    user: 'المستخدم',
+    title: "لوحة التحكم",
+    welcome: "مرحباً",
+    tokens: "التوكنات",
+    available: "متاح",
+    used: "مستخدم",
+    total: "الإجمالي",
+    trial: "تجربة مجانية",
+    trialExpires: "تنتهي في",
+    trialExpired: "انتهت التجربة المجانية",
+    buyMore: "شراء مزارع",
+    farms: "المزارع",
+    noFarms: "لا توجد مزارع بعد",
+    noFarmsDesc: "أضف مزرعتك الأولى لبدء الأتمتة",
+    addFarm: "إضافة مزرعة",
+    farmName: "اسم المزرعة",
+    farmServer: "السيرفر (اختياري)",
+    farmNotes: "ملاحظات (اختياري)",
+    cancel: "إلغاء",
+    create: "إنشاء",
+    creating: "جاري الإنشاء...",
+    deleteFarm: "حذف",
+    deleteConfirm: "هل أنت متأكد من حذف هذه المزرعة؟",
+    tasks: "المهام",
+    status: "الحالة",
+    active: "نشط",
+    inactive: "غير نشط",
+    server: "السيرفر",
+    created: "تاريخ الإنشاء",
+    noTokens: "لا توجد توكنات متاحة",
+    noTokensDesc: "اشترك أولاً لإضافة مزارع",
+    loading: "جاري التحميل...",
+    logout: "تسجيل خروج",
+    quickStats: "إحصائيات سريعة",
+    activeFarms: "مزارع نشطة",
+    availableTokens: "توكنات متاحة",
+    taskGroups: "مجموعات المهام",
+    resources: "جمع الموارد",
+    combat: "القتال",
+    alliance: "التحالف",
+    daily: "المهام اليومية",
+    upgrade: "الترقية",
+    error: "حدث خطأ",
   },
   en: {
-    title: '🖥️ Dashboard',
-    subtitle: 'Presence • Auto-Reconnect • Live Agents',
-    autoReconnect: 'Auto-Reconnect',
-    connect: '🔗 Connect',
-    disconnect: '⛔ Disconnect',
-    agents: '👥 Agents',
-    online: 'Online',
-    offline: 'Offline',
-    noAgents: 'No agents connected. Start VRBOT-AGENT service.',
-    send: '📤 Send',
-    sendHint: 'Send messages to agents via hub.',
-    sendBtn: '📤 Send Message',
-    logs: '📋 Logs',
-    clear: '🗑️ Clear',
-    noLogs: 'No logs yet...',
-    session: 'Session Info',
-    type: 'Type',
-    payload: 'Payload',
-    loadingToken: '⏳ Loading token...',
-    noSession: '⚠️ Please login first',
-    user: 'User',
+    title: "Dashboard",
+    welcome: "Welcome",
+    tokens: "Tokens",
+    available: "Available",
+    used: "Used",
+    total: "Total",
+    trial: "Free Trial",
+    trialExpires: "Expires on",
+    trialExpired: "Free trial expired",
+    buyMore: "Buy Farms",
+    farms: "Farms",
+    noFarms: "No farms yet",
+    noFarmsDesc: "Add your first farm to start automation",
+    addFarm: "Add Farm",
+    farmName: "Farm name",
+    farmServer: "Server (optional)",
+    farmNotes: "Notes (optional)",
+    cancel: "Cancel",
+    create: "Create",
+    creating: "Creating...",
+    deleteFarm: "Delete",
+    deleteConfirm: "Are you sure you want to delete this farm?",
+    tasks: "Tasks",
+    status: "Status",
+    active: "Active",
+    inactive: "Inactive",
+    server: "Server",
+    created: "Created",
+    noTokens: "No tokens available",
+    noTokensDesc: "Subscribe first to add farms",
+    loading: "Loading...",
+    logout: "Logout",
+    quickStats: "Quick Stats",
+    activeFarms: "Active Farms",
+    availableTokens: "Available Tokens",
+    taskGroups: "Task Groups",
+    resources: "Resources",
+    combat: "Combat",
+    alliance: "Alliance",
+    daily: "Daily Tasks",
+    upgrade: "Upgrades",
+    error: "An error occurred",
   },
   ru: {
-    title: '🖥️ Панель управления',
-    subtitle: 'Подключение • Авто-переподключение • Агенты',
-    autoReconnect: 'Авто-переподключение',
-    connect: '🔗 Подключить',
-    disconnect: '⛔ Отключить',
-    agents: '👥 Агенты',
-    online: 'Онлайн',
-    offline: 'Офлайн',
-    noAgents: 'Нет подключенных агентов. Запустите VRBOT-AGENT.',
-    send: '📤 Отправить',
-    sendHint: 'Отправить сообщения агентам через hub.',
-    sendBtn: '📤 Отправить сообщение',
-    logs: '📋 Логи',
-    clear: '🗑️ Очистить',
-    noLogs: 'Логов пока нет...',
-    session: 'Информация о сессии',
-    type: 'Тип',
-    payload: 'Данные',
-    loadingToken: '⏳ Загрузка токена...',
-    noSession: '⚠️ Войдите в систему',
-    user: 'Пользователь',
+    title: "Панель управления",
+    welcome: "Добро пожаловать",
+    tokens: "Токены",
+    available: "Доступно",
+    used: "Использовано",
+    total: "Всего",
+    trial: "Пробный период",
+    trialExpires: "Истекает",
+    trialExpired: "Пробный период истек",
+    buyMore: "Купить фермы",
+    farms: "Фермы",
+    noFarms: "Пока нет ферм",
+    noFarmsDesc: "Добавьте первую ферму для автоматизации",
+    addFarm: "Добавить ферму",
+    farmName: "Название фермы",
+    farmServer: "Сервер (необязательно)",
+    farmNotes: "Заметки (необязательно)",
+    cancel: "Отмена",
+    create: "Создать",
+    creating: "Создание...",
+    deleteFarm: "Удалить",
+    deleteConfirm: "Вы уверены, что хотите удалить эту ферму?",
+    tasks: "Задачи",
+    status: "Статус",
+    active: "Активно",
+    inactive: "Неактивно",
+    server: "Сервер",
+    created: "Создано",
+    noTokens: "Нет доступных токенов",
+    noTokensDesc: "Сначала оформите подписку",
+    loading: "Загрузка...",
+    logout: "Выйти",
+    quickStats: "Статистика",
+    activeFarms: "Активных ферм",
+    availableTokens: "Доступных токенов",
+    taskGroups: "Группы задач",
+    resources: "Ресурсы",
+    combat: "Бой",
+    alliance: "Альянс",
+    daily: "Ежедневные",
+    upgrade: "Улучшения",
+    error: "Произошла ошибка",
   },
   zh: {
-    title: '🖥️ 控制面板',
-    subtitle: '连接 • 自动重连 • 实时代理',
-    autoReconnect: '自动重连',
-    connect: '🔗 连接',
-    disconnect: '⛔ 断开',
-    agents: '👥 代理',
-    online: '在线',
-    offline: '离线',
-    noAgents: '没有连接的代理。启动 VRBOT-AGENT 服务。',
-    send: '📤 发送',
-    sendHint: '通过 hub 向代理发送消息。',
-    sendBtn: '📤 发送消息',
-    logs: '📋 日志',
-    clear: '🗑️ 清除',
-    noLogs: '暂无日志...',
-    session: '会话信息',
-    type: '类型',
-    payload: '数据',
-    loadingToken: '⏳ 正在加载令牌...',
-    noSession: '⚠️ 请先登录',
-    user: '用户',
+    title: "控制面板",
+    welcome: "欢迎",
+    tokens: "代币",
+    available: "可用",
+    used: "已用",
+    total: "总计",
+    trial: "免费试用",
+    trialExpires: "到期日",
+    trialExpired: "免费试用已过期",
+    buyMore: "购买农场",
+    farms: "农场",
+    noFarms: "暂无农场",
+    noFarmsDesc: "添加您的第一个农场开始自动化",
+    addFarm: "添加农场",
+    farmName: "农场名称",
+    farmServer: "服务器（可选）",
+    farmNotes: "备注（可选）",
+    cancel: "取消",
+    create: "创建",
+    creating: "创建中...",
+    deleteFarm: "删除",
+    deleteConfirm: "确定要删除此农场吗？",
+    tasks: "任务",
+    status: "状态",
+    active: "活跃",
+    inactive: "未激活",
+    server: "服务器",
+    created: "创建时间",
+    noTokens: "没有可用代币",
+    noTokensDesc: "请先订阅",
+    loading: "加载中...",
+    logout: "退出",
+    quickStats: "快速统计",
+    activeFarms: "活跃农场",
+    availableTokens: "可用代币",
+    taskGroups: "任务组",
+    resources: "资源",
+    combat: "战斗",
+    alliance: "联盟",
+    daily: "日常任务",
+    upgrade: "升级",
+    error: "发生错误",
   },
 };
 
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
-}
+// =========== TASK DEFINITIONS ===========
+const TASK_GROUPS = [
+  {
+    key: "resources",
+    icon: "🌾",
+    color: "#10b981",
+    tasks: [
+      "Gather Resources",
+      "Collect Farms",
+      "Open Chests",
+      "Collect Free Items",
+    ],
+  },
+  {
+    key: "combat",
+    icon: "⚔️",
+    color: "#ef4444",
+    tasks: [
+      "Kill Monster",
+      "Hunt Niflung",
+      "Rally Niflung",
+      "Auto Scout",
+    ],
+  },
+  {
+    key: "alliance",
+    icon: "🏰",
+    color: "#8b5cf6",
+    tasks: [
+      "Tribe Tech",
+      "Tribe Gifts",
+      "Alliance Help",
+      "Send Gifts",
+    ],
+  },
+  {
+    key: "daily",
+    icon: "📋",
+    color: "#f59e0b",
+    tasks: [
+      "Mail Rewards",
+      "Hall of Valor",
+      "Prosperity",
+      "Quest Rewards",
+    ],
+  },
+  {
+    key: "upgrade",
+    icon: "🔨",
+    color: "#3b82f6",
+    tasks: [
+      "Building Upgrade",
+      "Troop Training",
+      "Research Tech",
+      "Heal Wounded",
+    ],
+  },
+];
 
-function fmtTime(ts?: number) {
-  if (!ts) return "—";
-  return new Date(ts).toLocaleString();
-}
-
-function msAgo(ts?: number) {
-  if (!ts) return "—";
-  const diff = Date.now() - ts;
-  if (diff < 1000) return `${diff}ms`;
-  const s = Math.floor(diff / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  return `${h}h`;
-}
-
-function normalizeWsBase(input: string): string {
-  const v = (input || "").trim();
-  if (!v) return "";
-  if (v.startsWith("https://")) return "wss://" + v.slice("https://".length);
-  if (v.startsWith("http://")) return "ws://" + v.slice("http://".length);
-  if (v.startsWith("ws://") || v.startsWith("wss://")) return v;
-  return `wss://${v}`;
-}
-
-function buildWsUrl(wsBase: string, params: Record<string, string>) {
-
-  const base = normalizeWsBase(wsBase);
-  const u = new URL(base);
-  Object.entries(params).forEach(([k, val]) => {
-    if (val && val.trim().length > 0) u.searchParams.set(k, val.trim());
-  });
-  return u.toString();
-}
-
+// =========== COMPONENT ===========
 export default function DashboardClient() {
-  const envWsUrl = (process.env.NEXT_PUBLIC_WS_URL || "").trim();
-  const [wsBase, setWsBase] = useState<string>("");
-  const [token, setToken] = useState<string>("");
-  const [userEmail, setUserEmail] = useState<string>("");
-  const [tokenLoading, setTokenLoading] = useState<boolean>(true);
   const [lang, setLang] = useState<Lang>("ar");
+  const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
-  const [status, setStatus] = useState<WsStatus>("idle");
-  const [statusMsg, setStatusMsg] = useState<string>("");
-  const [autoReconnect, setAutoReconnect] = useState<boolean>(true);
+  // Token state
+  const [tokens, setTokens] = useState<TokenInfo | null>(null);
+  const [loadingTokens, setLoadingTokens] = useState(true);
 
-  const [welcome, setWelcome] = useState<any>(null);
-  const [agents, setAgents] = useState<Record<string, AgentPeer>>({});
-  const [logs, setLogs] = useState<string[]>([]);
+  // Farms state
+  const [farms, setFarms] = useState<Farm[]>([]);
+  const [loadingFarms, setLoadingFarms] = useState(true);
 
-  const [outType, setOutType] = useState<string>("dashboard_cmd");
-  const [outPayload, setOutPayload] = useState<string>('{"action":"ping"}');
+  // Add farm modal
+  const [showAddFarm, setShowAddFarm] = useState(false);
+  const [newFarmName, setNewFarmName] = useState("");
+  const [newFarmServer, setNewFarmServer] = useState("");
+  const [newFarmNotes, setNewFarmNotes] = useState("");
+  const [addingFarm, setAddingFarm] = useState(false);
+  const [farmError, setFarmError] = useState("");
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<any>(null);
-  const attemptRef = useRef<number>(0);
+  const s = tx[lang];
+  const isRtl = lang === "ar";
 
-  const tx = tr[lang] || tr.ar;
-
-  // ====== Auto-load Supabase session token ======
-  useEffect(() => {
-    async function loadSession() {
-      try {
-        const supabase = createSupabaseBrowserClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          setToken(session.access_token);
-          setUserEmail(session.user?.email || "");
-        }
-      } catch (err) {
-        console.error("Failed to get Supabase session:", err);
-      } finally {
-        setTokenLoading(false);
-      }
-    }
-    loadSession();
-  }, []);
-
-  // Load language
+  // Init
   useEffect(() => {
     try {
       const saved = localStorage.getItem("vrbot_lang") as Lang;
-      if (saved && tr[saved]) setLang(saved);
+      if (saved && tx[saved]) setLang(saved);
     } catch {}
+    setMounted(true);
   }, []);
 
-  // Set WS Base from env
+  // Load user
   useEffect(() => {
-    if (envWsUrl) setWsBase(envWsUrl);
-  }, [envWsUrl]);
-
-  const effectiveWsBase = useMemo(() => {
-    return wsBase.trim() || envWsUrl || "ws://88.99.64.19:8787/ws";
-  }, [wsBase, envWsUrl]);
-
-  function pushLog(line: string) {
-    setLogs((prev) => [line, ...prev].slice(0, 300));
-  }
-
-  function clearReconnectTimer() {
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
-  }
-
-  function setAgentOnline(payload: any) {
-    const clientId = String(payload?.clientId || "");
-    if (!clientId) return;
-    setAgents((prev) => {
-      const current = prev[clientId];
-      const next: AgentPeer = {
-        clientId,
-        deviceId: payload?.deviceId || current?.deviceId,
-        name: payload?.name || current?.name,
-        lastSeen: payload?.lastSeen || Date.now(),
-        status: "online",
-      };
-      return { ...prev, [clientId]: next };
+    if (!mounted) return;
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      setLoadingUser(false);
     });
-  }
+  }, [mounted]);
 
-  function setAgentOffline(payload: any) {
-    const clientId = String(payload?.clientId || "");
-    if (!clientId) return;
-    setAgents((prev) => {
-      const current = prev[clientId];
-      if (!current) return prev;
-      return { ...prev, [clientId]: { ...current, status: "offline", lastSeen: payload?.lastSeen || current.lastSeen } };
-    });
-  }
-
-  function markAllOffline() {
-    setAgents((prev) => {
-      const out: Record<string, AgentPeer> = {};
-      Object.values(prev).forEach((a) => (out[a.clientId] = { ...a, status: "offline" }));
-      return out;
-    });
-  }
-
-  function scheduleReconnect(reason: string) {
-    if (!autoReconnect) return;
-    attemptRef.current += 1;
-    const delay = clamp(1000 * Math.pow(2, attemptRef.current - 1), 1000, 15000);
-    clearReconnectTimer();
-    setStatus("offline");
-    setStatusMsg(`${reason} — reconnect in ${Math.round(delay / 1000)}s`);
-    pushLog(`[reconnect] ${reason} | attempt=${attemptRef.current} | delay=${delay}ms`);
-    reconnectTimerRef.current = setTimeout(() => doConnect(), delay);
-  }
-
-  function disconnect(reason = "manual disconnect") {
-    clearReconnectTimer();
-    attemptRef.current = 0;
-    try { wsRef.current?.close(1000, reason); } catch {}
-    wsRef.current = null;
-    setStatus("offline");
-    setStatusMsg(reason);
-    markAllOffline();
-    pushLog(`[ws] disconnected (${reason})`);
-  }
-
-  function doConnect() {
-    if (!token.trim()) {
-      setStatus("error");
-      setStatusMsg("Token is required — please login");
-      return;
-    }
-    clearReconnectTimer();
-    try { wsRef.current?.close(1000, "reconnect"); } catch {}
-    setStatus("connecting");
-    setStatusMsg("Connecting…");
-    pushLog(`[ws] connecting...`);
-
-    let ws: WebSocket;
+  // Load tokens
+  const loadTokens = useCallback(async () => {
+    setLoadingTokens(true);
     try {
-      ws = new WebSocket(wsUrl);
-    } catch (e: any) {
-      setStatus("error");
-      setStatusMsg(String(e?.message || e));
-      scheduleReconnect("create socket failed");
-      return;
-    }
-    wsRef.current = ws;
+      const res = await fetch("/api/tokens/status");
+      if (res.ok) {
+        const data = await res.json();
 
-    ws.onopen = () => {
-      setStatus("online");
-      setStatusMsg("Connected ✅");
-      attemptRef.current = 0;
-      pushLog("[ws] connected ✅");
-      try { ws.send(JSON.stringify({ type: "ping", ts: Date.now() })); } catch {}
-    };
-
-    ws.onmessage = (ev) => {
-      let msg: HubMsg | null = null;
-      try { msg = JSON.parse(String(ev.data)); } catch { return; }
-      if (!msg?.type) return;
-
-      if (msg.type === "hub_welcome") {
-        setWelcome(msg.payload || null);
-        if (Array.isArray(msg.payload?.agents)) {
-          msg.payload.agents.forEach((a: any) => setAgentOnline(a));
+        // Auto-grant trial if no tokens
+        if (data.tokens_total === 0 && !data.trial_granted) {
+          const trialRes = await fetch("/api/tokens/grant-trial", {
+            method: "POST",
+          });
+          if (trialRes.ok) {
+            const res2 = await fetch("/api/tokens/status");
+            if (res2.ok) {
+              setTokens(await res2.json());
+              setLoadingTokens(false);
+              return;
+            }
+          }
         }
-        pushLog(`[in] hub_welcome — clientId=${msg.payload?.clientId}`);
-      } else if (msg.type === "agent_online") {
-        setAgentOnline(msg.payload);
-        pushLog(`[in] agent_online — ${msg.payload?.clientId}`);
-      } else if (msg.type === "agent_offline") {
-        setAgentOffline(msg.payload);
-        pushLog(`[in] agent_offline — ${msg.payload?.clientId}`);
-      } else if (msg.type === "pong") {
-        pushLog(`[in] pong`);
-      } else {
-        pushLog(`[in] ${msg.type}`);
+        setTokens(data);
       }
-    };
+    } catch {}
+    setLoadingTokens(false);
+  }, []);
 
-    ws.onerror = () => { pushLog("[ws] error"); };
-
-    ws.onclose = (ev) => {
-      setStatus("offline");
-      markAllOffline();
-      const reason = ev.reason || `code=${ev.code}`;
-      pushLog(`[ws] closed (${reason})`);
-      if (ev.code !== 1000) scheduleReconnect(reason);
-    };
-  }
-
-  function sendMessage() {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      pushLog("[out] not connected");
-      return;
-    }
-    let payloadObj: any;
-    try { payloadObj = JSON.parse(outPayload); } catch { payloadObj = outPayload; }
-    const msg: HubMsg = { type: outType.trim() || "dashboard_cmd", ts: Date.now(), payload: payloadObj };
+  // Load farms
+  const loadFarms = useCallback(async () => {
+    setLoadingFarms(true);
     try {
-      ws.send(JSON.stringify(msg));
-      pushLog(`[out] ${msg.type}`);
-    } catch {
-      pushLog("[out] send failed");
+      const res = await fetch("/api/farms/list");
+      if (res.ok) {
+        const data = await res.json();
+        setFarms(data.farms || []);
+      }
+    } catch {}
+    setLoadingFarms(false);
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadTokens();
+      loadFarms();
     }
+  }, [user, loadTokens, loadFarms]);
+
+  // Add farm
+  async function handleAddFarm() {
+    if (!newFarmName.trim()) return;
+    setAddingFarm(true);
+    setFarmError("");
+    try {
+      const res = await fetch("/api/farms/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newFarmName,
+          server: newFarmServer || null,
+          notes: newFarmNotes || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFarmError(data.error || s.error);
+      } else {
+        setShowAddFarm(false);
+        setNewFarmName("");
+        setNewFarmServer("");
+        setNewFarmNotes("");
+        loadFarms();
+        loadTokens();
+      }
+    } catch {
+      setFarmError(s.error);
+    }
+    setAddingFarm(false);
   }
 
-  useEffect(() => { return () => { clearReconnectTimer(); try { wsRef.current?.close(1000, "unmount"); } catch {} }; }, []);
+  if (!mounted || loadingUser) {
+    return (
+      <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 16, animation: "spin 1s linear infinite" }}>🤖</div>
+          <div style={{ color: "#64748b", fontSize: 15 }}>{s.loading}</div>
+        </div>
+      </div>
+    );
+  }
 
-  const agentList = useMemo(() => {
-    const arr = Object.values(agents);
-    arr.sort((a, b) => {
-      if (a.status !== b.status) return a.status === "online" ? -1 : 1;
-      return (b.lastSeen || 0) - (a.lastSeen || 0);
-    });
-    return arr;
-  }, [agents]);
+  if (!user) {
+    window.location.href = "/login";
+    return null;
+  }
 
-  const onlineCount = agentList.filter((a) => a.status === "online").length;
+  const daysLeft = tokens?.trial_expires_at
+    ? Math.max(0, Math.ceil((new Date(tokens.trial_expires_at).getTime() - Date.now()) / 86400000))
+    : 0;
 
   return (
-    <div dir="ltr" style={{ minHeight: '100vh', background: '#f8f9fa', padding: '24px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div dir={isRtl ? "rtl" : "ltr"} style={{ minHeight: "100vh", background: "#0b0f1a" }}>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+      `}</style>
 
-        {/* ====== Connection Card ====== */}
-        <div style={cardStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+      {/* ===== HEADER BAR ===== */}
+      <div style={{
+        background: "linear-gradient(135deg, #0f1629 0%, #1a1145 100%)",
+        borderBottom: "1px solid rgba(139,92,246,0.15)",
+        padding: "16px 28px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#fff", letterSpacing: "0.5px" }}>
+            🤖 {s.title}
+          </h1>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "rgba(255,255,255,0.45)" }}>
+            {s.welcome}, {user.email?.split("@")[0]}
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <a href="/billing" style={{
+            padding: "8px 18px",
+            background: "linear-gradient(135deg, #7c3aed, #6366f1)",
+            color: "#fff",
+            borderRadius: 10,
+            textDecoration: "none",
+            fontSize: 13,
+            fontWeight: 700,
+          }}>
+            {s.buyMore}
+          </a>
+          <a href="/auth/logout" style={{
+            padding: "8px 14px",
+            background: "rgba(255,255,255,0.06)",
+            color: "rgba(255,255,255,0.5)",
+            borderRadius: 8,
+            textDecoration: "none",
+            fontSize: 12,
+            fontWeight: 600,
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}>
+            {s.logout}
+          </a>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 20px" }}>
+        {/* ===== TOKEN BAR ===== */}
+        <div style={{
+          background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%)",
+          borderRadius: 16,
+          padding: "20px 28px",
+          marginBottom: 24,
+          border: "1px solid rgba(139,92,246,0.25)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 16,
+          animation: "fadeIn 0.4s ease",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: 14,
+              background: "rgba(139,92,246,0.2)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 26,
+            }}>🎫</div>
             <div>
-              <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{tx.title}</h1>
-              <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0' }}>{tx.subtitle}</p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {userEmail && (
-                <span style={{ fontSize: '13px', color: '#555', background: '#f0f7ff', padding: '6px 12px', borderRadius: '20px', border: '1px solid #d6e4ff' }}>
-                  👤 {userEmail}
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: 600, marginBottom: 4 }}>
+                {s.tokens}
+              </div>
+              <div style={{ display: "flex", gap: 20, alignItems: "baseline" }}>
+                <span style={{ fontSize: 32, fontWeight: 800, color: "#a78bfa" }}>
+                  {loadingTokens ? "..." : tokens?.tokens_available ?? 0}
                 </span>
-              )}
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 600,
-                background: status === 'online' ? '#f6ffed' : status === 'error' ? '#fff2f0' : '#f5f5f5',
-                color: status === 'online' ? '#52c41a' : status === 'error' ? '#ff4d4f' : '#888',
-                border: `1px solid ${status === 'online' ? '#b7eb8f' : status === 'error' ? '#ffccc7' : '#d9d9d9'}`,
-              }}>
-                {status === 'online' ? '🟢' : status === 'connecting' ? '🔵' : status === 'error' ? '🔴' : '⚪'}
-                {' '}{status} {statusMsg && `— ${statusMsg}`}
+                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>
+                  {s.available} / {tokens?.tokens_total ?? 0} {s.total}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Token Status */}
-          {tokenLoading ? (
-            <div style={{ padding: '12px', background: '#fffbe6', borderRadius: '8px', border: '1px solid #ffe58f', fontSize: '14px', color: '#ad8b00', marginBottom: '16px' }}>
-              {tx.loadingToken}
-            </div>
-          ) : !token ? (
-            <div style={{ padding: '12px', background: '#fff2f0', borderRadius: '8px', border: '1px solid #ffccc7', fontSize: '14px', color: '#ff4d4f', marginBottom: '16px' }}>
-              {tx.noSession} — <a href="/login" style={{ color: '#1890ff', textDecoration: 'underline' }}>Login</a>
-            </div>
-          ) : null}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <input type="checkbox" checked={autoReconnect} onChange={(e) => setAutoReconnect(e.target.checked)} />
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#555' }}>{tx.autoReconnect}</span>
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={doConnect} disabled={!token || tokenLoading} style={{ ...btnPrimary, opacity: (!token || tokenLoading) ? 0.5 : 1 }}>{tx.connect}</button>
-              <button onClick={() => disconnect()} style={btnDanger}>{tx.disconnect}</button>
-            </div>
-          </div>
-
-          {welcome && (
-            <div style={{ background: '#f0f7ff', borderRadius: '8px', padding: '12px 16px', marginTop: '16px', fontSize: '13px', border: '1px solid #d6e4ff' }}>
-              <strong>{tx.session}:</strong>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginTop: '8px' }}>
-                <div><span style={{ color: '#888' }}>clientId:</span> {welcome.clientId}</div>
-                <div><span style={{ color: '#888' }}>role:</span> {welcome.role}</div>
-                <div><span style={{ color: '#888' }}>serverTs:</span> {fmtTime(welcome.serverTs)}</div>
+          {/* Trial badge */}
+          {tokens?.trial_granted && !tokens.trial_expired && (
+            <div style={{
+              background: "rgba(16,185,129,0.15)",
+              border: "1px solid rgba(16,185,129,0.3)",
+              borderRadius: 10,
+              padding: "8px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}>
+              <span style={{ fontSize: 16 }}>🎁</span>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#34d399" }}>{s.trial}</div>
+                <div style={{ fontSize: 11, color: "rgba(52,211,153,0.7)" }}>
+                  {daysLeft > 0 ? `${daysLeft} ${lang === "ar" ? "يوم" : "days"}` : s.trialExpired}
+                </div>
               </div>
+            </div>
+          )}
+
+          {tokens?.trial_expired && (
+            <div style={{
+              background: "rgba(239,68,68,0.15)",
+              border: "1px solid rgba(239,68,68,0.3)",
+              borderRadius: 10,
+              padding: "8px 16px",
+            }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#f87171" }}>⚠️ {s.trialExpired}</span>
             </div>
           )}
         </div>
 
-        {/* ====== Main Grid ====== */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        {/* ===== QUICK STATS ===== */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: 14,
+          marginBottom: 24,
+        }}>
+          {[
+            { label: s.activeFarms, value: farms.length, icon: "🌾", color: "#10b981" },
+            { label: s.availableTokens, value: tokens?.tokens_available ?? 0, icon: "🎫", color: "#a78bfa" },
+            { label: s.used, value: tokens?.tokens_used ?? 0, icon: "📊", color: "#f59e0b" },
+          ].map((stat, i) => (
+            <div key={i} style={{
+              background: "rgba(255,255,255,0.03)",
+              borderRadius: 14,
+              padding: "18px 20px",
+              border: "1px solid rgba(255,255,255,0.06)",
+              animation: `fadeIn ${0.3 + i * 0.1}s ease`,
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", fontWeight: 600 }}>{stat.label}</div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: stat.color, marginTop: 4 }}>{stat.value}</div>
+                </div>
+                <div style={{ fontSize: 28, opacity: 0.4 }}>{stat.icon}</div>
+              </div>
+            </div>
+          ))}
+        </div>
 
-          {/* LEFT: Agents + Send */}
-          <div>
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{tx.agents}</h2>
-                <span style={{ background: '#f0f0f0', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 600 }}>
-                  {tx.online}: {onlineCount} / {agentList.length}
+        {/* ===== FARMS SECTION ===== */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 16,
+        }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#fff" }}>
+            🌾 {s.farms} ({farms.length})
+          </h2>
+          <button onClick={() => {
+            if (tokens && tokens.tokens_available > 0) {
+              setShowAddFarm(true);
+              setFarmError("");
+            }
+          }} style={{
+            padding: "8px 20px",
+            background: tokens && tokens.tokens_available > 0
+              ? "linear-gradient(135deg, #10b981, #059669)"
+              : "rgba(255,255,255,0.06)",
+            color: tokens && tokens.tokens_available > 0 ? "#fff" : "rgba(255,255,255,0.3)",
+            border: "none",
+            borderRadius: 10,
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: tokens && tokens.tokens_available > 0 ? "pointer" : "not-allowed",
+          }}>
+            + {s.addFarm}
+          </button>
+        </div>
+
+        {loadingFarms ? (
+          <div style={{ textAlign: "center", padding: 40 }}>
+            <div style={{ color: "rgba(255,255,255,0.3)" }}>{s.loading}</div>
+          </div>
+        ) : farms.length === 0 ? (
+          <div style={{
+            background: "rgba(255,255,255,0.02)",
+            borderRadius: 16,
+            padding: "48px 24px",
+            textAlign: "center",
+            border: "1px dashed rgba(255,255,255,0.08)",
+            animation: "fadeIn 0.5s ease",
+          }}>
+            <div style={{ fontSize: 48, marginBottom: 12, opacity: 0.3 }}>🌾</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(255,255,255,0.5)" }}>{s.noFarms}</div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", marginTop: 6 }}>{s.noFarmsDesc}</div>
+            {tokens && tokens.tokens_available > 0 && (
+              <button onClick={() => setShowAddFarm(true)} style={{
+                marginTop: 16,
+                padding: "10px 24px",
+                background: "linear-gradient(135deg, #10b981, #059669)",
+                color: "#fff",
+                border: "none",
+                borderRadius: 10,
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}>
+                + {s.addFarm}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
+            {farms.map((farm, i) => (
+              <div key={farm.id} style={{
+                background: "rgba(255,255,255,0.03)",
+                borderRadius: 14,
+                padding: "20px",
+                border: "1px solid rgba(255,255,255,0.06)",
+                animation: `fadeIn ${0.3 + i * 0.08}s ease`,
+                transition: "border-color 0.2s",
+              }}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.3)")}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)")}
+              >
+                {/* Farm header */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 10,
+                      background: "rgba(16,185,129,0.15)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 20,
+                    }}>🌾</div>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{farm.name}</div>
+                      {farm.server && (
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+                          {s.server}: {farm.server}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{
+                    padding: "4px 10px",
+                    borderRadius: 6,
+                    background: "rgba(16,185,129,0.15)",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#34d399",
+                  }}>
+                    {s.active}
+                  </div>
+                </div>
+
+                {/* Task groups mini */}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                  {TASK_GROUPS.map((g) => (
+                    <div key={g.key} style={{
+                      padding: "4px 8px",
+                      borderRadius: 6,
+                      background: `${g.color}15`,
+                      fontSize: 11,
+                      color: g.color,
+                      fontWeight: 600,
+                    }}>
+                      {g.icon} {g.tasks.length}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Farm footer */}
+                <div style={{
+                  paddingTop: 10,
+                  borderTop: "1px solid rgba(255,255,255,0.05)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>
+                    {s.created}: {new Date(farm.created_at).toLocaleDateString()}
+                  </div>
+                  {farm.notes && (
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>
+                      {farm.notes}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ===== TASK GROUPS OVERVIEW ===== */}
+        <h2 style={{ margin: "28px 0 14px", fontSize: 18, fontWeight: 700, color: "#fff" }}>
+          📋 {s.taskGroups}
+        </h2>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+          gap: 12,
+        }}>
+          {TASK_GROUPS.map((group, i) => (
+            <div key={group.key} style={{
+              background: "rgba(255,255,255,0.02)",
+              borderRadius: 12,
+              padding: "16px",
+              border: `1px solid ${group.color}20`,
+              animation: `fadeIn ${0.4 + i * 0.08}s ease`,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 22 }}>{group.icon}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: group.color }}>
+                  {s[group.key as keyof typeof s] || group.key}
                 </span>
               </div>
-
-              {agentList.length === 0 ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: '#999', fontSize: '14px', border: '2px dashed #e8e8e8', borderRadius: '8px' }}>
-                  {tx.noAgents}
-                </div>
-              ) : (
-                agentList.map((a) => (
-                  <div key={a.clientId} style={{
-                    padding: '12px 16px', borderRadius: '8px', marginBottom: '8px',
-                    border: `1px solid ${a.status === 'online' ? '#b7eb8f' : '#e8e8e8'}`,
-                    background: a.status === 'online' ? '#f6ffed' : '#fafafa',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {group.tasks.map((task) => (
+                  <div key={task} style={{
+                    fontSize: 12,
+                    color: "rgba(255,255,255,0.4)",
+                    padding: "3px 0",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
                   }}>
-                    <div>
-                      <div style={{ fontWeight: 600, color: '#1a1a2e', marginBottom: '4px' }}>
-                        {a.name || a.deviceId || a.clientId}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#888' }}>
-                        deviceId: <span style={{ fontFamily: 'monospace' }}>{a.deviceId || "—"}</span>
-                        {' '}• last seen: {msAgo(a.lastSeen)} ago
-                      </div>
-                    </div>
                     <span style={{
-                      padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 600,
-                      background: a.status === 'online' ? '#52c41a' : '#d9d9d9', color: '#fff',
-                    }}>
-                      {a.status === 'online' ? tx.online : tx.offline}
-                    </span>
+                      width: 6, height: 6, borderRadius: "50%",
+                      background: "rgba(255,255,255,0.15)",
+                      flexShrink: 0,
+                    }}></span>
+                    {task}
                   </div>
-                ))
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ===== ADD FARM MODAL ===== */}
+      {showAddFarm && (
+        <div style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.7)",
+          backdropFilter: "blur(8px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: 20,
+        }} onClick={() => setShowAddFarm(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            background: "#1a1f2e",
+            borderRadius: 18,
+            padding: "28px",
+            width: "100%",
+            maxWidth: 420,
+            border: "1px solid rgba(139,92,246,0.2)",
+            animation: "fadeIn 0.25s ease",
+          }}>
+            <h3 style={{ margin: "0 0 20px", fontSize: 18, fontWeight: 700, color: "#fff" }}>
+              🌾 {s.addFarm}
+            </h3>
+
+            <div style={{ display: "grid", gap: 12 }}>
+              <input
+                placeholder={s.farmName}
+                value={newFarmName}
+                onChange={(e) => setNewFarmName(e.target.value)}
+                autoFocus
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "rgba(255,255,255,0.05)",
+                  color: "#fff",
+                  fontSize: 14,
+                  outline: "none",
+                }}
+              />
+              <input
+                placeholder={s.farmServer}
+                value={newFarmServer}
+                onChange={(e) => setNewFarmServer(e.target.value)}
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "rgba(255,255,255,0.05)",
+                  color: "#fff",
+                  fontSize: 14,
+                  outline: "none",
+                }}
+              />
+              <input
+                placeholder={s.farmNotes}
+                value={newFarmNotes}
+                onChange={(e) => setNewFarmNotes(e.target.value)}
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "rgba(255,255,255,0.05)",
+                  color: "#fff",
+                  fontSize: 14,
+                  outline: "none",
+                }}
+              />
+
+              {farmError && (
+                <div style={{
+                  padding: "10px 14px",
+                  borderRadius: 8,
+                  background: "rgba(239,68,68,0.1)",
+                  border: "1px solid rgba(239,68,68,0.2)",
+                  color: "#f87171",
+                  fontSize: 13,
+                }}>
+                  {farmError}
+                </div>
               )}
-            </div>
 
-            <div style={cardStyle}>
-              <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1a1a2e', margin: '0 0 4px' }}>{tx.send}</h2>
-              <p style={{ fontSize: '13px', color: '#888', marginBottom: '16px' }}>{tx.sendHint}</p>
-
-              <div style={{ marginBottom: '12px' }}>
-                <label style={labelStyle}>{tx.type}</label>
-                <input value={outType} onChange={(e) => setOutType(e.target.value)} style={inputStyle} />
+              <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                <button onClick={() => setShowAddFarm(false)} style={{
+                  flex: 1,
+                  padding: "12px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "transparent",
+                  color: "rgba(255,255,255,0.5)",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}>
+                  {s.cancel}
+                </button>
+                <button
+                  onClick={handleAddFarm}
+                  disabled={addingFarm || !newFarmName.trim()}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    borderRadius: 10,
+                    border: "none",
+                    background: addingFarm
+                      ? "rgba(139,92,246,0.3)"
+                      : "linear-gradient(135deg, #7c3aed, #6366f1)",
+                    color: "#fff",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: addingFarm ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {addingFarm ? s.creating : s.create}
+                </button>
               </div>
-
-              <div style={{ marginBottom: '12px' }}>
-                <label style={labelStyle}>{tx.payload}</label>
-                <textarea value={outPayload} onChange={(e) => setOutPayload(e.target.value)} rows={5} style={{
-                  ...inputStyle, fontFamily: 'monospace', resize: 'vertical' as const,
-                }} />
-              </div>
-
-              <button onClick={sendMessage} style={btnSuccess}>{tx.sendBtn}</button>
-            </div>
-          </div>
-
-          {/* RIGHT: Logs */}
-          <div>
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{tx.logs}</h2>
-                <button onClick={() => setLogs([])} style={btnOutline}>{tx.clear}</button>
-              </div>
-
-              <div style={{
-                background: '#1a1a2e', borderRadius: '8px', padding: '12px',
-                height: '500px', overflowY: 'auto',
-              }}>
-                {logs.length === 0 ? (
-                  <div style={{ color: '#666', fontSize: '13px' }}>{tx.noLogs}</div>
-                ) : (
-                  logs.map((l, idx) => (
-                    <div key={idx} style={{ fontSize: '12px', color: '#a0e4a0', fontFamily: 'monospace', marginBottom: '2px', wordBreak: 'break-all' }}>{l}</div>
-                  ))
-                )}
-              </div>
-
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
-
-// ====== Shared Styles ======
-const cardStyle: React.CSSProperties = {
-  background: '#ffffff', borderRadius: '12px', border: '1px solid #e8e8e8',
-  padding: '20px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-};
-const labelStyle: React.CSSProperties = {
-  fontSize: '13px', fontWeight: 600, color: '#555', display: 'block', marginBottom: '4px',
-};
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 12px', border: '1px solid #d9d9d9', borderRadius: '8px',
-  fontSize: '14px', outline: 'none', fontFamily: "'Times New Roman', Times, serif", boxSizing: 'border-box',
-};
-const btnPrimary: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', color: '#fff', border: 'none',
-  padding: '10px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-  fontFamily: "'Times New Roman', Times, serif",
-};
-const btnDanger: React.CSSProperties = {
-  background: '#ff4d4f', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '8px',
-  fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Times New Roman', Times, serif",
-};
-const btnSuccess: React.CSSProperties = {
-  background: '#52c41a', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px',
-  fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Times New Roman', Times, serif",
-};
-const btnOutline: React.CSSProperties = {
-  background: '#f5f5f5', color: '#333', border: '1px solid #d9d9d9', padding: '8px 16px',
-  borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-  fontFamily: "'Times New Roman', Times, serif",
-};
