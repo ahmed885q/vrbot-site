@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
@@ -7,12 +7,7 @@ import { useState, useEffect } from 'react'
 type Lang = 'ar' | 'en' | 'ru' | 'zh'
 
 const navItems = [
-  { href: '/admin', icon: '🏠', label: { ar: 'الرئيسية', en: 'Overview', ru: 'Обзор', zh: '概览' } },
-  { href: '/admin/subscriptions', icon: '⚡', label: { ar: 'الاشتراكات', en: 'Subscriptions', ru: 'Подписки', zh: '订阅' } },
-  { href: '/admin/pro-keys', icon: '🔑', label: { ar: 'مفاتيح Pro', en: 'Pro Keys', ru: 'Pro Ключи', zh: 'Pro密钥' } },
-  { href: '/admin/licenses', icon: '📜', label: { ar: 'التراخيص', en: 'Licenses', ru: 'Лицензии', zh: '许可证' } },
-  { href: '/admin/early-access', icon: '🚀', label: { ar: 'الوصول المبكر', en: 'Early Access', ru: 'Ранний доступ', zh: '抢先体验' } },
-  { href: '/admin/protection', icon: '🛡️', label: { ar: 'الحماية', en: 'Protection', ru: 'Защита', zh: '防护' } },
+  { href: '/admin/diagnostics', icon: '🔧', label: { ar: 'لوحة التحكم', en: 'Diagnostics', ru: 'Диагностика', zh: '诊断' } },
 ]
 
 const titles: Record<Lang, Record<string, string>> = {
@@ -38,10 +33,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isRtl = lang === 'ar'
 
   return (
-    <div dir={isRtl ? 'rtl' : 'ltr'} style={{ display: 'flex', minHeight: '100vh', background: '#f1f5f9' }}>
-      {/* Sidebar */}
+    <div dir={isRtl ? 'rtl' : 'ltr'} style={{ display: 'flex', minHeight: '100vh', background: '#0a0a0f' }}>
       <aside style={{
-        width: collapsed ? '64px' : '240px',
+        width: collapsed ? '64px' : '220px',
         background: 'linear-gradient(180deg, #0f0c29 0%, #1a1a3e 50%, #24243e 100%)',
         color: '#fff',
         transition: 'width 0.2s ease',
@@ -53,7 +47,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         overflow: 'hidden',
         zIndex: 50,
       }}>
-        {/* Logo */}
         <div style={{
           padding: collapsed ? '20px 12px' : '20px',
           borderBottom: '1px solid rgba(255,255,255,0.1)',
@@ -71,10 +64,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           )}
         </div>
 
-        {/* Nav Items */}
         <nav style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {navItems.map((item) => {
-            const isActive = pathname === item.href
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             return (
               <Link key={item.href} href={item.href} style={{
                 display: 'flex',
@@ -84,8 +76,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 borderRadius: '10px',
                 textDecoration: 'none',
                 color: isActive ? '#fff' : 'rgba(255,255,255,0.65)',
-                background: isActive ? 'rgba(168,85,247,0.3)' : 'transparent',
-                border: isActive ? '1px solid rgba(168,85,247,0.4)' : '1px solid transparent',
+                background: isActive ? 'rgba(59,130,246,0.3)' : 'transparent',
+                border: isActive ? '1px solid rgba(59,130,246,0.4)' : '1px solid transparent',
                 fontSize: '14px',
                 fontWeight: isActive ? 700 : 500,
                 transition: 'all 0.15s ease',
@@ -98,19 +90,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* Bottom */}
         <div style={{ padding: '12px 8px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-          {/* Collapse Toggle */}
           <button onClick={() => setCollapsed(!collapsed)} style={{
             width: '100%', padding: '10px', borderRadius: '8px', border: 'none',
             background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)',
             cursor: 'pointer', fontSize: '12px', fontWeight: 600,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
           }}>
-            {collapsed ? '→' : '←'} {!collapsed && (collapsed ? tx.expand : tx.collapse)}
+            {collapsed ? '→' : '←'} {!collapsed && tx.collapse}
           </button>
-
-          {/* Back to site */}
           <Link href="/" style={{
             display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
             gap: '8px', padding: '10px', marginTop: '8px',
@@ -122,7 +110,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Main Content */}
       <main style={{ flex: 1, overflow: 'auto' }}>
         {children}
       </main>
