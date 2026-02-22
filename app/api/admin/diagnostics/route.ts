@@ -52,7 +52,7 @@ export async function GET() {
     db.auth.admin.listUsers({ perPage: 1000 }),
   ]);
 
-  const users = usersRes.data?.users?.map((u: any) => ({ id: u.id, email: u.email, created_at: u.created_at, last_sign_in: u.last_sign_in_at })) ?? [];
+  const users = usersRes.data?.users?.map((u: any) => ({ id: u.id, email: u.email, created_at: u.created_at, last_sign_in: u.last_sign_in_at, banned: u.banned_until ? true : false })) ?? [];
   const userMap: Record<string, string> = {};
   users.forEach((u: any) => { userMap[u.id] = u.email; });
 
@@ -64,14 +64,12 @@ export async function GET() {
   return NextResponse.json({
     ok: true, timestamp: new Date().toISOString(), hub: hubHealth,
     stats: {
-      totalUsers: users.length,
-      totalFarms: farms.length,
+      totalUsers: users.length, totalFarms: farms.length,
       activeFarms: farms.filter((f: any) => f.bot_enabled).length,
       activeSubs: subs.filter((s: any) => s.status === "active").length,
       totalTokensUsed: tokens.reduce((s: number, t: any) => s + (t.tokens_used || 0), 0),
       totalTokensAvail: tokens.reduce((s: number, t: any) => s + (t.tokens_total || 0), 0),
-      totalKeys: keys.length,
-      usedKeys: keys.filter((k: any) => k.is_used).length,
+      totalKeys: keys.length, usedKeys: keys.filter((k: any) => k.is_used).length,
       revokedKeys: keys.filter((k: any) => k.revoked).length,
     },
     farms: farms.map((f: any) => ({ ...f, email: userMap[f.user_id] || f.user_id })),
@@ -80,12 +78,7 @@ export async function GET() {
     proKeys: keys.map((k: any) => ({ ...k, usedByEmail: k.used_by ? (userMap[k.used_by] || k.used_by) : null })),
     antiDetection: settingsRes.data ?? null,
     users,
-    errors: {
-      farms: farmsRes.error?.message ?? null,
-      tokens: tokensRes.error?.message ?? null,
-      subs: subsRes.error?.message ?? null,
-      keys: keysRes.error?.message ?? null,
-    },
+    errors: { farms: farmsRes.error?.message ?? null, tokens: tokensRes.error?.message ?? null, subs: subsRes.error?.message ?? null, keys: keysRes.error?.message ?? null },
   });
 }
 
@@ -94,7 +87,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const db = getDB();
   const body = await req.json().catch(() => ({}));
-  const { action, userId, farmId, keyId, count, batchTag, note } = body;
+  const { action, userId, farmId, keyId, count, batchTag, note, email, password, settings } = body;
 
   switch (action) {
     case "reset_tokens": {
@@ -134,12 +127,7 @@ export async function POST(req: Request) {
       const n = Math.min(Math.max(Number(count || 1), 1), 100);
       const tag = batchTag ? String(batchTag).trim().slice(0, 64) : null;
       const nt = note ? String(note).trim().slice(0, 160) : null;
-      const rows = Array.from({ length: n }, () => ({
-        code: crypto.randomBytes(16).toString("hex").toUpperCase(),
-        created_by: user.id,
-        batch_tag: tag,
-        note: nt,
-      }));
+      const rows = Array.from({ length: n }, () => ({ code: crypto.randomBytes(16).toString("hex").toUpperCase(), created_by: user.id, batch_tag: tag, note: nt }));
       const { error } = await db.from("pro_keys").insert(rows);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json({ ok: true, message: n + " keys generated", codes: rows.map(r => r.code) });
@@ -155,6 +143,46 @@ export async function POST(req: Request) {
       const { error } = await db.from("pro_keys").update({ revoked: false }).eq("id", keyId);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json({ ok: true, message: "Key unrevoked" });
+    }
+    case "delete_user": {
+      if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+      await db.from("farm_settings").delete().eq("farm_id", userId);
+      await db.from("user_farms").delete().eq("user_id", userId);
+      await db.from("tokens").delete().eq("user_id", userId);
+      await db.from("subscriptions").delete().eq("user_id", userId);
+      const { error } = await db.auth.admin.deleteUser(userId);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true, message: "User deleted with all data" });
+    }
+    case "ban_user": {
+      if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+      const { error } = await db.auth.admin.updateUserById(userId, { ban_duration: "876600h" });
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true, message: "User banned" });
+    }
+    case "unban_user": {
+      if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+      const { error } = await db.auth.admin.updateUserById(userId, { ban_duration: "none" });
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true, message: "User unbanned" });
+    }
+    case "create_user": {
+      if (!email || !password) return NextResponse.json({ error: "email + password required" }, { status: 400 });
+      const { data: newUser, error } = await db.auth.admin.createUser({ email, password, email_confirm: true });
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true, message: "User created: " + email });
+    }
+    case "save_protection": {
+      if (!settings) return NextResponse.json({ error: "settings required" }, { status: 400 });
+      const { data: existing } = await db.from("anti_detection_settings").select("id").limit(1).maybeSingle();
+      if (existing) {
+        const { error } = await db.from("anti_detection_settings").update({ ...settings, updated_at: new Date().toISOString() }).eq("id", existing.id);
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      } else {
+        const { error } = await db.from("anti_detection_settings").insert({ ...settings });
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true, message: "Protection settings saved" });
     }
     default:
       return NextResponse.json({ error: "Unknown action" }, { status: 400 });
