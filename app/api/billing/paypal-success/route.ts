@@ -1,8 +1,9 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { getPayPalAccessToken } from "@/lib/paypal";
 import { supabaseService } from "@/lib/supabase/server";
+import { sendPaymentConfirmation } from "@/lib/email";
 
 const PAYPAL_BASE =
   process.env.PAYPAL_ENV === "live"
@@ -93,3 +94,4 @@ export async function GET(req: Request) {
     return NextResponse.redirect(`${APP_URL}/billing?error=unknown`);
   }
 }
+
