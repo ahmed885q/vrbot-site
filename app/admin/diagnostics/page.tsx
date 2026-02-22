@@ -165,7 +165,9 @@ export default function DiagnosticsPage() {
                 <td style={S.td}><span style={on ? S.badge('#22c55e','#052e16') : S.badge('#ef4444','#2a0a0a')}>{s.status}</span></td>
                 <td style={{ ...S.td, fontSize: '12px' }}>{shortDate(s.current_period_end)}</td>
                 <td style={S.td}><span style={S.badge('#06b6d4','#0a2a3a')}>{src}</span></td>
-                <td style={S.td}>{on && <button style={S.btn('#ef4444','#fff')} onClick={() => doAction('cancel_subscription', { userId: s.user_id })}>Cancel</button>}</td>
+                <td style={S.td}><div style={{ display: 'flex', gap: '4px' }}>
+                    {s.status === 'active' ? <button style={S.btn('#ef4444','#fff')} onClick={() => doAction('deactivate_subscription', { userId: s.user_id })}>Deactivate</button> : <button style={S.btn('#22c55e','#fff')} onClick={() => doAction('activate_subscription', { userId: s.user_id })}>Activate</button>}
+                  </div></td>
               </tr>)})}</tbody>
           </table>
         )}
@@ -262,3 +264,4 @@ export default function DiagnosticsPage() {
     </div>
   )
 }
+

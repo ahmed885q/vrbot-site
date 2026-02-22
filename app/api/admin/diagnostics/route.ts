@@ -184,7 +184,27 @@ export async function POST(req: Request) {
       }
       return NextResponse.json({ ok: true, message: "Protection settings saved" });
     }
+    case "activate_subscription": {
+      if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+      const endDate = new Date(); endDate.setMonth(endDate.getMonth() + 1);
+      const { data: existingSub } = await db.from("subscriptions").select("id").eq("user_id", userId).single();
+      if (existingSub) {
+        const { error } = await db.from("subscriptions").update({ status: "active", current_period_end: endDate.toISOString(), stripe_customer_id: "admin_manual", updated_at: new Date().toISOString() }).eq("user_id", userId);
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      } else {
+        const { error } = await db.from("subscriptions").insert({ user_id: userId, plan: "pro", status: "active", current_period_end: endDate.toISOString(), stripe_customer_id: "admin_manual" });
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true, message: "Subscription activated for 30 days" });
+    }
+    case "deactivate_subscription": {
+      if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+      const { error } = await db.from("subscriptions").update({ status: "canceled", updated_at: new Date().toISOString() }).eq("user_id", userId);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true, message: "Subscription deactivated" });
+    }
     default:
       return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
 }
+
