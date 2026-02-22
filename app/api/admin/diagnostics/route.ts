@@ -29,7 +29,7 @@ export async function GET() {
     db.from("user_farms").select("id, user_id, name, server, bot_enabled, bot_status, created_at, last_bot_activity"),
     db.from("tokens").select("user_id, tokens_total, tokens_used, trial_granted, trial_expires_at, updated_at"),
     db.from("subscriptions").select("id, user_id, plan, status, current_period_end, stripe_customer_id, pro_key_code, updated_at"),
-    db.from("pro_keys").select("id, code, is_used, used_by, revoked, batch_tag, note, created_at, used_at").order("created_at", { ascending: false }),
+    db.from("pro_keys").select("id, code, is_used, used_by, used_at, created_at, created_by, revoked_at, revoked_by, batch_tag, note, delivered_at, delivered_by, delivered_to, delivered_note").order("created_at", { ascending: false }),
     db.from("anti_detection_settings").select("*").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
     db.auth.admin.listUsers({ perPage: 1000 }),
   ]);
@@ -38,11 +38,11 @@ export async function GET() {
   const farms = farmsRes.data ?? []; const tokens = tokensRes.data ?? []; const subs = subsRes.data ?? []; const keys = keysRes.data ?? [];
   return NextResponse.json({
     ok: true, timestamp: new Date().toISOString(), hub: hubHealth,
-    stats: { totalUsers: users.length, totalFarms: farms.length, activeFarms: farms.filter((f: any) => f.bot_enabled).length, activeSubs: subs.filter((s: any) => s.status === "active").length, totalTokensUsed: tokens.reduce((a: number, t: any) => a + (t.tokens_used || 0), 0), totalTokensAvail: tokens.reduce((a: number, t: any) => a + (t.tokens_total || 0), 0), totalKeys: keys.length, usedKeys: keys.filter((k: any) => k.is_used).length, revokedKeys: keys.filter((k: any) => k.revoked).length },
+    stats: { totalUsers: users.length, totalFarms: farms.length, activeFarms: farms.filter((f: any) => f.bot_enabled).length, activeSubs: subs.filter((s: any) => s.status === "active").length, totalTokensUsed: tokens.reduce((a: number, t: any) => a + (t.tokens_used || 0), 0), totalTokensAvail: tokens.reduce((a: number, t: any) => a + (t.tokens_total || 0), 0), totalKeys: keys.length, usedKeys: keys.filter((k: any) => k.is_used).length, revokedKeys: keys.filter((k: any) => k.revoked_at).length, deliveredKeys: keys.filter((k: any) => k.delivered_at).length },
     farms: farms.map((f: any) => ({ ...f, email: userMap[f.user_id] || f.user_id })),
     tokens: tokens.map((t: any) => ({ ...t, email: userMap[t.user_id] || t.user_id })),
     subscriptions: subs.map((s: any) => ({ ...s, email: userMap[s.user_id] || s.user_id })),
-    proKeys: keys.map((k: any) => ({ ...k, usedByEmail: k.used_by ? (userMap[k.used_by] || k.used_by) : null })),
+    proKeys: keys.map((k: any) => ({ ...k, usedByEmail: k.used_by ? (userMap[k.used_by] || k.used_by) : null, revoked: !!k.revoked_at })),
     antiDetection: settingsRes.data ?? null, users,
     errors: { farms: farmsRes.error?.message ?? null, tokens: tokensRes.error?.message ?? null, subs: subsRes.error?.message ?? null, keys: keysRes.error?.message ?? null },
   });
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const db = getDB();
   const body = await req.json().catch(() => ({}));
-  const { action, userId, farmId, keyId, count, batchTag, note, email, password, settings } = body;
+  const { action, userId, farmId, keyId, count, batchTag, note, email, password, settings, keyIds, deliveredTo, deliveredNote } = body;
   switch (action) {
     case "reset_tokens": {
       if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
@@ -111,15 +111,21 @@ export async function POST(req: Request) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json({ ok: true, message: n + " keys generated", codes: rows.map(r => r.code) });
     }
+    case "deliver_keys": {
+      if (!keyIds?.length || !deliveredTo) return NextResponse.json({ error: "keyIds + deliveredTo required" }, { status: 400 });
+      const { error } = await db.from("pro_keys").update({ delivered_at: new Date().toISOString(), delivered_by: user.id, delivered_to: deliveredTo, delivered_note: deliveredNote || null }).in("id", keyIds);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true, message: keyIds.length + " keys delivered to " + deliveredTo });
+    }
     case "revoke_key": {
       if (!keyId) return NextResponse.json({ error: "keyId required" }, { status: 400 });
-      const { error } = await db.from("pro_keys").update({ revoked: true }).eq("id", keyId);
+      const { error } = await db.from("pro_keys").update({ revoked_at: new Date().toISOString(), revoked_by: user.id }).eq("id", keyId);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json({ ok: true, message: "Key revoked" });
     }
     case "unrevoke_key": {
       if (!keyId) return NextResponse.json({ error: "keyId required" }, { status: 400 });
-      const { error } = await db.from("pro_keys").update({ revoked: false }).eq("id", keyId);
+      const { error } = await db.from("pro_keys").update({ revoked_at: null, revoked_by: null }).eq("id", keyId);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json({ ok: true, message: "Key unrevoked" });
     }
