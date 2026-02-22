@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { supabaseService } from "@/lib/supabase/server";
 
 export async function DELETE(req: Request) {
   const cookieStore = cookies();
@@ -32,6 +33,24 @@ export async function DELETE(req: Request) {
   if (!farmId)
     return NextResponse.json({ error: "Missing farm id" }, { status: 400 });
 
+  // Verify farm belongs to user before deleting
+  const { data: farm, error: fetchError } = await supabase
+    .from("user_farms")
+    .select("id")
+    .eq("id", farmId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (fetchError || !farm)
+    return NextResponse.json({ error: "Farm not found" }, { status: 404 });
+
+  // Delete farm settings first (cleanup)
+  await supabase
+    .from("farm_settings")
+    .delete()
+    .eq("farm_id", farmId);
+
+  // Delete the farm
   const { error } = await supabase
     .from("user_farms")
     .delete()
@@ -41,5 +60,16 @@ export async function DELETE(req: Request) {
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ ok: true });
+  // Refund token
+  const service = supabaseService();
+  const { data: refundResult, error: refundError } = await service.rpc(
+    "refund_token",
+    { p_user_id: user.id }
+  );
+
+  return NextResponse.json({
+    ok: true,
+    refund: refundResult ?? null,
+    refund_error: refundError?.message ?? null,
+  });
 }
