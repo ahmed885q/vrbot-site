@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
 
 function isAdminEmail(email: string | null | undefined) {
   const admins = (process.env.ADMIN_EMAILS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
@@ -14,15 +15,23 @@ function getDB() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 }
 
-export async function GET() {
+function getAuth() {
   const cookieStore = cookies();
-  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
   });
+}
+
+async function checkAdmin() {
+  const supabase = getAuth();
   const { data } = await supabase.auth.getUser();
-  if (!data?.user || !isAdminEmail(data.user.email)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  if (!data?.user || !isAdminEmail(data.user.email)) return null;
+  return data.user;
+}
+
+export async function GET() {
+  const user = await checkAdmin();
+  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const db = getDB();
 
   let hubHealth: any = null;
@@ -34,53 +43,65 @@ export async function GET() {
     hubHealth = { error: e.message, status: "offline" };
   }
 
-  const { data: farms, error: farmsErr } = await db.from("user_farms").select("id, user_id, name, server, bot_enabled, bot_status, created_at, last_bot_activity");
-  const { data: tokens, error: tokensErr } = await db.from("tokens").select("user_id, tokens_total, tokens_used, trial_granted, trial_expires_at, updated_at");
-  const { data: subs, error: subsErr } = await db.from("subscriptions").select("id, user_id, plan, status, current_period_end, stripe_customer_id, pro_key_code, updated_at");
-  const { data: usersData } = await db.auth.admin.listUsers({ perPage: 1000 });
-  const users = usersData?.users?.map((u: any) => ({ id: u.id, email: u.email, created_at: u.created_at, last_sign_in: u.last_sign_in_at })) ?? [];
+  const [farmsRes, tokensRes, subsRes, keysRes, settingsRes, usersRes] = await Promise.all([
+    db.from("user_farms").select("id, user_id, name, server, bot_enabled, bot_status, created_at, last_bot_activity"),
+    db.from("tokens").select("user_id, tokens_total, tokens_used, trial_granted, trial_expires_at, updated_at"),
+    db.from("subscriptions").select("id, user_id, plan, status, current_period_end, stripe_customer_id, pro_key_code, updated_at"),
+    db.from("pro_keys").select("id, code, is_used, used_by, revoked, batch_tag, note, created_at, used_at").order("created_at", { ascending: false }),
+    db.from("anti_detection_settings").select("*").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+    db.auth.admin.listUsers({ perPage: 1000 }),
+  ]);
 
+  const users = usersRes.data?.users?.map((u: any) => ({ id: u.id, email: u.email, created_at: u.created_at, last_sign_in: u.last_sign_in_at })) ?? [];
   const userMap: Record<string, string> = {};
   users.forEach((u: any) => { userMap[u.id] = u.email; });
 
-  const enrichedFarms = (farms ?? []).map((f: any) => ({ ...f, email: userMap[f.user_id] || f.user_id }));
-  const enrichedTokens = (tokens ?? []).map((t: any) => ({ ...t, email: userMap[t.user_id] || t.user_id }));
-  const enrichedSubs = (subs ?? []).map((s: any) => ({ ...s, email: userMap[s.user_id] || s.user_id }));
+  const farms = farmsRes.data ?? [];
+  const tokens = tokensRes.data ?? [];
+  const subs = subsRes.data ?? [];
+  const keys = keysRes.data ?? [];
 
   return NextResponse.json({
     ok: true, timestamp: new Date().toISOString(), hub: hubHealth,
     stats: {
       totalUsers: users.length,
-      totalFarms: farms?.length ?? 0,
-      activeFarms: farms?.filter((f: any) => f.bot_enabled)?.length ?? 0,
-      activeSubs: subs?.filter((s: any) => s.status === "active")?.length ?? 0,
-      totalTokensUsed: tokens?.reduce((sum: number, t: any) => sum + (t.tokens_used || 0), 0) ?? 0,
-      totalTokensAvail: tokens?.reduce((sum: number, t: any) => sum + (t.tokens_total || 0), 0) ?? 0,
+      totalFarms: farms.length,
+      activeFarms: farms.filter((f: any) => f.bot_enabled).length,
+      activeSubs: subs.filter((s: any) => s.status === "active").length,
+      totalTokensUsed: tokens.reduce((s: number, t: any) => s + (t.tokens_used || 0), 0),
+      totalTokensAvail: tokens.reduce((s: number, t: any) => s + (t.tokens_total || 0), 0),
+      totalKeys: keys.length,
+      usedKeys: keys.filter((k: any) => k.is_used).length,
+      revokedKeys: keys.filter((k: any) => k.revoked).length,
     },
-    farms: enrichedFarms, tokens: enrichedTokens, subscriptions: enrichedSubs, users,
-    errors: { farms: farmsErr?.message ?? null, tokens: tokensErr?.message ?? null, subs: subsErr?.message ?? null },
+    farms: farms.map((f: any) => ({ ...f, email: userMap[f.user_id] || f.user_id })),
+    tokens: tokens.map((t: any) => ({ ...t, email: userMap[t.user_id] || t.user_id })),
+    subscriptions: subs.map((s: any) => ({ ...s, email: userMap[s.user_id] || s.user_id })),
+    proKeys: keys.map((k: any) => ({ ...k, usedByEmail: k.used_by ? (userMap[k.used_by] || k.used_by) : null })),
+    antiDetection: settingsRes.data ?? null,
+    users,
+    errors: {
+      farms: farmsRes.error?.message ?? null,
+      tokens: tokensRes.error?.message ?? null,
+      subs: subsRes.error?.message ?? null,
+      keys: keysRes.error?.message ?? null,
+    },
   });
 }
 
 export async function POST(req: Request) {
-  const cookieStore = cookies();
-  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
-  });
-  const { data } = await supabase.auth.getUser();
-  if (!data?.user || !isAdminEmail(data.user.email)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const user = await checkAdmin();
+  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const db = getDB();
   const body = await req.json().catch(() => ({}));
-  const { action, userId, farmId } = body;
+  const { action, userId, farmId, keyId, count, batchTag, note } = body;
 
   switch (action) {
     case "reset_tokens": {
       if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
       const { error } = await db.from("tokens").update({ tokens_used: 0, updated_at: new Date().toISOString() }).eq("user_id", userId);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-      return NextResponse.json({ ok: true, message: "Tokens reset to 0 used" });
+      return NextResponse.json({ ok: true, message: "Tokens reset" });
     }
     case "disable_farm": {
       if (!farmId) return NextResponse.json({ error: "farmId required" }, { status: 400 });
@@ -108,6 +129,32 @@ export async function POST(req: Request) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       if (farm?.user_id) await db.rpc("refund_token", { p_user_id: farm.user_id });
       return NextResponse.json({ ok: true, message: "Farm deleted + token refunded" });
+    }
+    case "generate_keys": {
+      const n = Math.min(Math.max(Number(count || 1), 1), 100);
+      const tag = batchTag ? String(batchTag).trim().slice(0, 64) : null;
+      const nt = note ? String(note).trim().slice(0, 160) : null;
+      const rows = Array.from({ length: n }, () => ({
+        code: crypto.randomBytes(16).toString("hex").toUpperCase(),
+        created_by: user.id,
+        batch_tag: tag,
+        note: nt,
+      }));
+      const { error } = await db.from("pro_keys").insert(rows);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true, message: n + " keys generated", codes: rows.map(r => r.code) });
+    }
+    case "revoke_key": {
+      if (!keyId) return NextResponse.json({ error: "keyId required" }, { status: 400 });
+      const { error } = await db.from("pro_keys").update({ revoked: true }).eq("id", keyId);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true, message: "Key revoked" });
+    }
+    case "unrevoke_key": {
+      if (!keyId) return NextResponse.json({ error: "keyId required" }, { status: 400 });
+      const { error } = await db.from("pro_keys").update({ revoked: false }).eq("id", keyId);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true, message: "Key unrevoked" });
     }
     default:
       return NextResponse.json({ error: "Unknown action" }, { status: 400 });
