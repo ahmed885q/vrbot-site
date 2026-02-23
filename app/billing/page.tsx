@@ -5,7 +5,7 @@ import { Card, Button, InputNumber, Space, Statistic, Alert, Row, Col, Divider }
 import { DollarOutlined, ShoppingCartOutlined, SafetyCertificateOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useLanguage, Language } from '@/lib/i18n';
 
-const FARM_PRICE = 2;
+const FARM_PRICE = 3;
 
 const t: Record<Language, Record<string, string>> = {
   ar: {
