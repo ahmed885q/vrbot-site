@@ -3,24 +3,26 @@
 import { useState, useEffect } from 'react';
 
 type Language = 'ar' | 'en' | 'ru' | 'zh';
+type Theme = 'dark' | 'light';
 
 const langConfig: Record<Language, { name: string; flag: string; dir: 'rtl' | 'ltr' }> = {
-  ar: { name: 'العربية', flag: '🇸🇦', dir: 'rtl' },
-  en: { name: 'English', flag: '🇬🇧', dir: 'ltr' },
-  ru: { name: 'Русский', flag: '🇷🇺', dir: 'ltr' },
-  zh: { name: '中文', flag: '🇨🇳', dir: 'ltr' },
+  ar: { name: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629', flag: '\uD83C\uDDF8\uD83C\uDDE6', dir: 'rtl' },
+  en: { name: 'English', flag: '\uD83C\uDDEC\uD83C\uDDE7', dir: 'ltr' },
+  ru: { name: '\u0420\u0443\u0441\u0441\u043a\u0438\u0439', flag: '\uD83C\uDDF7\uD83C\uDDFA', dir: 'ltr' },
+  zh: { name: '\u4e2d\u6587', flag: '\uD83C\uDDE8\uD83C\uDDF3', dir: 'ltr' },
 };
 
 const navText: Record<Language, { farms: string; billing: string; download: string; dashboard: string }> = {
-  ar: { farms: '🌾 المزارع', billing: '💳 الدفع', download: '⬇️ تحميل', dashboard: '🎮 الداشبورد' },
-  en: { farms: '🌾 Farms', billing: '💳 Billing', download: '⬇️ Download', dashboard: '🎮 Dashboard' },
-  ru: { farms: '🌾 Фермы', billing: '💳 Оплата', download: '⬇️ Скачать', dashboard: '🎮 Панель' },
-  zh: { farms: '🌾 农场', billing: '💳 付款', download: '⬇️ 下载', dashboard: '🎮 面板' },
+  ar: { farms: '\uD83C\uDF3E \u0627\u0644\u0645\u0632\u0627\u0631\u0639', billing: '\uD83D\uDCB3 \u0627\u0644\u062f\u0641\u0639', download: '\u2B07\uFE0F \u062a\u062d\u0645\u064a\u0644', dashboard: '\uD83C\uDFAE \u0627\u0644\u062f\u0627\u0634\u0628\u0648\u0631\u062f' },
+  en: { farms: '\uD83C\uDF3E Farms', billing: '\uD83D\uDCB3 Billing', download: '\u2B07\uFE0F Download', dashboard: '\uD83C\uDFAE Dashboard' },
+  ru: { farms: '\uD83C\uDF3E \u0424\u0435\u0440\u043c\u044b', billing: '\uD83D\uDCB3 \u041e\u043f\u043b\u0430\u0442\u0430', download: '\u2B07\uFE0F \u0421\u043a\u0430\u0447\u0430\u0442\u044c', dashboard: '\uD83C\uDFAE \u041f\u0430\u043d\u0435\u043b\u044c' },
+  zh: { farms: '\uD83C\uDF3E \u519c\u573a', billing: '\uD83D\uDCB3 \u4ed8\u6b3e', download: '\u2B07\uFE0F \u4e0b\u8f7d', dashboard: '\uD83C\uDFAE \u9762\u677f' },
 };
 
 export default function SiteHeader() {
   const [lang, setLang] = useState<Language>('ar');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>('dark');
 
   useEffect(() => {
     const saved = localStorage.getItem('vrbot_lang') as Language;
@@ -28,6 +30,13 @@ export default function SiteHeader() {
       setLang(saved);
       document.documentElement.lang = saved;
       document.documentElement.dir = langConfig[saved].dir;
+    }
+    const savedTheme = localStorage.getItem('vrbot_theme') as Theme;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
     }
   }, []);
 
@@ -39,23 +48,33 @@ export default function SiteHeader() {
     setMenuOpen(false);
   };
 
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('vrbot_theme', next);
+    document.documentElement.setAttribute('data-theme', next);
+  };
+
   const t = navText[lang];
+  const isDark = theme === 'dark';
 
   return (
     <header style={{
-      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+      background: isDark
+        ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+        : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
       padding: '12px 24px',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+      boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.15)' : '0 2px 8px rgba(0,0,0,0.08)',
       position: 'sticky',
       top: 0,
       zIndex: 1000,
+      borderBottom: isDark ? 'none' : '1px solid #dee2e6',
     }}>
-      {/* Logo */}
       <a href="/" style={{
-        color: '#ffffff',
+        color: isDark ? '#ffffff' : '#1a1a2e',
         textDecoration: 'none',
         fontSize: '22px',
         fontWeight: 700,
@@ -63,30 +82,44 @@ export default function SiteHeader() {
         alignItems: 'center',
         gap: '8px',
       }}>
-        🤖 VRBOT
+        \uD83E\uDD16 VRBOT
       </a>
 
-      {/* Navigation */}
-      <nav style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-      }}>
-        <a href="/dashboard" style={navLinkStyle}>{t.farms}</a>
-        <a href="/billing" style={navLinkStyle}>{t.billing}</a>
-        <a href="/download" style={navLinkStyle}>{t.download}</a>
-        <a href="/dashboard" style={navLinkStyle}>{t.dashboard}</a>
+      <nav style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <a href="/dashboard" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.farms}</a>
+        <a href="/billing" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.billing}</a>
+        <a href="/download" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.download}</a>
+        <a href="/dashboard" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.dashboard}</a>
+
+        {/* Theme Toggle */}
+        <button
+          onClick={toggleTheme}
+          title={isDark ? 'Light Mode' : 'Dark Mode'}
+          style={{
+            background: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+            border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.15)',
+            borderRadius: '8px',
+            padding: '6px 10px',
+            cursor: 'pointer',
+            fontSize: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            transition: 'all 0.3s',
+          }}
+        >
+          {isDark ? '\u2600\uFE0F' : '\uD83C\uDF19'}
+        </button>
 
         {/* Language Switcher */}
         <div style={{ position: 'relative' }}>
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             style={{
-              background: 'rgba(255,255,255,0.15)',
-              border: '1px solid rgba(255,255,255,0.3)',
+              background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.06)',
+              border: isDark ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(0,0,0,0.15)',
               borderRadius: '8px',
               padding: '6px 14px',
-              color: '#ffffff',
+              color: isDark ? '#ffffff' : '#1a1a2e',
               cursor: 'pointer',
               fontSize: '14px',
               fontWeight: 600,
@@ -95,7 +128,7 @@ export default function SiteHeader() {
               gap: '6px',
             }}
           >
-            {langConfig[lang].flag} {langConfig[lang].name} ▾
+            {langConfig[lang].flag} {langConfig[lang].name} \u25BE
           </button>
 
           {menuOpen && (
@@ -103,12 +136,13 @@ export default function SiteHeader() {
               position: 'absolute',
               top: '42px',
               right: 0,
-              background: '#ffffff',
+              background: isDark ? '#1a1a2e' : '#ffffff',
               borderRadius: '8px',
               boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
               overflow: 'hidden',
               minWidth: '150px',
               zIndex: 9999,
+              border: isDark ? '1px solid #2a2a3a' : '1px solid #dee2e6',
             }}>
               {(Object.keys(langConfig) as Language[]).map((l) => (
                 <button
@@ -121,16 +155,16 @@ export default function SiteHeader() {
                     width: '100%',
                     padding: '10px 16px',
                     border: 'none',
-                    background: lang === l ? '#f0f7ff' : 'transparent',
+                    background: lang === l ? (isDark ? '#2a2a3a' : '#f0f7ff') : 'transparent',
                     cursor: 'pointer',
                     fontSize: '14px',
                     fontWeight: lang === l ? 700 : 400,
-                    color: '#1a1a2e',
+                    color: isDark ? '#e0e0e0' : '#1a1a2e',
                     textAlign: 'left',
                   }}
                 >
                   {langConfig[l].flag} {langConfig[l].name}
-                  {lang === l && ' ✓'}
+                  {lang === l && ' \u2714'}
                 </button>
               ))}
             </div>
@@ -141,8 +175,7 @@ export default function SiteHeader() {
   );
 }
 
-const navLinkStyle: React.CSSProperties = {
-  color: 'rgba(255,255,255,0.85)',
+const navLinkBase: React.CSSProperties = {
   textDecoration: 'none',
   fontSize: '15px',
   fontWeight: 600,
