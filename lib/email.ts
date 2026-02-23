@@ -78,3 +78,27 @@ export async function sendSubscriptionExpiring(to: string, daysLeft: number) {
     console.log("[Email] Expiring notice sent to", to);
   } catch (e) { console.error("[Email] Expiring notice failed:", e); }
 }
+
+export async function sendAutoRenewLink(to: string, farms: number, amount: string, payUrl: string) {
+  try {
+    await resend.emails.send({
+      from: FROM, to, subject: "VRBOT - Renew Your Subscription",
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a1a;color:#e0e0e0;border-radius:12px;overflow:hidden">
+          <div style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);padding:24px;text-align:center">
+            <h1 style="margin:0;color:#fff;font-size:24px">Renew Your Subscription</h1>
+          </div>
+          <div style="padding:24px">
+            <p>Your VRBOT subscription is expiring today. Click below to renew instantly!</p>
+            <div style="background:#141428;border:1px solid #2a2a3a;border-radius:8px;padding:16px;margin:16px 0">
+              <p style="margin:4px 0"><strong>Farms:</strong> ${farms}</p>
+              <p style="margin:4px 0"><strong>Amount:</strong> $${amount}</p>
+            </div>
+            <a href="${payUrl}" style="display:inline-block;background:#0070ba;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px">Pay Now with PayPal</a>
+            <p style="color:#888;font-size:12px;margin-top:24px">This link expires in 24 hours. You can also renew from vrbot.me/billing</p>
+          </div>
+        </div>`,
+    });
+    console.log("[Email] Auto-renew link sent to", to);
+  } catch (e) { console.error("[Email] Auto-renew link failed:", e); }
+}
