@@ -1,12 +1,13 @@
-﻿'use client'
+'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import AnalyticsTab from '../components/AnalyticsTab'
 
 export default function DiagnosticsPage() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
-  const [tab, setTab] = useState('farms')
+  const [tab, setTab] = useState('analytics')
   const [keyCount, setKeyCount] = useState(5)
   const [keyTag, setKeyTag] = useState('')
   const [keyNote, setKeyNote] = useState('')
@@ -136,9 +137,11 @@ export default function DiagnosticsPage() {
         {[{ v: stats.totalUsers, l: 'Users', c: '#3b82f6' },{ v: stats.totalFarms, l: 'Farms', c: '#8b5cf6' },{ v: stats.activeFarms, l: 'Active', c: '#22c55e' },{ v: stats.activeSubs, l: 'Subs', c: '#f59e0b' },{ v: (stats.totalTokensUsed||0)+'/'+(stats.totalTokensAvail||0), l: 'Tokens', c: '#06b6d4' },{ v: stats.totalKeys, l: 'Keys', c: '#a855f7' },{ v: stats.usedKeys, l: 'Used', c: '#ec4899' },{ v: stats.deliveredKeys, l: 'Delivered', c: '#14b8a6' }].map((s, i) => (<div key={i} style={S.stat(s.c)}><div style={{ fontSize: '24px', fontWeight: 800, color: s.c }}>{s.v}</div><div style={{ fontSize: '11px', color: '#888' }}>{s.l}</div></div>))}
       </div>
       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-        {[{ k: 'farms', l: 'Farms', n: data?.farms?.length },{ k: 'tokens', l: 'Tokens', n: data?.tokens?.length },{ k: 'subs', l: 'Subscriptions', n: data?.subscriptions?.length },{ k: 'proKeys', l: 'Pro Keys', n: data?.proKeys?.length },{ k: 'users', l: 'Users', n: data?.users?.length },{ k: 'protection', l: 'Protection', n: null }].map(t => (<div key={t.k} style={S.tabS(tab === t.k)} onClick={() => setTab(t.k)}>{t.l}{t.n !== null ? ` (${t.n ?? 0})` : ''}</div>))}
+        {[{ k: 'analytics', l: '📊 Analytics', n: null },{ k: 'farms', l: 'Farms', n: data?.farms?.length },{ k: 'tokens', l: 'Tokens', n: data?.tokens?.length },{ k: 'subs', l: 'Subscriptions', n: data?.subscriptions?.length },{ k: 'proKeys', l: 'Pro Keys', n: data?.proKeys?.length },{ k: 'users', l: 'Users', n: data?.users?.length },{ k: 'protection', l: 'Protection', n: null }].map(t => (<div key={t.k} style={S.tabS(tab === t.k)} onClick={() => setTab(t.k)}>{t.l}{t.n !== null ? ` (${t.n ?? 0})` : ''}</div>))}
       </div>
       <div style={{ ...S.card, borderTopLeftRadius: 0, marginTop: 0, overflowX: 'auto' }}>
+
+        {tab === 'analytics' && <AnalyticsTab data={data} />}
 
         {tab === 'farms' && (<table style={{ width: '100%', borderCollapse: 'collapse' }}><thead><tr>{['Email','Name','Server','Bot','Status','Activity','Actions'].map((h,i) => <th key={i} style={S.th}>{h}</th>)}</tr></thead><tbody>{(data?.farms ?? []).map((f: any) => (<tr key={f.id}><td style={S.td}><span style={{ fontSize: '12px' }}>{f.email}</span></td><td style={{ ...S.td, fontWeight: 600 }}>{f.name}</td><td style={S.td}>{f.server || '-'}</td><td style={S.td}><span style={f.bot_enabled ? S.badge('#22c55e','#052e16') : S.badge('#888','#1a1a2a')}>{f.bot_enabled ? 'ON' : 'OFF'}</span></td><td style={S.td}><span style={S.badge('#888','#1a1a2a')}>{f.bot_status || 'idle'}</span></td><td style={{ ...S.td, fontSize: '12px', color: '#888' }}>{timeAgo(f.last_bot_activity)}</td><td style={S.td}><div style={{ display: 'flex', gap: '4px' }}>{f.bot_enabled ? <button style={S.btn('#f59e0b','#000')} onClick={() => doAction('disable_farm', { farmId: f.id })}>Disable</button> : <button style={S.btn('#22c55e','#fff')} onClick={() => doAction('enable_farm', { farmId: f.id })}>Enable</button>}<button style={S.btn('#ef4444','#fff')} onClick={() => { if(confirm('Delete farm?')) doAction('delete_farm', { farmId: f.id }) }}>Delete</button></div></td></tr>))}</tbody></table>)}
 
