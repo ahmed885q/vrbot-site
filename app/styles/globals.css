@@ -147,3 +147,26 @@ body {
   background: #7c3aed;
   color: #ffffff;
 }
+
+/* Theme Variables */
+:root, [data-theme="dark"] {
+  --bg-primary: #0a0a1a;
+  --bg-secondary: #141428;
+  --bg-card: #1a1a2e;
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a0a0;
+  --border-color: #2a2a3a;
+}
+[data-theme="light"] {
+  --bg-primary: #f5f5f7;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --text-primary: #1a1a2e;
+  --text-secondary: #666666;
+  --border-color: #dee2e6;
+}
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background 0.3s, color 0.3s;
+}
