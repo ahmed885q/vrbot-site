@@ -128,7 +128,7 @@ export default function SiteHeader() {
               gap: '6px',
             }}
           >
-            {langConfig[lang].flag} {langConfig[lang].name} ?
+            {langConfig[lang].flag} {langConfig[lang].name} ▼
           </button>
 
           {menuOpen && (
@@ -163,7 +163,7 @@ export default function SiteHeader() {
                     textAlign: 'left',
                   }}
                 >
-                  {langConfig[l].flag} {langConfig[l].name}
+                  {langConfig[l].flag} {langConfig[l].name}▼
                   {lang === l && ' \u2714'}
                 </button>
               ))}
