@@ -128,7 +128,7 @@ export default function SiteHeader() {
               gap: '6px',
             }}
           >
-            {langConfig[lang].flag} {langConfig[lang].name} \u25BE
+            {langConfig[lang].flag} {langConfig[lang].name} ?
           </button>
 
           {menuOpen && (
