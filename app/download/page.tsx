@@ -1,191 +1,436 @@
-﻿import Link from "next/link";
+'use client';
 
-export const metadata = {
-  title: "Download VRBOT Agent - Viking Rise Automation",
-  description: "Download and install VRBOT Agent to automate Viking Rise",
-};
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+
+type Language = 'ar' | 'en' | 'ru' | 'zh';
 
 export default function DownloadPage() {
+  const [lang, setLang] = useState<Language>('en');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('vrbot-lang') as Language;
+    if (saved) setLang(saved);
+  }, []);
+
+  const isRtl = lang === 'ar';
+
+  const t = {
+    ar: {
+      title: 'تحميل VRBOT Agent',
+      subtitle: 'ابدأ أتمتة Viking Rise في 3 خطوات بسيطة',
+      requirements: 'المتطلبات',
+      req1: 'Windows 10 أو أحدث',
+      req2: 'LDPlayer 9 (محاكي أندرويد)',
+      req3: 'Python 3.10 أو أحدث',
+      req4: 'لعبة Viking Rise مثبتة على المحاكي',
+      step1_title: 'الخطوة 1: تثبيت المتطلبات',
+      step1_desc: 'حمّل وثبّت LDPlayer 9 و Python 3.10+ على جهازك.',
+      step1_ldplayer: 'تحميل LDPlayer 9',
+      step1_python: 'تحميل Python 3.10',
+      step2_title: 'الخطوة 2: تحميل VRBOT Agent',
+      step2_desc: 'حمّل ملف البوت وفك الضغط في أي مجلد على جهازك.',
+      step2_btn: 'تحميل VRBOT Agent v3.0',
+      step2_size: 'حجم الملف: ~15 MB',
+      step3_title: 'الخطوة 3: التشغيل',
+      step3_desc: 'شغّل setup.bat مرة واحدة لتثبيت المكتبات، ثم start.bat لبدء البوت.',
+      step3_s1: 'شغّل setup.bat (مرة واحدة فقط)',
+      step3_s2: 'شغّل start.bat',
+      step3_s3: 'أدخل User ID الخاص بك',
+      step3_s4: 'اضغط Start Agent',
+      user_id_note: 'تجد الـ User ID في لوحة التحكم',
+      dashboard_link: 'الذهاب للوحة التحكم',
+      need_help: 'تحتاج مساعدة؟',
+      help_desc: 'تواصل معنا عبر Discord أو Telegram للدعم الفني.',
+      back: 'الرئيسية',
+    },
+    en: {
+      title: 'Download VRBOT Agent',
+      subtitle: 'Start automating Viking Rise in 3 simple steps',
+      requirements: 'Requirements',
+      req1: 'Windows 10 or later',
+      req2: 'LDPlayer 9 (Android Emulator)',
+      req3: 'Python 3.10 or later',
+      req4: 'Viking Rise installed on the emulator',
+      step1_title: 'Step 1: Install Prerequisites',
+      step1_desc: 'Download and install LDPlayer 9 and Python 3.10+ on your PC.',
+      step1_ldplayer: 'Download LDPlayer 9',
+      step1_python: 'Download Python 3.10',
+      step2_title: 'Step 2: Download VRBOT Agent',
+      step2_desc: 'Download the bot package and extract it to any folder.',
+      step2_btn: 'Download VRBOT Agent v3.0',
+      step2_size: 'File size: ~15 MB',
+      step3_title: 'Step 3: Launch',
+      step3_desc: 'Run setup.bat once to install libraries, then start.bat to launch.',
+      step3_s1: 'Run setup.bat (one time only)',
+      step3_s2: 'Run start.bat',
+      step3_s3: 'Enter your User ID',
+      step3_s4: 'Click Start Agent',
+      user_id_note: 'Find your User ID in the dashboard',
+      dashboard_link: 'Go to Dashboard',
+      need_help: 'Need Help?',
+      help_desc: 'Contact us on Discord or Telegram for technical support.',
+      back: 'Home',
+    },
+    ru: {
+      title: 'Скачать VRBOT Agent',
+      subtitle: 'Начните автоматизацию Viking Rise за 3 простых шага',
+      requirements: 'Требования',
+      req1: 'Windows 10 или новее',
+      req2: 'LDPlayer 9 (Android эмулятор)',
+      req3: 'Python 3.10 или новее',
+      req4: 'Viking Rise установлена на эмуляторе',
+      step1_title: 'Шаг 1: Установите требования',
+      step1_desc: 'Скачайте и установите LDPlayer 9 и Python 3.10+ на ваш ПК.',
+      step1_ldplayer: 'Скачать LDPlayer 9',
+      step1_python: 'Скачать Python 3.10',
+      step2_title: 'Шаг 2: Скачайте VRBOT Agent',
+      step2_desc: 'Скачайте архив бота и распакуйте в любую папку.',
+      step2_btn: 'Скачать VRBOT Agent v3.0',
+      step2_size: 'Размер файла: ~15 МБ',
+      step3_title: 'Шаг 3: Запуск',
+      step3_desc: 'Запустите setup.bat один раз, затем start.bat для старта.',
+      step3_s1: 'Запустите setup.bat (один раз)',
+      step3_s2: 'Запустите start.bat',
+      step3_s3: 'Введите ваш User ID',
+      step3_s4: 'Нажмите Start Agent',
+      user_id_note: 'Найдите User ID в панели управления',
+      dashboard_link: 'Перейти в панель',
+      need_help: 'Нужна помощь?',
+      help_desc: 'Свяжитесь с нами в Discord или Telegram для поддержки.',
+      back: 'Главная',
+    },
+    zh: {
+      title: '下载 VRBOT Agent',
+      subtitle: '3个简单步骤开始自动化Viking Rise',
+      requirements: '系统要求',
+      req1: 'Windows 10 或更高版本',
+      req2: 'LDPlayer 9（安卓模拟器）',
+      req3: 'Python 3.10 或更高版本',
+      req4: '模拟器上已安装Viking Rise',
+      step1_title: '第1步：安装前置条件',
+      step1_desc: '在您的电脑上下载并安装LDPlayer 9和Python 3.10+。',
+      step1_ldplayer: '下载 LDPlayer 9',
+      step1_python: '下载 Python 3.10',
+      step2_title: '第2步：下载 VRBOT Agent',
+      step2_desc: '下载机器人程序包并解压到任意文件夹。',
+      step2_btn: '下载 VRBOT Agent v3.0',
+      step2_size: '文件大小：约15 MB',
+      step3_title: '第3步：启动',
+      step3_desc: '运行setup.bat安装库（仅需一次），然后运行start.bat启动。',
+      step3_s1: '运行 setup.bat（仅一次）',
+      step3_s2: '运行 start.bat',
+      step3_s3: '输入您的 User ID',
+      step3_s4: '点击 Start Agent',
+      user_id_note: '在控制面板中查找您的User ID',
+      dashboard_link: '前往控制面板',
+      need_help: '需要帮助？',
+      help_desc: '通过Discord或Telegram联系我们获取技术支持。',
+      back: '首页',
+    },
+  }[lang];
+
   return (
-    <div className="min-h-screen bg-[#0b0f1a] text-white">
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#0b0f1a',
+        color: '#ffffff',
+        direction: isRtl ? 'rtl' : 'ltr',
+      }}
+    >
       {/* Header */}
-      <nav className="border-b border-white/10 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold">
-            🤖 VRBOT
+      <nav
+        style={{
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
+          padding: '16px 24px',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '1200px',
+            margin: '0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Link
+            href="/"
+            style={{
+              color: '#a78bfa',
+              textDecoration: 'none',
+              fontWeight: 700,
+              fontSize: '20px',
+            }}
+          >
+            ← {t.back}
           </Link>
-          <div className="flex gap-4">
-            <Link href="/dashboard" className="text-sm text-gray-400 hover:text-white">
-              Dashboard
-            </Link>
-            <Link href="/login" className="text-sm text-gray-400 hover:text-white">
-              Login
-            </Link>
-          </div>
+          <span style={{ fontWeight: 800, fontSize: '22px', color: '#a78bfa' }}>
+            VRBOT
+          </span>
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-6 py-16">
+      {/* Main Content */}
+      <main style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px' }}>
         {/* Hero */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Download <span className="text-purple-400">VRBOT Agent</span>
+        <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+          <h1
+            style={{
+              fontSize: 'clamp(28px, 5vw, 42px)',
+              fontWeight: 800,
+              marginBottom: '12px',
+              background: 'linear-gradient(135deg, #a78bfa, #7c3aed)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            {t.title}
           </h1>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Automate your Viking Rise farms with our desktop agent.
-            Connect to your dashboard and control everything remotely.
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '18px' }}>
+            {t.subtitle}
           </p>
         </div>
 
-        {/* Download Card */}
-        <div className="bg-[#1a1f2e] rounded-2xl p-8 mb-12 border border-white/10">
-          <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-3xl">🖥️</span>
-                <div>
-                  <h2 className="text-2xl font-bold">VRBOT Agent v3.0</h2>
-                  <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full">
-                    Windows 10/11
-                  </span>
-                </div>
-              </div>
-              <p className="text-gray-400 mb-4">
-                Multi-instance support · 37+ automated tasks · AI Vision · Real-time dashboard control
-              </p>
-              <div className="flex flex-wrap gap-2 mb-6">
-                {["Multi-Farm", "Kill Monster", "Gather", "Niflung", "Alliance", "Daily Quests"].map((f) => (
-                  <span key={f} className="text-xs bg-white/5 text-gray-300 px-2.5 py-1 rounded-full border border-white/10">
-                    {f}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-3">
-              
-                href="https://github.com/ahmed885q/vrbot-agent/archive/refs/heads/main.zip"
-                className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-8 py-4 rounded-xl text-center transition-all hover:scale-105 flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download ZIP
-              </a>
-              
-                href="https://github.com/ahmed885q/vrbot-agent"
-                target="_blank"
-                className="bg-white/5 hover:bg-white/10 text-gray-300 font-medium px-8 py-3 rounded-xl text-center transition-all border border-white/10 flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                </svg>
-                View on GitHub
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Setup Steps */}
-        <h2 className="text-2xl font-bold mb-8 text-center">Setup Guide</h2>
-        <div className="grid gap-4 mb-12">
-          {[
-            {
-              step: "1",
-              title: "Install Requirements",
-              desc: "Download and install LDPlayer 9 and Python 3.10+",
-              links: [
-                { text: "LDPlayer 9", url: "https://www.ldplayer.net/" },
-                { text: "Python", url: "https://www.python.org/downloads/" },
-              ],
-            },
-            {
-              step: "2",
-              title: "Download & Extract",
-              desc: "Download the ZIP file above and extract it to any folder on your computer.",
-            },
-            {
-              step: "3",
-              title: "Run Setup",
-              desc: "Open the extracted folder and double-click setup.bat to install dependencies.",
-              code: "setup.bat",
-            },
-            {
-              step: "4",
-              title: "Get Your User ID",
-              desc: "Log in to vrbot.me, go to your Dashboard, and copy your User ID from Settings.",
-            },
-            {
-              step: "5",
-              title: "Launch Agent",
-              desc: "Open LDPlayer, start Viking Rise, then double-click start.bat. Paste your User ID and click Start Agent.",
-              code: "start.bat",
-            },
-            {
-              step: "6",
-              title: "Control from Dashboard",
-              desc: "Go to vrbot.me/dashboard, select your farms and tasks, and click Run. Watch the magic happen!",
-            },
-          ].map((item) => (
-            <div key={item.step} className="bg-[#1a1f2e] rounded-xl p-5 border border-white/10 flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-purple-600/20 text-purple-400 flex items-center justify-center font-bold text-lg shrink-0">
-                {item.step}
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg mb-1">{item.title}</h3>
-                <p className="text-gray-400 text-sm">{item.desc}</p>
-                {item.links && (
-                  <div className="flex gap-3 mt-2">
-                    {item.links.map((l) => (
-                      <a key={l.text} href={l.url} target="_blank"
-                        className="text-sm text-purple-400 hover:text-purple-300 underline">
-                        {l.text} ↗
-                      </a>
-                    ))}
-                  </div>
-                )}
-                {item.code && (
-                  <code className="mt-2 inline-block bg-black/30 text-green-400 px-3 py-1 rounded text-sm">
-                    {item.code}
-                  </code>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
         {/* Requirements */}
-        <div className="bg-[#1a1f2e] rounded-2xl p-8 border border-white/10 mb-12">
-          <h3 className="text-xl font-bold mb-4">System Requirements</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            {[
-              { label: "OS", value: "Windows 10/11 (64-bit)" },
-              { label: "RAM", value: "8 GB minimum (16 GB for multi-farm)" },
-              { label: "CPU", value: "Intel i5 / Ryzen 5 or better" },
-              { label: "Storage", value: "2 GB per LDPlayer instance" },
-              { label: "Software", value: "LDPlayer 9, Python 3.10+" },
-              { label: "Network", value: "Stable internet connection" },
-            ].map((r) => (
-              <div key={r.label} className="flex justify-between bg-black/20 rounded-lg px-4 py-3">
-                <span className="text-gray-400">{r.label}</span>
-                <span className="font-medium">{r.value}</span>
+        <div
+          style={{
+            background: 'rgba(124,58,237,0.08)',
+            border: '1px solid rgba(124,58,237,0.2)',
+            borderRadius: '16px',
+            padding: '28px',
+            marginBottom: '40px',
+          }}
+        >
+          <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '16px', color: '#a78bfa' }}>
+            {t.requirements}
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+            {[t.req1, t.req2, t.req3, t.req4].map((req, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  color: 'rgba(255,255,255,0.8)',
+                  fontSize: '15px',
+                }}
+              >
+                <span style={{ color: '#22c55e', fontSize: '18px' }}>✓</span>
+                {req}
               </div>
             ))}
           </div>
         </div>
 
-        {/* CTA */}
-        <div className="text-center">
-          <p className="text-gray-400 mb-4">Need a subscription first?</p>
-          <Link href="/pricing"
-            className="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-6 py-3 rounded-xl transition-all">
-            View Plans & Pricing
-          </Link>
+        {/* Steps */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', marginBottom: '48px' }}>
+          {/* Step 1 */}
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '16px',
+              padding: '28px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: '16px',
+                  flexShrink: 0,
+                }}
+              >
+                1
+              </span>
+              <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{t.step1_title}</h3>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '16px', fontSize: '15px' }}>
+              {t.step1_desc}
+            </p>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <a
+                href="https://www.ldplayer.net/"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-block',
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  color: '#a78bfa',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                }}
+              >
+                {t.step1_ldplayer} ↗
+              </a>
+              <a
+                href="https://www.python.org/downloads/"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-block',
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  color: '#a78bfa',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                }}
+              >
+                {t.step1_python} ↗
+              </a>
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '16px',
+              padding: '28px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: '16px',
+                  flexShrink: 0,
+                }}
+              >
+                2
+              </span>
+              <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{t.step2_title}</h3>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '16px', fontSize: '15px' }}>
+              {t.step2_desc}
+            </p>
+            <a
+              href="https://github.com/ahmed885q/vrbot-agent/archive/refs/heads/main.zip"
+              style={{
+                display: 'inline-block',
+                padding: '14px 32px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                color: '#ffffff',
+                textDecoration: 'none',
+                fontWeight: 700,
+                fontSize: '16px',
+                boxShadow: '0 4px 20px rgba(124,58,237,0.3)',
+              }}
+            >
+              ⬇ {t.step2_btn}
+            </a>
+            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '13px', marginTop: '10px' }}>
+              {t.step2_size}
+            </p>
+          </div>
+
+          {/* Step 3 */}
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '16px',
+              padding: '28px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: '16px',
+                  flexShrink: 0,
+                }}
+              >
+                3
+              </span>
+              <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{t.step3_title}</h3>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '16px', fontSize: '15px' }}>
+              {t.step3_desc}
+            </p>
+            <div
+              style={{
+                background: 'rgba(0,0,0,0.3)',
+                borderRadius: '10px',
+                padding: '16px 20px',
+                fontFamily: 'monospace',
+                fontSize: '14px',
+                lineHeight: '2',
+              }}
+            >
+              <div style={{ color: '#22c55e' }}>{'>'} {t.step3_s1}</div>
+              <div style={{ color: '#22c55e' }}>{'>'} {t.step3_s2}</div>
+              <div style={{ color: '#facc15' }}>{'>'} {t.step3_s3}</div>
+              <div style={{ color: '#a78bfa' }}>{'>'} {t.step3_s4}</div>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', marginTop: '14px' }}>
+              💡 {t.user_id_note} →{' '}
+              <Link href="/dashboard" style={{ color: '#a78bfa', textDecoration: 'underline' }}>
+                {t.dashboard_link}
+              </Link>
+            </p>
+          </div>
         </div>
-      </div>
+
+        {/* Help Section */}
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '32px',
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: '16px',
+          }}
+        >
+          <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>{t.need_help}</h3>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '15px' }}>{t.help_desc}</p>
+        </div>
+      </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-8 text-center text-sm text-gray-500">
-        <p>© 2026 VRBOT. All rights reserved.</p>
+      <footer
+        style={{
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          padding: '24px',
+          textAlign: 'center',
+        }}
+      >
+        <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '13px' }}>
+          © 2025 VRBOT — Viking Rise Automation
+        </p>
       </footer>
     </div>
   );
