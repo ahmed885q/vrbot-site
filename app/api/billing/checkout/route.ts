@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const FARM_PRICE = 2.0;
+const FARM_PRICE = 3.0;
 
 async function getAccessToken(): Promise<string> {
   const clientId = process.env.PAYPAL_CLIENT_ID;

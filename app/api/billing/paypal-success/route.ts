@@ -1,4 +1,4 @@
-﻿export const dynamic = "force-dynamic";
+export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { getPayPalAccessToken } from "@/lib/paypal";
@@ -73,7 +73,7 @@ export async function GET(req: Request) {
             paypal_order_id: token,
             transaction_id: transactionId,
             farms_purchased: farms,
-            amount: farms * 2,
+            amount: farms * 3,
             status: "completed",
           }).catch(() => {});
         } catch (e) {
