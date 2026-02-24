@@ -1,724 +1,522 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react';
 
-type Lang = 'ar' | 'en' | 'ru' | 'zh'
+type Language = 'ar' | 'en' | 'ru' | 'zh';
 
-const tr: Record<Lang, Record<string, string>> = {
+const content: Record<Language, {
+  hero_title: string; hero_subtitle: string; hero_desc: string;
+  cta_start: string; cta_pricing: string;
+  trusted: string;
+  features_title: string; features_subtitle: string;
+  f1_title: string; f1_desc: string;
+  f2_title: string; f2_desc: string;
+  f3_title: string; f3_desc: string;
+  f4_title: string; f4_desc: string;
+  f5_title: string; f5_desc: string;
+  f6_title: string; f6_desc: string;
+  stats_farms: string; stats_tasks: string; stats_uptime: string; stats_languages: string;
+  how_title: string; how_subtitle: string;
+  step1_title: string; step1_desc: string;
+  step2_title: string; step2_desc: string;
+  step3_title: string; step3_desc: string;
+  pricing_title: string; pricing_subtitle: string;
+  pricing_free_title: string; pricing_free_desc: string;
+  pricing_free_f1: string; pricing_free_f2: string; pricing_free_f3: string;
+  pricing_free_cta: string;
+  pricing_pro_badge: string;
+  pricing_pro_title: string; pricing_pro_desc: string;
+  pricing_pro_f1: string; pricing_pro_f2: string; pricing_pro_f3: string;
+  pricing_pro_f4: string; pricing_pro_f5: string;
+  pricing_pro_cta: string;
+  pricing_per: string;
+  faq_title: string;
+  faq1_q: string; faq1_a: string;
+  faq2_q: string; faq2_a: string;
+  faq3_q: string; faq3_a: string;
+  cta_final_title: string; cta_final_desc: string; cta_final_btn: string;
+  footer_text: string;
+}> = {
   ar: {
-    title: '🔧 تشخيص النظام',
-    subtitle: 'مراقبة وإصلاح جميع مكونات VRBOT',
-    refresh: '🔄 تحديث',
-    loading: 'جاري التحميل...',
-    hubStatus: '🌐 حالة Hub',
-    online: 'متصل',
-    offline: 'غير متصل',
-    stats: '📊 إحصائيات عامة',
-    users: 'المستخدمين',
-    farms: 'المزارع',
-    activeFarms: 'مزارع نشطة',
-    activeSubs: 'اشتراكات فعّالة',
-    tokensUsed: 'توكنز مستخدمة',
-    tokensTotal: 'إجمالي التوكنز',
-    farmsList: '🏠 المزارع',
-    tokensList: '🪙 التوكنز',
-    subsList: '💳 الاشتراكات',
-    usersList: '👥 المستخدمين',
-    email: 'البريد',
-    name: 'الاسم',
-    server: 'السيرفر',
-    status: 'الحالة',
-    botEnabled: 'البوت',
-    lastActivity: 'آخر نشاط',
-    actions: 'إجراءات',
-    total: 'الإجمالي',
-    used: 'المستخدم',
-    remaining: 'المتبقي',
-    trial: 'تجريبي',
-    plan: 'الخطة',
-    expires: 'ينتهي',
-    source: 'المصدر',
-    created: 'التسجيل',
-    lastLogin: 'آخر دخول',
-    disable: '⛔ تعطيل',
-    enable: '✅ تفعيل',
-    delete: '🗑️ حذف',
-    resetTokens: '🔄 إعادة تعيين',
-    cancelSub: '❌ إلغاء',
-    confirmDelete: 'هل أنت متأكد من الحذف؟',
-    success: '✅ تم بنجاح',
-    error: '❌ خطأ',
-    connections: 'الاتصالات',
-    agents: 'الوكلاء',
-    dashboards: 'لوحات التحكم',
-    uptime: 'مدة التشغيل',
-    errors: '⚠️ أخطاء',
-    noErrors: 'لا توجد أخطاء',
-    hubHealth: 'فحص Hub',
-    yes: 'نعم',
-    no: 'لا',
+    hero_title: 'VRBOT',
+    hero_subtitle: 'أتمتة Viking Rise بالذكاء الاصطناعي',
+    hero_desc: 'أدِر مزارعك، اجمع الموارد، طوّر قلعتك وهاجم الأعداء — كل شيء يعمل تلقائياً على مدار الساعة بذكاء اصطناعي متقدم.',
+    cta_start: 'ابدأ مجاناً',
+    cta_pricing: 'عرض الأسعار',
+    trusted: 'يثق به أكثر من 500 لاعب حول العالم',
+    features_title: 'كل ما تحتاجه في بوت واحد',
+    features_subtitle: '37 مهمة آلية تغطي كل جانب من اللعبة',
+    f1_title: 'جمع الموارد',
+    f1_desc: 'إرسال مسيرات جمع تلقائية مع إدارة ذكية للقوات والأوقات.',
+    f2_title: 'بناء وتطوير',
+    f2_desc: 'ترقية المباني والأبحاث تلقائياً مع تحديد الأولويات الذكي.',
+    f3_title: 'قتل الوحوش',
+    f3_desc: 'صيد Niflung والوحوش تلقائياً مع اختيار المستوى المناسب.',
+    f4_title: 'حماية من الحظر',
+    f4_desc: 'محاكاة سلوك بشري متقدم مع تأخيرات عشوائية وحركات طبيعية.',
+    f5_title: 'لوحة تحكم مباشرة',
+    f5_desc: 'تابع جميع مزارعك في الوقت الحقيقي من المتصفح أو الهاتف.',
+    f6_title: 'دعم سحابي',
+    f6_desc: 'شغّل البوت على سيرفراتنا السحابية بدون الحاجة لجهاز كمبيوتر.',
+    stats_farms: 'مزرعة نشطة',
+    stats_tasks: 'مهمة آلية',
+    stats_uptime: 'وقت التشغيل',
+    stats_languages: 'لغات مدعومة',
+    how_title: 'ابدأ في 3 خطوات',
+    how_subtitle: 'إعداد سهل وسريع — شغّل البوت خلال دقائق',
+    step1_title: 'أنشئ حسابك',
+    step1_desc: 'سجّل مجاناً وأضف معلومات مزرعتك الأولى.',
+    step2_title: 'اختر المهام',
+    step2_desc: 'حدد المهام اللي تبي البوت يشغّلها من 37 مهمة متاحة.',
+    step3_title: 'شغّل واسترخِ',
+    step3_desc: 'البوت يشتغل 24/7 وأنت تتابع النتائج من لوحة التحكم.',
+    pricing_title: 'خطط بسيطة وشفافة',
+    pricing_subtitle: 'ابدأ مجاناً — ترقّى متى ما تبي',
+    pricing_free_title: 'مجاني',
+    pricing_free_desc: 'للتجربة',
+    pricing_free_f1: 'مزرعة واحدة',
+    pricing_free_f2: 'المهام الأساسية',
+    pricing_free_f3: 'تجربة 7 أيام',
+    pricing_free_cta: 'ابدأ مجاناً',
+    pricing_pro_badge: 'الأكثر طلباً',
+    pricing_pro_title: 'احترافي',
+    pricing_pro_desc: 'للاعبين الجادين',
+    pricing_pro_f1: 'مزارع غير محدودة',
+    pricing_pro_f2: 'جميع الـ 37 مهمة',
+    pricing_pro_f3: 'حماية متقدمة',
+    pricing_pro_f4: 'لوحة تحكم متقدمة',
+    pricing_pro_f5: 'أولوية الدعم',
+    pricing_pro_cta: 'اشترك الآن',
+    pricing_per: '/ مزرعة / شهرياً',
+    faq_title: 'أسئلة شائعة',
+    faq1_q: 'هل حسابي آمن من الحظر؟',
+    faq1_a: 'نستخدم تقنيات محاكاة سلوك بشري متقدمة تشمل تأخيرات عشوائية، حركات طبيعية، وفترات راحة تلقائية لحماية حسابك.',
+    faq2_q: 'كم مزرعة أقدر أشغّل؟',
+    faq2_a: 'الخطة المجانية تدعم مزرعة واحدة. الخطة الاحترافية تدعم عدد غير محدود من المزارع بـ $3 لكل مزرعة شهرياً.',
+    faq3_q: 'هل أحتاج أخلي جهازي شغّال؟',
+    faq3_a: 'حالياً نعم، البوت يحتاج جهاز كمبيوتر شغّال. قريباً نوفّر خيار سحابي يشتغل بدون جهازك.',
+    cta_final_title: 'جاهز تبدأ؟',
+    cta_final_desc: 'انضم لمئات اللاعبين اللي يستخدمون VRBOT لتطوير حساباتهم تلقائياً.',
+    cta_final_btn: 'ابدأ الآن مجاناً',
+    footer_text: '© 2026 VRBOT. جميع الحقوق محفوظة.',
   },
   en: {
-    title: '🔧 System Diagnostics',
-    subtitle: 'Monitor and fix all VRBOT components',
-    refresh: '🔄 Refresh',
-    loading: 'Loading...',
-    hubStatus: '🌐 Hub Status',
-    online: 'Online',
-    offline: 'Offline',
-    stats: '📊 Overview',
-    users: 'Users',
-    farms: 'Farms',
-    activeFarms: 'Active Farms',
-    activeSubs: 'Active Subs',
-    tokensUsed: 'Tokens Used',
-    tokensTotal: 'Total Tokens',
-    farmsList: '🏠 Farms',
-    tokensList: '🪙 Tokens',
-    subsList: '💳 Subscriptions',
-    usersList: '👥 Users',
-    email: 'Email',
-    name: 'Name',
-    server: 'Server',
-    status: 'Status',
-    botEnabled: 'Bot',
-    lastActivity: 'Last Activity',
-    actions: 'Actions',
-    total: 'Total',
-    used: 'Used',
-    remaining: 'Remaining',
-    trial: 'Trial',
-    plan: 'Plan',
-    expires: 'Expires',
-    source: 'Source',
-    created: 'Created',
-    lastLogin: 'Last Login',
-    disable: '⛔ Disable',
-    enable: '✅ Enable',
-    delete: '🗑️ Delete',
-    resetTokens: '🔄 Reset',
-    cancelSub: '❌ Cancel',
-    confirmDelete: 'Are you sure you want to delete?',
-    success: '✅ Success',
-    error: '❌ Error',
-    connections: 'Connections',
-    agents: 'Agents',
-    dashboards: 'Dashboards',
-    uptime: 'Uptime',
-    errors: '⚠️ Errors',
-    noErrors: 'No errors',
-    hubHealth: 'Hub Check',
-    yes: 'Yes',
-    no: 'No',
+    hero_title: 'VRBOT',
+    hero_subtitle: 'AI-Powered Viking Rise Automation',
+    hero_desc: 'Manage farms, gather resources, upgrade your castle and attack enemies — everything runs 24/7 with advanced AI automation.',
+    cta_start: 'Start Free',
+    cta_pricing: 'View Pricing',
+    trusted: 'Trusted by 500+ players worldwide',
+    features_title: 'Everything You Need in One Bot',
+    features_subtitle: '37 automated tasks covering every aspect of the game',
+    f1_title: 'Resource Gathering',
+    f1_desc: 'Automated gathering marches with smart troop and timing management.',
+    f2_title: 'Build & Upgrade',
+    f2_desc: 'Auto-upgrade buildings and research with smart priority selection.',
+    f3_title: 'Monster Hunting',
+    f3_desc: 'Auto-hunt Niflung and monsters with appropriate level selection.',
+    f4_title: 'Ban Protection',
+    f4_desc: 'Advanced human behavior simulation with random delays and natural movements.',
+    f5_title: 'Live Dashboard',
+    f5_desc: 'Monitor all your farms in real-time from browser or mobile.',
+    f6_title: 'Cloud Support',
+    f6_desc: 'Run the bot on our cloud servers — no computer needed.',
+    stats_farms: 'Active Farms',
+    stats_tasks: 'Auto Tasks',
+    stats_uptime: 'Uptime',
+    stats_languages: 'Languages',
+    how_title: 'Start in 3 Steps',
+    how_subtitle: 'Quick and easy setup — get running in minutes',
+    step1_title: 'Create Account',
+    step1_desc: 'Sign up free and add your first farm details.',
+    step2_title: 'Choose Tasks',
+    step2_desc: 'Select which tasks to run from 37 available automations.',
+    step3_title: 'Run & Relax',
+    step3_desc: 'Bot runs 24/7 while you monitor results from the dashboard.',
+    pricing_title: 'Simple, Transparent Pricing',
+    pricing_subtitle: 'Start free — upgrade anytime',
+    pricing_free_title: 'Free',
+    pricing_free_desc: 'To try it out',
+    pricing_free_f1: 'One farm',
+    pricing_free_f2: 'Basic tasks',
+    pricing_free_f3: '7-day trial',
+    pricing_free_cta: 'Start Free',
+    pricing_pro_badge: 'Most Popular',
+    pricing_pro_title: 'Pro',
+    pricing_pro_desc: 'For serious players',
+    pricing_pro_f1: 'Unlimited farms',
+    pricing_pro_f2: 'All 37 tasks',
+    pricing_pro_f3: 'Advanced protection',
+    pricing_pro_f4: 'Advanced dashboard',
+    pricing_pro_f5: 'Priority support',
+    pricing_pro_cta: 'Subscribe Now',
+    pricing_per: '/ farm / month',
+    faq_title: 'FAQ',
+    faq1_q: 'Is my account safe from bans?',
+    faq1_a: 'We use advanced human behavior simulation including random delays, natural movements, and automatic rest periods to protect your account.',
+    faq2_q: 'How many farms can I run?',
+    faq2_a: 'Free plan supports one farm. Pro plan supports unlimited farms at $3 per farm per month.',
+    faq3_q: 'Do I need to keep my computer running?',
+    faq3_a: 'Currently yes, the bot needs a running computer. Cloud option coming soon — no computer needed.',
+    cta_final_title: 'Ready to Start?',
+    cta_final_desc: 'Join hundreds of players using VRBOT to automate their accounts.',
+    cta_final_btn: 'Start Free Now',
+    footer_text: '© 2026 VRBOT. All rights reserved.',
   },
   ru: {
-    title: '🔧 Диагностика системы',
-    subtitle: 'Мониторинг и исправление компонентов VRBOT',
-    refresh: '🔄 Обновить',
-    loading: 'Загрузка...',
-    hubStatus: '🌐 Статус Hub',
-    online: 'Онлайн',
-    offline: 'Офлайн',
-    stats: '📊 Обзор',
-    users: 'Пользователи',
-    farms: 'Фермы',
-    activeFarms: 'Активные фермы',
-    activeSubs: 'Активные подписки',
-    tokensUsed: 'Использовано токенов',
-    tokensTotal: 'Всего токенов',
-    farmsList: '🏠 Фермы',
-    tokensList: '🪙 Токены',
-    subsList: '💳 Подписки',
-    usersList: '👥 Пользователи',
-    email: 'Email',
-    name: 'Имя',
-    server: 'Сервер',
-    status: 'Статус',
-    botEnabled: 'Бот',
-    lastActivity: 'Активность',
-    actions: 'Действия',
-    total: 'Всего',
-    used: 'Использовано',
-    remaining: 'Остаток',
-    trial: 'Пробный',
-    plan: 'План',
-    expires: 'Истекает',
-    source: 'Источник',
-    created: 'Создан',
-    lastLogin: 'Последний вход',
-    disable: '⛔ Отключить',
-    enable: '✅ Включить',
-    delete: '🗑️ Удалить',
-    resetTokens: '🔄 Сброс',
-    cancelSub: '❌ Отмена',
-    confirmDelete: 'Вы уверены что хотите удалить?',
-    success: '✅ Успешно',
-    error: '❌ Ошибка',
-    connections: 'Соединения',
-    agents: 'Агенты',
-    dashboards: 'Панели',
-    uptime: 'Время работы',
-    errors: '⚠️ Ошибки',
-    noErrors: 'Нет ошибок',
-    hubHealth: 'Проверка Hub',
-    yes: 'Да',
-    no: 'Нет',
+    hero_title: 'VRBOT',
+    hero_subtitle: 'ИИ-автоматизация Viking Rise',
+    hero_desc: 'Управляйте фермами, собирайте ресурсы, улучшайте замок и атакуйте врагов — всё работает автоматически 24/7 с продвинутым ИИ.',
+    cta_start: 'Начать бесплатно',
+    cta_pricing: 'Цены',
+    trusted: 'Более 500 игроков по всему миру',
+    features_title: 'Всё в одном боте',
+    features_subtitle: '37 автоматических задач для каждого аспекта игры',
+    f1_title: 'Сбор ресурсов',
+    f1_desc: 'Автоматические марши с умным управлением войсками.',
+    f2_title: 'Строительство',
+    f2_desc: 'Автоулучшение зданий и исследований с приоритетами.',
+    f3_title: 'Охота на монстров',
+    f3_desc: 'Автоохота на Нифлунгов и монстров нужного уровня.',
+    f4_title: 'Защита от бана',
+    f4_desc: 'Симуляция поведения с задержками и естественными движениями.',
+    f5_title: 'Панель управления',
+    f5_desc: 'Мониторинг всех ферм в реальном времени из браузера.',
+    f6_title: 'Облачная поддержка',
+    f6_desc: 'Запуск бота на наших серверах — компьютер не нужен.',
+    stats_farms: 'Активных ферм',
+    stats_tasks: 'Автозадач',
+    stats_uptime: 'Аптайм',
+    stats_languages: 'Языков',
+    how_title: 'Начните за 3 шага',
+    how_subtitle: 'Быстрая настройка — запуск за минуты',
+    step1_title: 'Создайте аккаунт',
+    step1_desc: 'Зарегистрируйтесь и добавьте первую ферму.',
+    step2_title: 'Выберите задачи',
+    step2_desc: 'Отметьте нужные из 37 доступных автоматизаций.',
+    step3_title: 'Запустите и отдыхайте',
+    step3_desc: 'Бот работает 24/7, вы следите за результатами.',
+    pricing_title: 'Простые и прозрачные цены',
+    pricing_subtitle: 'Начните бесплатно — обновите когда угодно',
+    pricing_free_title: 'Бесплатно',
+    pricing_free_desc: 'Для пробы',
+    pricing_free_f1: 'Одна ферма',
+    pricing_free_f2: 'Базовые задачи',
+    pricing_free_f3: '7 дней пробного периода',
+    pricing_free_cta: 'Начать бесплатно',
+    pricing_pro_badge: 'Популярный',
+    pricing_pro_title: 'Про',
+    pricing_pro_desc: 'Для серьёзных игроков',
+    pricing_pro_f1: 'Безлимитные фермы',
+    pricing_pro_f2: 'Все 37 задач',
+    pricing_pro_f3: 'Продвинутая защита',
+    pricing_pro_f4: 'Расширенная панель',
+    pricing_pro_f5: 'Приоритетная поддержка',
+    pricing_pro_cta: 'Подписаться',
+    pricing_per: '/ ферма / месяц',
+    faq_title: 'Частые вопросы',
+    faq1_q: 'Мой аккаунт в безопасности?',
+    faq1_a: 'Мы используем симуляцию поведения с задержками, естественными движениями и паузами для защиты.',
+    faq2_q: 'Сколько ферм можно запустить?',
+    faq2_a: 'Бесплатно — одна ферма. Про — безлимит по $3 за ферму в месяц.',
+    faq3_q: 'Нужен ли включённый компьютер?',
+    faq3_a: 'Пока да. Скоро будет облачный вариант без компьютера.',
+    cta_final_title: 'Готовы начать?',
+    cta_final_desc: 'Присоединяйтесь к сотням игроков, использующих VRBOT.',
+    cta_final_btn: 'Начать бесплатно',
+    footer_text: '© 2026 VRBOT. Все права защищены.',
   },
   zh: {
-    title: '🔧 系统诊断',
-    subtitle: '监控和修复VRBOT所有组件',
-    refresh: '🔄 刷新',
-    loading: '加载中...',
-    hubStatus: '🌐 Hub状态',
-    online: '在线',
-    offline: '离线',
-    stats: '📊 概览',
-    users: '用户',
-    farms: '农场',
-    activeFarms: '活跃农场',
-    activeSubs: '活跃订阅',
-    tokensUsed: '已用令牌',
-    tokensTotal: '总令牌',
-    farmsList: '🏠 农场',
-    tokensList: '🪙 令牌',
-    subsList: '💳 订阅',
-    usersList: '👥 用户',
-    email: '邮箱',
-    name: '名称',
-    server: '服务器',
-    status: '状态',
-    botEnabled: '机器人',
-    lastActivity: '最后活动',
-    actions: '操作',
-    total: '总计',
-    used: '已用',
-    remaining: '剩余',
-    trial: '试用',
-    plan: '计划',
-    expires: '到期',
-    source: '来源',
-    created: '创建',
-    lastLogin: '最后登录',
-    disable: '⛔ 禁用',
-    enable: '✅ 启用',
-    delete: '🗑️ 删除',
-    resetTokens: '🔄 重置',
-    cancelSub: '❌ 取消',
-    confirmDelete: '确定要删除吗？',
-    success: '✅ 成功',
-    error: '❌ 错误',
-    connections: '连接',
-    agents: '代理',
-    dashboards: '仪表板',
-    uptime: '运行时间',
-    errors: '⚠️ 错误',
-    noErrors: '无错误',
-    hubHealth: 'Hub检查',
-    yes: '是',
-    no: '否',
+    hero_title: 'VRBOT',
+    hero_subtitle: 'AI驱动的维京崛起自动化',
+    hero_desc: '管理农场、收集资源、升级城堡、攻击敌人——一切由先进AI全天候自动运行。',
+    cta_start: '免费开始',
+    cta_pricing: '查看价格',
+    trusted: '全球500+玩家信赖',
+    features_title: '一个机器人满足所有需求',
+    features_subtitle: '37项自动化任务覆盖游戏各个方面',
+    f1_title: '资源采集',
+    f1_desc: '自动派遣采集队伍，智能管理部队和时间。',
+    f2_title: '建造升级',
+    f2_desc: '自动升级建筑和研究，智能排列优先级。',
+    f3_title: '怪物猎杀',
+    f3_desc: '自动猎杀尼弗隆和怪物，选择合适等级。',
+    f4_title: '防封保护',
+    f4_desc: '高级人类行为模拟，随机延迟和自然操作。',
+    f5_title: '实时面板',
+    f5_desc: '通过浏览器或手机实时监控所有农场。',
+    f6_title: '云端支持',
+    f6_desc: '在我们的云服务器上运行，无需电脑。',
+    stats_farms: '活跃农场',
+    stats_tasks: '自动任务',
+    stats_uptime: '运行时间',
+    stats_languages: '支持语言',
+    how_title: '3步开始',
+    how_subtitle: '快速简单设置——几分钟即可运行',
+    step1_title: '创建账户',
+    step1_desc: '免费注册并添加您的第一个农场。',
+    step2_title: '选择任务',
+    step2_desc: '从37项自动化中选择要运行的任务。',
+    step3_title: '运行并放松',
+    step3_desc: '机器人全天候运行，您在面板监控结果。',
+    pricing_title: '简单透明的定价',
+    pricing_subtitle: '免费开始——随时升级',
+    pricing_free_title: '免费',
+    pricing_free_desc: '试用',
+    pricing_free_f1: '一个农场',
+    pricing_free_f2: '基本任务',
+    pricing_free_f3: '7天试用',
+    pricing_free_cta: '免费开始',
+    pricing_pro_badge: '最受欢迎',
+    pricing_pro_title: '专业版',
+    pricing_pro_desc: '适合认真玩家',
+    pricing_pro_f1: '无限农场',
+    pricing_pro_f2: '全部37项任务',
+    pricing_pro_f3: '高级保护',
+    pricing_pro_f4: '高级面板',
+    pricing_pro_f5: '优先支持',
+    pricing_pro_cta: '立即订阅',
+    pricing_per: '/ 农场 / 月',
+    faq_title: '常见问题',
+    faq1_q: '我的账户安全吗？',
+    faq1_a: '我们使用高级行为模拟技术，包括随机延迟、自然操作和自动休息来保护您的账户。',
+    faq2_q: '可以运行多少农场？',
+    faq2_a: '免费版支持一个农场。专业版每月$3/农场，数量无限。',
+    faq3_q: '需要保持电脑开启吗？',
+    faq3_a: '目前需要。云端选项即将推出，届时无需电脑。',
+    cta_final_title: '准备开始？',
+    cta_final_desc: '加入数百名使用VRBOT自动化账户的玩家。',
+    cta_final_btn: '立即免费开始',
+    footer_text: '© 2026 VRBOT. 保留所有权利。',
   },
+};
+
+function CountUp({ end, suffix = '' }: { end: number; suffix?: string }) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const started = useRef(false);
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !started.current) {
+        started.current = true;
+        const duration = 1800;
+        const startTime = performance.now();
+        const animate = (now: number) => {
+          const elapsed = now - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          setCount(Math.floor(eased * end));
+          if (progress < 1) requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
+      }
+    }, { threshold: 0.3 });
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [end]);
+  return <span ref={ref}>{count}{suffix}</span>;
 }
 
-export default function DiagnosticsPage() {
-  const [lang, setLang] = useState<Lang>('ar')
-  const [data, setData] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [actionMsg, setActionMsg] = useState('')
-  const [actionErr, setActionErr] = useState('')
-  const [activeTab, setActiveTab] = useState<'farms' | 'tokens' | 'subs' | 'users'>('farms')
-
-  const tx = tr[lang]
-  const isRtl = lang === 'ar'
-
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/admin/diagnostics')
-      const json = await res.json()
-      setData(json)
-    } catch (e: any) {
-      setActionErr(e.message)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchData()
-    const stored = localStorage.getItem('vrbot-lang') as Lang
-    if (stored && tr[stored]) setLang(stored)
-  }, [fetchData])
-
-  async function doAction(action: string, params: Record<string, string> = {}) {
-    setActionMsg('')
-    setActionErr('')
-    try {
-      const res = await fetch('/api/admin/diagnostics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, ...params }),
-      })
-      const json = await res.json()
-      if (json.error) setActionErr(json.error)
-      else {
-        setActionMsg(json.message || tx.success)
-        await fetchData()
-      }
-    } catch (e: any) {
-      setActionErr(e.message)
-    }
-  }
-
-  function timeAgo(dateStr: string) {
-    if (!dateStr) return '—'
-    const diff = Date.now() - new Date(dateStr).getTime()
-    const mins = Math.floor(diff / 60000)
-    if (mins < 1) return 'just now'
-    if (mins < 60) return `${mins}m ago`
-    const hrs = Math.floor(mins / 60)
-    if (hrs < 24) return `${hrs}h ago`
-    const days = Math.floor(hrs / 24)
-    return `${days}d ago`
-  }
-
-  function shortDate(dateStr: string) {
-    if (!dateStr) return '—'
-    return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })
-  }
-
-  // Styles
-  const page: React.CSSProperties = {
-    minHeight: '100vh',
-    background: '#0a0a0f',
-    color: '#e0e0e0',
-    fontFamily: "'Segoe UI', Tahoma, sans-serif",
-    padding: '24px',
-    direction: isRtl ? 'rtl' : 'ltr',
-  }
-
-  const card: React.CSSProperties = {
-    background: '#141420',
-    border: '1px solid #2a2a3a',
-    borderRadius: '12px',
-    padding: '20px',
-    marginBottom: '16px',
-  }
-
-  const statCard = (color: string): React.CSSProperties => ({
-    background: `linear-gradient(135deg, ${color}15, ${color}08)`,
-    border: `1px solid ${color}30`,
-    borderRadius: '10px',
-    padding: '16px',
-    textAlign: 'center' as const,
-    flex: '1',
-    minWidth: '140px',
-  })
-
-  const btnBase: React.CSSProperties = {
-    padding: '6px 12px',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '12px',
-    fontWeight: 600,
-    transition: 'all 0.2s',
-  }
-
-  const btnPrimary: React.CSSProperties = {
-    ...btnBase,
-    background: '#3b82f6',
-    color: '#fff',
-  }
-
-  const btnDanger: React.CSSProperties = {
-    ...btnBase,
-    background: '#ef4444',
-    color: '#fff',
-  }
-
-  const btnSuccess: React.CSSProperties = {
-    ...btnBase,
-    background: '#22c55e',
-    color: '#fff',
-  }
-
-  const btnWarning: React.CSSProperties = {
-    ...btnBase,
-    background: '#f59e0b',
-    color: '#000',
-  }
-
-  const tab = (active: boolean): React.CSSProperties => ({
-    padding: '10px 20px',
-    background: active ? '#3b82f6' : '#1a1a2e',
-    color: active ? '#fff' : '#888',
-    border: active ? '1px solid #3b82f6' : '1px solid #2a2a3a',
-    borderRadius: '8px 8px 0 0',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: active ? 700 : 400,
-    transition: 'all 0.2s',
-  })
-
-  const th: React.CSSProperties = {
-    padding: '10px 12px',
-    borderBottom: '1px solid #2a2a3a',
-    textAlign: isRtl ? 'right' : 'left',
-    fontSize: '12px',
-    color: '#888',
-    fontWeight: 600,
-    textTransform: 'uppercase',
-  }
-
-  const td: React.CSSProperties = {
-    padding: '10px 12px',
-    borderBottom: '1px solid #1a1a2a',
-    fontSize: '13px',
-  }
-
-  const badge = (color: string, bg: string): React.CSSProperties => ({
-    display: 'inline-block',
-    padding: '2px 8px',
-    borderRadius: '4px',
-    fontSize: '11px',
-    fontWeight: 600,
-    color,
-    background: bg,
-  })
-
-  if (loading && !data) {
-    return (
-      <div style={{ ...page, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <div style={{ fontSize: '20px', color: '#888' }}>{tx.loading}</div>
+function FAQ({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div onClick={() => setOpen(!open)} style={{
+      background: open ? 'rgba(139,92,246,0.06)' : 'rgba(255,255,255,0.02)',
+      border: `1px solid ${open ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.06)'}`,
+      borderRadius: 16, padding: '20px 24px', cursor: 'pointer', transition: 'all 0.3s ease',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+        <span style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 600 }}>{q}</span>
+        <span style={{ color: '#8b5cf6', fontSize: 22, fontWeight: 300, transform: open ? 'rotate(45deg)' : 'rotate(0)', transition: 'transform 0.3s', flexShrink: 0 }}>+</span>
       </div>
-    )
-  }
+      <div style={{ maxHeight: open ? 200 : 0, overflow: 'hidden', transition: 'max-height 0.4s ease, opacity 0.3s', opacity: open ? 1 : 0 }}>
+        <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 15, lineHeight: 1.7, marginTop: 12, marginBottom: 0 }}>{a}</p>
+      </div>
+    </div>
+  );
+}
 
-  const hub = data?.hub ?? {}
-  const stats = data?.stats ?? {}
-  const hubOnline = !hub.error && hub.status !== 'offline'
+export default function HomePage() {
+  const [lang, setLang] = useState<Language>('en');
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const saved = localStorage.getItem('vrbot_lang') as Language;
+    if (saved && content[saved]) setLang(saved);
+    setMounted(true);
+    const check = setInterval(() => {
+      const l = localStorage.getItem('vrbot_lang') as Language;
+      if (l && l !== lang && content[l]) setLang(l);
+    }, 500);
+    return () => clearInterval(check);
+  }, [lang]);
+  if (!mounted) return null;
+  const t = content[lang];
+  const isRtl = lang === 'ar';
+  const fontFamily = lang === 'ar' ? "'Tajawal', sans-serif" : lang === 'zh' ? "'Noto Sans SC', sans-serif" : "'Inter', sans-serif";
+  const features = [
+    { title: t.f1_title, desc: t.f1_desc, emoji: '🌾', color: '#10b981' },
+    { title: t.f2_title, desc: t.f2_desc, emoji: '🔨', color: '#f59e0b' },
+    { title: t.f3_title, desc: t.f3_desc, emoji: '🎯', color: '#ef4444' },
+    { title: t.f4_title, desc: t.f4_desc, emoji: '🛡️', color: '#8b5cf6' },
+    { title: t.f5_title, desc: t.f5_desc, emoji: '📊', color: '#3b82f6' },
+    { title: t.f6_title, desc: t.f6_desc, emoji: '☁️', color: '#06b6d4' },
+  ];
+  const steps = [
+    { num: '01', title: t.step1_title, desc: t.step1_desc },
+    { num: '02', title: t.step2_title, desc: t.step2_desc },
+    { num: '03', title: t.step3_title, desc: t.step3_desc },
+  ];
 
   return (
-    <div style={page}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, margin: 0, background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            {tx.title}
-          </h1>
-          <p style={{ color: '#666', margin: '4px 0 0', fontSize: '14px' }}>{tx.subtitle}</p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <select
-            value={lang}
-            onChange={(e) => { setLang(e.target.value as Lang); localStorage.setItem('vrbot-lang', e.target.value) }}
-            style={{ padding: '8px 12px', background: '#1a1a2e', border: '1px solid #2a2a3a', borderRadius: '6px', color: '#e0e0e0', fontSize: '13px' }}
-          >
-            <option value="ar">العربية</option>
-            <option value="en">English</option>
-            <option value="ru">Русский</option>
-            <option value="zh">中文</option>
-          </select>
-          <button onClick={fetchData} style={btnPrimary} disabled={loading}>
-            {loading ? '⏳' : tx.refresh}
-          </button>
-        </div>
-      </div>
+    <div dir={isRtl ? 'rtl' : 'ltr'} style={{ fontFamily, background: '#09090b', color: '#fafafa', overflowX: 'hidden' }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap');
+        @keyframes heroGlow { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:.6;transform:scale(1.12)} }
+        @keyframes floatBot { 0%,100%{transform:translateY(0) rotate(-1deg)} 50%{transform:translateY(-14px) rotate(1deg)} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes pulseRing { 0%{box-shadow:0 0 0 0 rgba(139,92,246,.35)} 70%{box-shadow:0 0 0 14px rgba(139,92,246,0)} 100%{box-shadow:0 0 0 0 rgba(139,92,246,0)} }
+        .vr-fu{animation:fadeUp .7s ease forwards;opacity:0}
+        .vr-d1{animation-delay:.1s}.vr-d2{animation-delay:.2s}.vr-d3{animation-delay:.3s}.vr-d4{animation-delay:.4s}
+        .vr-fc{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);border-radius:20px;padding:32px 28px;transition:all .35s cubic-bezier(.4,0,.2,1);cursor:default}
+        .vr-fc:hover{transform:translateY(-6px);border-color:rgba(139,92,246,.3);box-shadow:0 20px 50px rgba(0,0,0,.4);background:rgba(139,92,246,.04)}
+        .vr-bp{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#7c3aed,#6366f1);color:#fff;padding:14px 36px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:700;box-shadow:0 4px 24px rgba(124,58,237,.35);transition:all .25s;border:none;cursor:pointer}
+        .vr-bp:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(124,58,237,.5)}
+        .vr-bs{display:inline-flex;align-items:center;gap:8px;background:transparent;color:#e2e8f0;padding:14px 36px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:600;border:1.5px solid rgba(255,255,255,.15);transition:all .25s;cursor:pointer}
+        .vr-bs:hover{background:rgba(255,255,255,.05);border-color:rgba(139,92,246,.4);transform:translateY(-2px)}
+        .vr-pp{border:2px solid rgba(139,92,246,.4);background:linear-gradient(170deg,rgba(139,92,246,.08),rgba(59,130,246,.04));box-shadow:0 0 80px rgba(139,92,246,.08)}
+        .vr-pp:hover{border-color:rgba(139,92,246,.6);box-shadow:0 0 100px rgba(139,92,246,.12)}
+        @media(max-width:768px){.vr-g3{grid-template-columns:1fr!important}.vr-g2{grid-template-columns:1fr!important}.vr-g4{grid-template-columns:repeat(2,1fr)!important}.vr-hb{flex-direction:column!important;align-items:stretch!important}.vr-ht{font-size:48px!important}}
+      `}</style>
 
-      {/* Messages */}
-      {actionMsg && (
-        <div style={{ ...card, background: '#052e16', borderColor: '#22c55e40', color: '#4ade80', padding: '12px 16px' }}>
-          {tx.success}: {actionMsg}
-        </div>
-      )}
-      {actionErr && (
-        <div style={{ ...card, background: '#2a0a0a', borderColor: '#ef444440', color: '#f87171', padding: '12px 16px' }}>
-          {tx.error}: {actionErr}
-        </div>
-      )}
-
-      {/* Hub Status */}
-      <div style={{ ...card, borderColor: hubOnline ? '#22c55e40' : '#ef444440' }}>
-        <h2 style={{ margin: '0 0 16px', fontSize: '18px' }}>{tx.hubStatus}</h2>
-        <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{
-              width: '14px', height: '14px', borderRadius: '50%',
-              background: hubOnline ? '#22c55e' : '#ef4444',
-              boxShadow: hubOnline ? '0 0 12px #22c55e80' : '0 0 12px #ef444480',
-              animation: hubOnline ? 'pulse 2s infinite' : 'none',
-            }} />
-            <span style={{ fontWeight: 700, fontSize: '16px', color: hubOnline ? '#4ade80' : '#f87171' }}>
-              {hubOnline ? tx.online : tx.offline}
-            </span>
+      {/* HERO */}
+      <section style={{ position:'relative', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:'120px 24px 80px' }}>
+        <div style={{ position:'absolute', top:'-20%', left:'10%', width:700, height:700, borderRadius:'50%', background:'radial-gradient(circle,rgba(139,92,246,.15),transparent 70%)', animation:'heroGlow 10s ease-in-out infinite', pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', bottom:'-10%', right:'5%', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle,rgba(59,130,246,.1),transparent 70%)', animation:'heroGlow 8s ease-in-out infinite 2s', pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px)', backgroundSize:'80px 80px', pointerEvents:'none' }}/>
+        <div style={{ position:'relative', zIndex:1, textAlign:'center', maxWidth:800 }}>
+          <div className="vr-fu" style={{ fontSize:72, marginBottom:24, animation:'floatBot 4s ease-in-out infinite, fadeUp .7s ease forwards' }}>🤖</div>
+          <h1 className="vr-fu vr-d1 vr-ht" style={{ fontSize:72, fontWeight:900, color:'#fff', letterSpacing: isRtl ? 0 : 4, margin:'0 0 16px', lineHeight:1.1 }}>{t.hero_title}</h1>
+          <p className="vr-fu vr-d2" style={{ fontSize:22, fontWeight:600, background:'linear-gradient(135deg,#a78bfa,#818cf8,#60a5fa)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', margin:'0 0 20px' }}>{t.hero_subtitle}</p>
+          <p className="vr-fu vr-d3" style={{ fontSize:17, color:'rgba(255,255,255,.5)', lineHeight:1.7, maxWidth:600, margin:'0 auto 40px' }}>{t.hero_desc}</p>
+          <div className="vr-fu vr-d4 vr-hb" style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
+            <a href="/signup" className="vr-bp">{t.cta_start}</a>
+            <a href="#pricing" className="vr-bs">{t.cta_pricing}</a>
           </div>
-          {hubOnline && hub.connections !== undefined && (
-            <>
-              <div>
-                <span style={{ color: '#888', fontSize: '12px' }}>{tx.connections}: </span>
-                <span style={{ fontWeight: 700 }}>{hub.connections ?? 0}</span>
-              </div>
-              {hub.agents !== undefined && (
-                <div>
-                  <span style={{ color: '#888', fontSize: '12px' }}>{tx.agents}: </span>
-                  <span style={{ fontWeight: 700, color: '#3b82f6' }}>{hub.agents}</span>
-                </div>
-              )}
-              {hub.dashboards !== undefined && (
-                <div>
-                  <span style={{ color: '#888', fontSize: '12px' }}>{tx.dashboards}: </span>
-                  <span style={{ fontWeight: 700, color: '#8b5cf6' }}>{hub.dashboards}</span>
-                </div>
-              )}
-              {hub.uptime && (
-                <div>
-                  <span style={{ color: '#888', fontSize: '12px' }}>{tx.uptime}: </span>
-                  <span style={{ fontWeight: 700 }}>{hub.uptime}</span>
-                </div>
-              )}
-            </>
-          )}
-          {hub.error && (
-            <div style={{ color: '#f87171', fontSize: '13px' }}>
-              {hub.error}
+          <p className="vr-fu vr-d4" style={{ marginTop:48, fontSize:14, color:'rgba(255,255,255,.3)', letterSpacing:.5 }}>{t.trusted}</p>
+        </div>
+      </section>
+
+      {/* STATS */}
+      <section style={{ padding:'0 24px 80px' }}>
+        <div className="vr-g4" style={{ maxWidth:900, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:1, background:'rgba(255,255,255,.06)', borderRadius:20, overflow:'hidden' }}>
+          {[{ val:500, suffix:'+', label:t.stats_farms },{ val:37, suffix:'', label:t.stats_tasks },{ val:99, suffix:'.9%', label:t.stats_uptime },{ val:4, suffix:'', label:t.stats_languages }].map((s,i)=>(
+            <div key={i} style={{ background:'#09090b', padding:'36px 20px', textAlign:'center' }}>
+              <div style={{ fontSize:36, fontWeight:800, color:'#fff', marginBottom:6 }}><CountUp end={s.val} suffix={s.suffix}/></div>
+              <div style={{ fontSize:13, color:'rgba(255,255,255,.4)', fontWeight:500 }}>{s.label}</div>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
-        <div style={statCard('#3b82f6')}>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#3b82f6' }}>{stats.totalUsers}</div>
-          <div style={{ fontSize: '12px', color: '#888' }}>{tx.users}</div>
-        </div>
-        <div style={statCard('#8b5cf6')}>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#8b5cf6' }}>{stats.totalFarms}</div>
-          <div style={{ fontSize: '12px', color: '#888' }}>{tx.farms}</div>
-        </div>
-        <div style={statCard('#22c55e')}>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#22c55e' }}>{stats.activeFarms}</div>
-          <div style={{ fontSize: '12px', color: '#888' }}>{tx.activeFarms}</div>
-        </div>
-        <div style={statCard('#f59e0b')}>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#f59e0b' }}>{stats.activeSubs}</div>
-          <div style={{ fontSize: '12px', color: '#888' }}>{tx.activeSubs}</div>
-        </div>
-        <div style={statCard('#06b6d4')}>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#06b6d4' }}>{stats.totalTokensUsed}/{stats.totalTokensAvail}</div>
-          <div style={{ fontSize: '12px', color: '#888' }}>{tx.tokensUsed}/{tx.tokensTotal}</div>
-        </div>
-      </div>
-
-      {/* Errors */}
-      {data?.errors && Object.values(data.errors).some(Boolean) && (
-        <div style={{ ...card, borderColor: '#ef444440', background: '#1a0a0a' }}>
-          <h3 style={{ margin: '0 0 8px', color: '#f87171' }}>{tx.errors}</h3>
-          {Object.entries(data.errors).filter(([, v]) => v).map(([k, v]) => (
-            <div key={k} style={{ fontSize: '13px', color: '#f87171' }}>• {k}: {v as string}</div>
           ))}
         </div>
-      )}
+      </section>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '0' }}>
-        <div style={tab(activeTab === 'farms')} onClick={() => setActiveTab('farms')}>{tx.farmsList} ({data?.farms?.length ?? 0})</div>
-        <div style={tab(activeTab === 'tokens')} onClick={() => setActiveTab('tokens')}>{tx.tokensList} ({data?.tokens?.length ?? 0})</div>
-        <div style={tab(activeTab === 'subs')} onClick={() => setActiveTab('subs')}>{tx.subsList} ({data?.subscriptions?.length ?? 0})</div>
-        <div style={tab(activeTab === 'users')} onClick={() => setActiveTab('users')}>{tx.usersList} ({data?.users?.length ?? 0})</div>
-      </div>
+      {/* FEATURES */}
+      <section style={{ padding:'80px 24px' }}>
+        <div style={{ maxWidth:1100, margin:'0 auto' }}>
+          <div style={{ textAlign:'center', marginBottom:64 }}>
+            <h2 style={{ fontSize:36, fontWeight:800, color:'#fff', margin:'0 0 12px' }}>{t.features_title}</h2>
+            <p style={{ fontSize:16, color:'rgba(255,255,255,.4)', margin:0 }}>{t.features_subtitle}</p>
+          </div>
+          <div className="vr-g3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:20 }}>
+            {features.map((f,i)=>(
+              <div key={i} className="vr-fc">
+                <div style={{ width:52, height:52, borderRadius:14, background:`${f.color}15`, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:20, fontSize:26 }}>{f.emoji}</div>
+                <h3 style={{ fontSize:18, fontWeight:700, color:'#f1f5f9', margin:'0 0 10px' }}>{f.title}</h3>
+                <p style={{ fontSize:14, color:'rgba(255,255,255,.45)', lineHeight:1.7, margin:0 }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-      {/* Tab Content */}
-      <div style={{ ...card, borderTopLeftRadius: 0, marginTop: 0, overflowX: 'auto' }}>
-        {/* Farms Table */}
-        {activeTab === 'farms' && (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={th}>{tx.email}</th>
-                <th style={th}>{tx.name}</th>
-                <th style={th}>{tx.server}</th>
-                <th style={th}>{tx.botEnabled}</th>
-                <th style={th}>{tx.status}</th>
-                <th style={th}>{tx.lastActivity}</th>
-                <th style={th}>{tx.actions}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data?.farms ?? []).map((f: any) => (
-                <tr key={f.id} style={{ transition: 'background 0.2s' }}>
-                  <td style={td}><span style={{ fontSize: '12px' }}>{f.email}</span></td>
-                  <td style={{ ...td, fontWeight: 600 }}>{f.name}</td>
-                  <td style={td}>{f.server || '—'}</td>
-                  <td style={td}>
-                    <span style={f.bot_enabled ? badge('#22c55e', '#052e16') : badge('#888', '#1a1a2a')}>
-                      {f.bot_enabled ? tx.yes : tx.no}
-                    </span>
-                  </td>
-                  <td style={td}>
-                    <span style={badge(
-                      f.bot_status === 'running' ? '#3b82f6' : f.bot_status === 'error' ? '#ef4444' : '#888',
-                      f.bot_status === 'running' ? '#1e3a5f' : f.bot_status === 'error' ? '#2a0a0a' : '#1a1a2a'
-                    )}>
-                      {f.bot_status || 'idle'}
-                    </span>
-                  </td>
-                  <td style={{ ...td, fontSize: '12px', color: '#888' }}>{timeAgo(f.last_bot_activity)}</td>
-                  <td style={td}>
-                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                      {f.bot_enabled ? (
-                        <button style={btnWarning} onClick={() => doAction('disable_farm', { farmId: f.id })}>
-                          {tx.disable}
-                        </button>
-                      ) : (
-                        <button style={btnSuccess} onClick={() => doAction('enable_farm', { farmId: f.id })}>
-                          {tx.enable}
-                        </button>
-                      )}
-                      <button style={btnDanger} onClick={() => {
-                        if (confirm(tx.confirmDelete)) doAction('delete_farm', { farmId: f.id })
-                      }}>
-                        {tx.delete}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {(!data?.farms || data.farms.length === 0) && (
-                <tr><td colSpan={7} style={{ ...td, textAlign: 'center', color: '#666' }}>—</td></tr>
-              )}
-            </tbody>
-          </table>
-        )}
+      {/* HOW IT WORKS */}
+      <section style={{ padding:'80px 24px', background:'linear-gradient(180deg,transparent,rgba(139,92,246,.03),transparent)' }}>
+        <div style={{ maxWidth:900, margin:'0 auto' }}>
+          <div style={{ textAlign:'center', marginBottom:64 }}>
+            <h2 style={{ fontSize:36, fontWeight:800, color:'#fff', margin:'0 0 12px' }}>{t.how_title}</h2>
+            <p style={{ fontSize:16, color:'rgba(255,255,255,.4)', margin:0 }}>{t.how_subtitle}</p>
+          </div>
+          <div className="vr-g3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:32 }}>
+            {steps.map((s,i)=>(
+              <div key={i} style={{ textAlign:'center' }}>
+                <div style={{ width:72, height:72, borderRadius:'50%', background:'linear-gradient(135deg,rgba(139,92,246,.15),rgba(99,102,241,.1))', border:'2px solid rgba(139,92,246,.2)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', fontSize:24, fontWeight:800, color:'#a78bfa', animation:`pulseRing 3s infinite ${i*.8}s` }}>{s.num}</div>
+                <h3 style={{ fontSize:18, fontWeight:700, color:'#f1f5f9', margin:'0 0 10px' }}>{s.title}</h3>
+                <p style={{ fontSize:14, color:'rgba(255,255,255,.45)', lineHeight:1.7, margin:0 }}>{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-        {/* Tokens Table */}
-        {activeTab === 'tokens' && (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={th}>{tx.email}</th>
-                <th style={th}>{tx.total}</th>
-                <th style={th}>{tx.used}</th>
-                <th style={th}>{tx.remaining}</th>
-                <th style={th}>{tx.trial}</th>
-                <th style={th}>{tx.actions}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data?.tokens ?? []).map((t: any) => (
-                <tr key={t.user_id}>
-                  <td style={td}><span style={{ fontSize: '12px' }}>{t.email}</span></td>
-                  <td style={{ ...td, fontWeight: 700, color: '#3b82f6' }}>{t.tokens_total}</td>
-                  <td style={{ ...td, fontWeight: 700, color: '#f59e0b' }}>{t.tokens_used}</td>
-                  <td style={{ ...td, fontWeight: 700, color: '#22c55e' }}>{t.tokens_total - t.tokens_used}</td>
-                  <td style={td}>
-                    <span style={t.trial_granted ? badge('#f59e0b', '#2a1a00') : badge('#888', '#1a1a2a')}>
-                      {t.trial_granted ? tx.yes : tx.no}
-                    </span>
-                  </td>
-                  <td style={td}>
-                    <button style={btnWarning} onClick={() => doAction('reset_tokens', { userId: t.user_id })}>
-                      {tx.resetTokens}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {(!data?.tokens || data.tokens.length === 0) && (
-                <tr><td colSpan={6} style={{ ...td, textAlign: 'center', color: '#666' }}>—</td></tr>
-              )}
-            </tbody>
-          </table>
-        )}
+      {/* PRICING */}
+      <section id="pricing" style={{ padding:'80px 24px' }}>
+        <div style={{ maxWidth:800, margin:'0 auto' }}>
+          <div style={{ textAlign:'center', marginBottom:64 }}>
+            <h2 style={{ fontSize:36, fontWeight:800, color:'#fff', margin:'0 0 12px' }}>{t.pricing_title}</h2>
+            <p style={{ fontSize:16, color:'rgba(255,255,255,.4)', margin:0 }}>{t.pricing_subtitle}</p>
+          </div>
+          <div className="vr-g2" style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:24, alignItems:'start' }}>
+            {/* Free */}
+            <div style={{ background:'rgba(255,255,255,.025)', border:'1px solid rgba(255,255,255,.08)', borderRadius:24, padding:'40px 32px', transition:'all .35s' }}>
+              <p style={{ fontSize:14, color:'rgba(255,255,255,.4)', margin:'0 0 8px', fontWeight:500 }}>{t.pricing_free_desc}</p>
+              <h3 style={{ fontSize:24, fontWeight:800, color:'#f1f5f9', margin:'0 0 4px' }}>{t.pricing_free_title}</h3>
+              <div style={{ fontSize:48, fontWeight:900, color:'#fff', margin:'20px 0' }}>$0</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:32 }}>
+                {[t.pricing_free_f1, t.pricing_free_f2, t.pricing_free_f3].map((f,i)=>(
+                  <span key={i} style={{ color:'rgba(255,255,255,.6)', fontSize:15 }}><span style={{ color:'#8b5cf6', marginInlineEnd:10, fontWeight:700 }}>✓</span>{f}</span>
+                ))}
+              </div>
+              <a href="/signup" className="vr-bs" style={{ width:'100%', justifyContent:'center', boxSizing:'border-box' }}>{t.pricing_free_cta}</a>
+            </div>
+            {/* Pro */}
+            <div className="vr-pp" style={{ borderRadius:24, padding:'40px 32px', transition:'all .35s', position:'relative' }}>
+              <div style={{ position:'absolute', top:-1, left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#7c3aed,#6366f1)', color:'#fff', padding:'6px 20px', borderRadius:'0 0 10px 10px', fontSize:12, fontWeight:700 }}>{t.pricing_pro_badge}</div>
+              <p style={{ fontSize:14, color:'rgba(255,255,255,.4)', margin:'0 0 8px', fontWeight:500 }}>{t.pricing_pro_desc}</p>
+              <h3 style={{ fontSize:24, fontWeight:800, color:'#f1f5f9', margin:'0 0 4px' }}>{t.pricing_pro_title}</h3>
+              <div style={{ margin:'20px 0' }}><span style={{ fontSize:48, fontWeight:900, color:'#fff' }}>$3</span><span style={{ fontSize:14, color:'rgba(255,255,255,.4)', marginInlineStart:8 }}>{t.pricing_per}</span></div>
+              <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:32 }}>
+                {[t.pricing_pro_f1, t.pricing_pro_f2, t.pricing_pro_f3, t.pricing_pro_f4, t.pricing_pro_f5].map((f,i)=>(
+                  <span key={i} style={{ color:'rgba(255,255,255,.6)', fontSize:15 }}><span style={{ color:'#8b5cf6', marginInlineEnd:10, fontWeight:700 }}>✓</span>{f}</span>
+                ))}
+              </div>
+              <a href="/billing" className="vr-bp" style={{ width:'100%', justifyContent:'center', boxSizing:'border-box' }}>{t.pricing_pro_cta}</a>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        {/* Subscriptions Table */}
-        {activeTab === 'subs' && (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={th}>{tx.email}</th>
-                <th style={th}>{tx.plan}</th>
-                <th style={th}>{tx.status}</th>
-                <th style={th}>{tx.expires}</th>
-                <th style={th}>{tx.source}</th>
-                <th style={th}>{tx.actions}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data?.subscriptions ?? []).map((s: any) => {
-                const isActive = s.status === 'active' && new Date(s.current_period_end) > new Date()
-                const src = s.stripe_customer_id === 'admin_manual' ? 'Manual'
-                  : s.pro_key_code ? 'Pro Key'
-                  : s.stripe_customer_id?.startsWith('cus_') ? 'Stripe'
-                  : 'PayPal'
-                return (
-                  <tr key={s.id}>
-                    <td style={td}><span style={{ fontSize: '12px' }}>{s.email}</span></td>
-                    <td style={{ ...td, fontWeight: 600 }}>{s.plan || '—'}</td>
-                    <td style={td}>
-                      <span style={isActive ? badge('#22c55e', '#052e16') : badge('#ef4444', '#2a0a0a')}>
-                        {s.status}
-                      </span>
-                    </td>
-                    <td style={{ ...td, fontSize: '12px' }}>{shortDate(s.current_period_end)}</td>
-                    <td style={td}>
-                      <span style={badge('#06b6d4', '#0a2a3a')}>{src}</span>
-                    </td>
-                    <td style={td}>
-                      {isActive && (
-                        <button style={btnDanger} onClick={() => doAction('cancel_subscription', { userId: s.user_id })}>
-                          {tx.cancelSub}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-              {(!data?.subscriptions || data.subscriptions.length === 0) && (
-                <tr><td colSpan={6} style={{ ...td, textAlign: 'center', color: '#666' }}>—</td></tr>
-              )}
-            </tbody>
-          </table>
-        )}
+      {/* FAQ */}
+      <section style={{ padding:'80px 24px' }}>
+        <div style={{ maxWidth:700, margin:'0 auto' }}>
+          <h2 style={{ fontSize:36, fontWeight:800, color:'#fff', textAlign:'center', margin:'0 0 48px' }}>{t.faq_title}</h2>
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            <FAQ q={t.faq1_q} a={t.faq1_a}/><FAQ q={t.faq2_q} a={t.faq2_a}/><FAQ q={t.faq3_q} a={t.faq3_a}/>
+          </div>
+        </div>
+      </section>
 
-        {/* Users Table */}
-        {activeTab === 'users' && (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={th}>{tx.email}</th>
-                <th style={th}>{tx.created}</th>
-                <th style={th}>{tx.lastLogin}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data?.users ?? []).map((u: any) => (
-                <tr key={u.id}>
-                  <td style={td}>{u.email}</td>
-                  <td style={{ ...td, fontSize: '12px', color: '#888' }}>{shortDate(u.created_at)}</td>
-                  <td style={{ ...td, fontSize: '12px', color: '#888' }}>{timeAgo(u.last_sign_in)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {/* FINAL CTA */}
+      <section style={{ padding:'80px 24px', textAlign:'center', position:'relative' }}>
+        <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse at center,rgba(139,92,246,.08),transparent 70%)', pointerEvents:'none' }}/>
+        <div style={{ position:'relative', zIndex:1, maxWidth:600, margin:'0 auto' }}>
+          <h2 style={{ fontSize:36, fontWeight:800, color:'#fff', margin:'0 0 16px' }}>{t.cta_final_title}</h2>
+          <p style={{ fontSize:16, color:'rgba(255,255,255,.45)', margin:'0 0 36px', lineHeight:1.7 }}>{t.cta_final_desc}</p>
+          <a href="/signup" className="vr-bp" style={{ fontSize:18, padding:'18px 48px' }}>{t.cta_final_btn}</a>
+        </div>
+      </section>
 
-      {/* Timestamp */}
-      <div style={{ textAlign: 'center', color: '#444', fontSize: '12px', marginTop: '16px' }}>
-        Last updated: {data?.timestamp ? new Date(data.timestamp).toLocaleString() : '—'}
-      </div>
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        table tr:hover { background: #1a1a2e !important; }
-        button:hover { opacity: 0.85; transform: scale(1.02); }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0a0a0f; }
-        ::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 3px; }
-      `}</style>
+      {/* FOOTER */}
+      <footer style={{ padding:'32px 24px', textAlign:'center', borderTop:'1px solid rgba(255,255,255,.05)' }}>
+        <p style={{ color:'rgba(255,255,255,.25)', fontSize:13, margin:0 }}>{t.footer_text}</p>
+      </footer>
     </div>
-  )
+  );
 }
