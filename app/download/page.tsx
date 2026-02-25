@@ -32,6 +32,13 @@ export default function DownloadPage() {
       step2_desc: 'حمّل ملف البوت وفك الضغط في أي مجلد على جهازك.',
       step2_btn: 'تحميل VRBOT Agent v3.0',
       step2_size: 'حجم الملف: ~18 MB',
+      security_title: '⚠️ ملاحظة أمنية — Windows SmartScreen',
+      security_desc: 'قد يمنع Windows تشغيل الملفات المحملة. لحل المشكلة:',
+      security_s1: 'كلك يمين على ملف ZIP قبل فك الضغط',
+      security_s2: 'اختر Properties (خصائص)',
+      security_s3: 'فعّل ✅ Unblock (إلغاء الحظر) في الأسفل',
+      security_s4: 'اضغط Apply ثم OK',
+      security_s5: 'الآن فك الضغط وشغّل عادي',
       step3_title: 'الخطوة 3: التشغيل',
       step3_desc: 'شغّل setup.bat مرة واحدة لتثبيت المكتبات، ثم start.bat لبدء البوت.',
       step3_s1: 'شغّل setup.bat (مرة واحدة فقط)',
@@ -60,6 +67,13 @@ export default function DownloadPage() {
       step2_desc: 'Download the bot package and extract it to any folder.',
       step2_btn: 'Download VRBOT Agent v3.0',
       step2_size: 'File size: ~18 MB',
+      security_title: '⚠️ Security Note — Windows SmartScreen',
+      security_desc: 'Windows may block downloaded files from running. To fix this:',
+      security_s1: 'Right-click the ZIP file before extracting',
+      security_s2: 'Select Properties',
+      security_s3: 'Check ✅ Unblock at the bottom',
+      security_s4: 'Click Apply then OK',
+      security_s5: 'Now extract and run normally',
       step3_title: 'Step 3: Launch',
       step3_desc: 'Run setup.bat once to install libraries, then start.bat to launch.',
       step3_s1: 'Run setup.bat (one time only)',
@@ -88,6 +102,13 @@ export default function DownloadPage() {
       step2_desc: 'Скачайте архив бота и распакуйте в любую папку.',
       step2_btn: 'Скачать VRBOT Agent v3.0',
       step2_size: 'Размер файла: ~18 МБ',
+      security_title: '⚠️ Безопасность — Windows SmartScreen',
+      security_desc: 'Windows может заблокировать скачанные файлы. Чтобы исправить:',
+      security_s1: 'Нажмите правой кнопкой на ZIP-файл до распаковки',
+      security_s2: 'Выберите Свойства (Properties)',
+      security_s3: 'Отметьте ✅ Разблокировать (Unblock) внизу',
+      security_s4: 'Нажмите Применить и ОК',
+      security_s5: 'Теперь распакуйте и запустите',
       step3_title: 'Шаг 3: Запуск',
       step3_desc: 'Запустите setup.bat один раз, затем start.bat для старта.',
       step3_s1: 'Запустите setup.bat (один раз)',
@@ -116,6 +137,13 @@ export default function DownloadPage() {
       step2_desc: '下载机器人程序包并解压到任意文件夹。',
       step2_btn: '下载 VRBOT Agent v3.0',
       step2_size: '文件大小：约18 MB',
+      security_title: '⚠️ 安全提示 — Windows SmartScreen',
+      security_desc: 'Windows 可能会阻止下载的文件运行。解决方法：',
+      security_s1: '解压前右键点击ZIP文件',
+      security_s2: '选择"属性"(Properties)',
+      security_s3: '勾选底部的 ✅ 解除锁定 (Unblock)',
+      security_s4: '点击"应用"然后"确定"',
+      security_s5: '现在解压并正常运行',
       step3_title: '第3步：启动',
       step3_desc: '运行setup.bat安装库（仅需一次），然后运行start.bat启动。',
       step3_s1: '运行 setup.bat（仅一次）',
@@ -400,6 +428,52 @@ export default function DownloadPage() {
             >
               {t.step2_size}
             </p>
+          </div>
+
+          {/* Security Note — Windows SmartScreen */}
+          <div
+            style={{
+              background: 'rgba(250,204,21,0.06)',
+              border: '1px solid rgba(250,204,21,0.25)',
+              borderRadius: '16px',
+              padding: '24px 28px',
+            }}
+          >
+            <h4
+              style={{
+                fontSize: '16px',
+                fontWeight: 700,
+                marginBottom: '10px',
+                color: '#facc15',
+              }}
+            >
+              {t.security_title}
+            </h4>
+            <p
+              style={{
+                color: 'rgba(255,255,255,0.6)',
+                fontSize: '14px',
+                marginBottom: '12px',
+              }}
+            >
+              {t.security_desc}
+            </p>
+            <div
+              style={{
+                background: 'rgba(0,0,0,0.3)',
+                borderRadius: '10px',
+                padding: '14px 18px',
+                fontFamily: 'monospace',
+                fontSize: '13px',
+                lineHeight: '2',
+              }}
+            >
+              <div style={{ color: '#facc15' }}>1. {t.security_s1}</div>
+              <div style={{ color: '#facc15' }}>2. {t.security_s2}</div>
+              <div style={{ color: '#22c55e' }}>3. {t.security_s3}</div>
+              <div style={{ color: '#facc15' }}>4. {t.security_s4}</div>
+              <div style={{ color: '#22c55e' }}>5. {t.security_s5}</div>
+            </div>
           </div>
 
           {/* Step 3 */}
