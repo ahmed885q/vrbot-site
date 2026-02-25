@@ -31,7 +31,7 @@ export default function DownloadPage() {
       step2_title: 'الخطوة 2: تحميل VRBOT Agent',
       step2_desc: 'حمّل ملف البوت وفك الضغط في أي مجلد على جهازك.',
       step2_btn: 'تحميل VRBOT Agent v3.0',
-      step2_size: 'حجم الملف: ~15 MB',
+      step2_size: 'حجم الملف: ~18 MB',
       step3_title: 'الخطوة 3: التشغيل',
       step3_desc: 'شغّل setup.bat مرة واحدة لتثبيت المكتبات، ثم start.bat لبدء البوت.',
       step3_s1: 'شغّل setup.bat (مرة واحدة فقط)',
@@ -59,7 +59,7 @@ export default function DownloadPage() {
       step2_title: 'Step 2: Download VRBOT Agent',
       step2_desc: 'Download the bot package and extract it to any folder.',
       step2_btn: 'Download VRBOT Agent v3.0',
-      step2_size: 'File size: ~15 MB',
+      step2_size: 'File size: ~18 MB',
       step3_title: 'Step 3: Launch',
       step3_desc: 'Run setup.bat once to install libraries, then start.bat to launch.',
       step3_s1: 'Run setup.bat (one time only)',
@@ -87,7 +87,7 @@ export default function DownloadPage() {
       step2_title: 'Шаг 2: Скачайте VRBOT Agent',
       step2_desc: 'Скачайте архив бота и распакуйте в любую папку.',
       step2_btn: 'Скачать VRBOT Agent v3.0',
-      step2_size: 'Размер файла: ~15 МБ',
+      step2_size: 'Размер файла: ~18 МБ',
       step3_title: 'Шаг 3: Запуск',
       step3_desc: 'Запустите setup.bat один раз, затем start.bat для старта.',
       step3_s1: 'Запустите setup.bat (один раз)',
@@ -115,7 +115,7 @@ export default function DownloadPage() {
       step2_title: '第2步：下载 VRBOT Agent',
       step2_desc: '下载机器人程序包并解压到任意文件夹。',
       step2_btn: '下载 VRBOT Agent v3.0',
-      step2_size: '文件大小：约15 MB',
+      step2_size: '文件大小：约18 MB',
       step3_title: '第3步：启动',
       step3_desc: '运行setup.bat安装库（仅需一次），然后运行start.bat启动。',
       step3_s1: '运行 setup.bat（仅一次）',
@@ -203,10 +203,23 @@ export default function DownloadPage() {
             marginBottom: '40px',
           }}
         >
-          <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '16px', color: '#a78bfa' }}>
+          <h2
+            style={{
+              fontSize: '20px',
+              fontWeight: 700,
+              marginBottom: '16px',
+              color: '#a78bfa',
+            }}
+          >
             {t.requirements}
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '12px',
+            }}
+          >
             {[t.req1, t.req2, t.req3, t.req4].map((req, i) => (
               <div
                 key={i}
@@ -226,7 +239,14 @@ export default function DownloadPage() {
         </div>
 
         {/* Steps */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', marginBottom: '48px' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '32px',
+            marginBottom: '48px',
+          }}
+        >
           {/* Step 1 */}
           <div
             style={{
@@ -236,7 +256,14 @@ export default function DownloadPage() {
               padding: '28px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '12px',
+              }}
+            >
               <span
                 style={{
                   background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
@@ -255,7 +282,13 @@ export default function DownloadPage() {
               </span>
               <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{t.step1_title}</h3>
             </div>
-            <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '16px', fontSize: '15px' }}>
+            <p
+              style={{
+                color: 'rgba(255,255,255,0.6)',
+                marginBottom: '16px',
+                fontSize: '15px',
+              }}
+            >
               {t.step1_desc}
             </p>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -298,7 +331,7 @@ export default function DownloadPage() {
             </div>
           </div>
 
-          {/* Step 2 */}
+          {/* Step 2 — PROTECTED DOWNLOAD */}
           <div
             style={{
               background: 'rgba(255,255,255,0.03)',
@@ -307,7 +340,14 @@ export default function DownloadPage() {
               padding: '28px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '12px',
+              }}
+            >
               <span
                 style={{
                   background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
@@ -326,11 +366,17 @@ export default function DownloadPage() {
               </span>
               <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{t.step2_title}</h3>
             </div>
-            <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '16px', fontSize: '15px' }}>
+            <p
+              style={{
+                color: 'rgba(255,255,255,0.6)',
+                marginBottom: '16px',
+                fontSize: '15px',
+              }}
+            >
               {t.step2_desc}
             </p>
             <a
-              href="https://github.com/ahmed885q/vrbot-agent/archive/refs/heads/main.zip"
+              href="/api/download"
               style={{
                 display: 'inline-block',
                 padding: '14px 32px',
@@ -345,7 +391,13 @@ export default function DownloadPage() {
             >
               ⬇ {t.step2_btn}
             </a>
-            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '13px', marginTop: '10px' }}>
+            <p
+              style={{
+                color: 'rgba(255,255,255,0.35)',
+                fontSize: '13px',
+                marginTop: '10px',
+              }}
+            >
               {t.step2_size}
             </p>
           </div>
@@ -359,7 +411,14 @@ export default function DownloadPage() {
               padding: '28px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '12px',
+              }}
+            >
               <span
                 style={{
                   background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
@@ -378,7 +437,13 @@ export default function DownloadPage() {
               </span>
               <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{t.step3_title}</h3>
             </div>
-            <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '16px', fontSize: '15px' }}>
+            <p
+              style={{
+                color: 'rgba(255,255,255,0.6)',
+                marginBottom: '16px',
+                fontSize: '15px',
+              }}
+            >
               {t.step3_desc}
             </p>
             <div
@@ -396,9 +461,18 @@ export default function DownloadPage() {
               <div style={{ color: '#facc15' }}>{'>'} {t.step3_s3}</div>
               <div style={{ color: '#a78bfa' }}>{'>'} {t.step3_s4}</div>
             </div>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', marginTop: '14px' }}>
+            <p
+              style={{
+                color: 'rgba(255,255,255,0.5)',
+                fontSize: '14px',
+                marginTop: '14px',
+              }}
+            >
               💡 {t.user_id_note} →{' '}
-              <Link href="/dashboard" style={{ color: '#a78bfa', textDecoration: 'underline' }}>
+              <Link
+                href="/dashboard"
+                style={{ color: '#a78bfa', textDecoration: 'underline' }}
+              >
                 {t.dashboard_link}
               </Link>
             </p>
@@ -415,8 +489,12 @@ export default function DownloadPage() {
             borderRadius: '16px',
           }}
         >
-          <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>{t.need_help}</h3>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '15px' }}>{t.help_desc}</p>
+          <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>
+            {t.need_help}
+          </h3>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '15px' }}>
+            {t.help_desc}
+          </p>
         </div>
       </main>
 
