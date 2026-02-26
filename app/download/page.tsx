@@ -65,8 +65,8 @@ export default function DownloadPage() {
       step1_python: 'Download Python 3.10',
       step2_title: 'Step 2: Download VRBOT Agent',
       step2_desc: 'Download the bot package and extract it to any folder.',
-      step2_btn: 'Download VRBOT Agent v4.0',
-      step2_size: 'File size: ~40 MB',
+      step2_btn: 'Download VRBOT Agent v5.0',
+      step2_size: 'File size: ~23 MB',
       security_title: '⚠️ Security Note — Windows SmartScreen',
       security_desc: 'Windows may block downloaded files from running. To fix this:',
       security_s1: 'Right-click the ZIP file before extracting',
@@ -581,7 +581,7 @@ export default function DownloadPage() {
         }}
       >
         <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '13px' }}>
-          © 2025 VRBOT — Viking Rise Automation
+          © 2026 VRBOT — Viking Rise Automation
         </p>
       </footer>
     </div>
