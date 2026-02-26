@@ -44,11 +44,24 @@ export async function POST(req: Request) {
       if (proKey.is_used && proKey.used_by) {
         userId = proKey.used_by;
       } else {
-        // Key is valid but not yet linked to a user
-        return NextResponse.json(
-          { detail: "Key not activated. Please redeem it on vrbot.me first." },
-          { status: 400 }
-        );
+        // Key is valid and not yet used — activate it now
+        // Link it to the creator (created_by) as the owner
+        userId = proKey.created_by;
+        if (userId) {
+          await db
+            .from("pro_keys")
+            .update({
+              is_used: true,
+              used_by: userId,
+              used_at: new Date().toISOString(),
+            })
+            .eq("id", proKey.id);
+        } else {
+          return NextResponse.json(
+            { detail: "Key has no owner. Please contact support." },
+            { status: 400 }
+          );
+        }
       }
     }
 
