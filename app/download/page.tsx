@@ -404,7 +404,7 @@ export default function DownloadPage() {
               {t.step2_desc}
             </p>
             <a
-              href="https://xmanyfpojzkjlwatkrcc.supabase.co/storage/v1/object/sign/downloads/vrbot-setup-v5.3.exe?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81NDNiZjU2MS0wZjUxLTQzYmYtYTc4My0xYWYwMzhjOTc2NGYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJkb3dubG9hZHMvdnJib3Qtc2V0dXAtdjUuMy5leGUiLCJpYXQiOjE3NzIyMjk3MjYsImV4cCI6MTgzNTMwMTcyNn0.ci6wjYXhzrK4W273B7hJmhYWeA_6l6paC8Xxv1eHjDs"
+              href="https://xmanyfpojzkjlwatkrcc.supabase.co/storage/v1/object/sign/downloads/vrbot-setup-v5.3.exe?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81NDNiZjU2MS0wZjUxLTQzYmYtYTc4My0xYWYwMzhjOTc2NGYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJkb3dubG9hZHMvdnJib3Qtc2V0dXAtdjUuMy5leGUiLCJpYXQiOjE3NzIyMzEzMjAsImV4cCI6MTgwMzc2NzMyMH0.Lj6KhcMmiWMW9dlGnUIhbdex42yrOqfpjwuB7OSTeTE"
               style={{
                 display: 'inline-block',
                 padding: '14px 32px',
