@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 
-const FILE_PATH = 'vrbot-agent-v5.zip'
+const FILE_PATH = 'vrbot-setup-v5.3.exe'
 const BUCKET = 'downloads'
 const SIGNED_URL_EXPIRY = 300 // 5 minutes
 
