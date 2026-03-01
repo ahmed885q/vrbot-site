@@ -155,7 +155,7 @@ const content: Record<Language, {
     faq1_q: 'Is my account safe from bans?',
     faq1_a: 'We use advanced human behavior simulation including random delays, natural movements, and automatic rest periods to protect your account.',
     faq2_q: 'How many farms can I run?',
-    faq2_a: 'Free plan supports one farm. Pro plan supports unlimited farms at $3 per farm per month.',
+    faq2_a: 'Free plan supports one farm. Pro: $2/farm/month (LDPlayer local) or $3/farm/month (Cloud servers).',
     faq3_q: 'Do I need to keep my computer running?',
     faq3_a: 'No! Our Cloud option is now live — farms run 24/7 on our servers. You can also run locally â€” no computer needed.',
     cta_final_title: 'Ready to Start?',
@@ -481,7 +481,7 @@ export default function HomePage() {
               <div style={{ position:'absolute', top:-1, left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#7c3aed,#6366f1)', color:'#fff', padding:'6px 20px', borderRadius:'0 0 10px 10px', fontSize:12, fontWeight:700 }}>{t.pricing_pro_badge}</div>
               <p style={{ fontSize:14, color:'rgba(255,255,255,.4)', margin:'0 0 8px', fontWeight:500 }}>{t.pricing_pro_desc}</p>
               <h3 style={{ fontSize:24, fontWeight:800, color:'#f1f5f9', margin:'0 0 4px' }}>{t.pricing_pro_title}</h3>
-              <div style={{ margin:'20px 0' }}><span style={{ fontSize:48, fontWeight:900, color:'#fff' }}>$3</span><span style={{ fontSize:14, color:'rgba(255,255,255,.4)', marginInlineStart:8 }}>{t.pricing_per}</span></div>
+              <div style={{ margin:'20px 0' }}><div style={{ marginBottom:12 }}><span style={{ fontSize:40, fontWeight:900, color:'#fff' }}>$2</span><span style={{ fontSize:13, color:'rgba(255,255,255,.4)', marginInlineStart:8 }}>{t.pricing_per} (LDPlayer)</span></div><div style={{ paddingTop:12, borderTop:'1px solid rgba(255,255,255,.08)' }}><span style={{ fontSize:32, fontWeight:800, color:'#a78bfa' }}>$3</span><span style={{ fontSize:13, color:'rgba(255,255,255,.4)', marginInlineStart:8 }}>{t.pricing_per} (Cloud ☁️)</span></div></div>
               <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:32 }}>
                 {[t.pricing_pro_f1, t.pricing_pro_f2, t.pricing_pro_f3, t.pricing_pro_f4, t.pricing_pro_f5].map((f,i)=>(
                   <span key={i} style={{ color:'rgba(255,255,255,.6)', fontSize:15 }}><span style={{ color:'#8b5cf6', marginInlineEnd:10, fontWeight:700 }}>âœ“</span>{f}</span>
@@ -520,6 +520,11 @@ export default function HomePage() {
     </div>
   );
 }
+
+
+
+
+
 
 
 
