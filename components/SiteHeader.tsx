@@ -12,11 +12,11 @@ const langConfig: Record<Language, { name: string; flag: string; dir: 'rtl' | 'l
   zh: { name: '\u4e2d\u6587', flag: '\uD83C\uDDE8\uD83C\uDDF3', dir: 'ltr' },
 };
 
-const navText: Record<Language, { farms: string; billing: string; download: string; dashboard: string }> = {
-  ar: { farms: '\uD83C\uDF3E \u0627\u0644\u0645\u0632\u0627\u0631\u0639', billing: '\uD83D\uDCB3 \u0627\u0644\u062f\u0641\u0639', download: '\u2B07\uFE0F \u062a\u062d\u0645\u064a\u0644', dashboard: '\uD83C\uDFAE \u0627\u0644\u062f\u0627\u0634\u0628\u0648\u0631\u062f' },
-  en: { farms: '\uD83C\uDF3E Farms', billing: '\uD83D\uDCB3 Billing', download: '\u2B07\uFE0F Download', dashboard: '\uD83C\uDFAE Dashboard' },
-  ru: { farms: '\uD83C\uDF3E \u0424\u0435\u0440\u043c\u044b', billing: '\uD83D\uDCB3 \u041e\u043f\u043b\u0430\u0442\u0430', download: '\u2B07\uFE0F \u0421\u043a\u0430\u0447\u0430\u0442\u044c', dashboard: '\uD83C\uDFAE \u041f\u0430\u043d\u0435\u043b\u044c' },
-  zh: { farms: '\uD83C\uDF3E \u519c\u573a', billing: '\uD83D\uDCB3 \u4ed8\u6b3e', download: '\u2B07\uFE0F \u4e0b\u8f7d', dashboard: '\uD83C\uDFAE \u9762\u677f' },
+const navText: Record<Language, { farms: string; billing: string; download: string; dashboard: string; cloud: string }> = {
+  ar: { farms: '\uD83C\uDF3E \u0627\u0644\u0645\u0632\u0627\u0631\u0639', billing: '\uD83D\uDCB3 \u0627\u0644\u062f\u0641\u0639', download: '\u2B07\uFE0F \u062a\u062d\u0645\u064a\u0644', dashboard: '\uD83C\uDFAE \u0627\u0644\u062f\u0627\u0634\u0628\u0648\u0631\u062f', cloud: '☁️ Cloud' },
+  en: { farms: '\uD83C\uDF3E Farms', billing: '\uD83D\uDCB3 Billing', download: '\u2B07\uFE0F Download', dashboard: '\uD83C\uDFAE Dashboard', cloud: '☁️ Cloud' },
+  ru: { farms: '\uD83C\uDF3E \u0424\u0435\u0440\u043c\u044b', billing: '\uD83D\uDCB3 \u041e\u043f\u043b\u0430\u0442\u0430', download: '\u2B07\uFE0F \u0421\u043a\u0430\u0447\u0430\u0442\u044c', dashboard: '\uD83C\uDFAE \u041f\u0430\u043d\u0435\u043b\u044c', cloud: '☁️ Cloud' },
+  zh: { farms: '\uD83C\uDF3E \u519c\u573a', billing: '\uD83D\uDCB3 \u4ed8\u6b3e', download: '\u2B07\uFE0F \u4e0b\u8f7d', dashboard: '\uD83C\uDFAE \u9762\u677f', cloud: '☁️ Cloud' },
 };
 
 export default function SiteHeader() {
@@ -88,7 +88,8 @@ export default function SiteHeader() {
       <nav style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <a href="/dashboard" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.farms}</a>
         <a href="/billing" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.billing}</a>
-        <a href="/download" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.download}</a>
+        <a href="https://cloud.vrbot.me" target="_blank" rel="noopener noreferrer" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.cloud}</a>
+                <a href="/download" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.download}</a>
         <a href="/dashboard" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.dashboard}</a>
 
         {/* Theme Toggle */}
