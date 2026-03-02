@@ -405,6 +405,9 @@ export default function DownloadPage() {
             </p>
             <a
               href="https://xmanyfpojzkjlwatkrcc.supabase.co/storage/v1/object/sign/downloads/vrbot-setup-v5.3.exe?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81NDNiZjU2MS0wZjUxLTQzYmYtYTc4My0xYWYwMzhjOTc2NGYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJkb3dubG9hZHMvdnJib3Qtc2V0dXAtdjUuMy5leGUiLCJpYXQiOjE3NzIyNjgwNDgsImV4cCI6MTgwMzgwNDA0OH0.pdlXiT_lYS7f9s97mgmYhpP5J1wvNSBaRSBBUe_jeoc"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download="vrbot-setup-v5.3.exe"
               style={{
                 display: 'inline-block',
                 padding: '14px 32px',
