@@ -144,7 +144,7 @@ export default function BillingPage() {
 
       {checkoutSuccess === 'success' && (
         <Alert message={s.success_title} description={s.success_desc} type="success" showIcon style={{ marginBottom: 16 }}
-          action={<Button type="primary" href="/farms">{s.manage_farms}</Button>} />
+          action={<Button type="primary" href="/dashboard">{s.manage_farms}</Button>} />
       )}
       {action === 'add-farm' && (
         <Alert message={s.need_pay} description={s.choose_pay} type="info" showIcon style={{ marginBottom: 16 }} />
@@ -199,3 +199,4 @@ export default function BillingPage() {
     </div>
   );
 }
+
