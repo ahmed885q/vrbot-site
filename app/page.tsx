@@ -145,7 +145,7 @@ const content: Record<Language, {
     pricing_pro_title: 'Pro',
     pricing_pro_desc: 'For serious players',
     pricing_pro_f1: 'Unlimited farms',
-    pricing_pro_f2: 'All 37 tasks',
+    pricing_pro_f2: 'All 52 tasks',
     pricing_pro_f3: 'Advanced protection',
     pricing_pro_f4: 'Advanced dashboard',
     pricing_pro_f5: 'Priority support',
