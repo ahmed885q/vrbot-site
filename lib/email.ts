@@ -19,7 +19,7 @@ export async function sendPaymentConfirmation(to: string, farms: number, amount:
               <p style="margin:4px 0"><strong>Amount:</strong> $${amount}</p>
               <p style="margin:4px 0"><strong>Transaction:</strong> ${txnId}</p>
             </div>
-            <p>Your farm tokens have been added to your account. Visit <a href="https://www.vrbot.me/farms" style="color:#3b82f6">vrbot.me/farms</a> to manage them.</p>
+            <p>Your farm tokens have been added to your account. Visit <a href="https://www.vrbot.me/dashboard" style="color:#3b82f6">vrbot.me/dashboard</a> to manage them.</p>
             <p style="color:#888;font-size:12px;margin-top:24px">Thank you for choosing VRBOT!</p>
           </div>
         </div>`,

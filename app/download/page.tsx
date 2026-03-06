@@ -404,21 +404,24 @@ export default function DownloadPage() {
               {t.step2_desc}
             </p>
             <a
-              href="https://xmanyfpojzkjlwatkrcc.supabase.co/storage/v1/object/sign/downloads/vrbot-setup-v5.3.exe?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81NDNiZjU2MS0wZjUxLTQzYmYtYTc4My0xYWYwMzhjOTc2NGYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJkb3dubG9hZHMvdnJib3Qtc2V0dXAtdjUuMy5leGUiLCJpYXQiOjE3NzIyNjgwNDgsImV4cCI6MTgwMzgwNDA0OH0.pdlXiT_lYS7f9s97mgmYhpP5J1wvNSBaRSBBUe_jeoc"
-              style={{
-                display: 'inline-block',
-                padding: '14px 32px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                color: '#ffffff',
-                textDecoration: 'none',
-                fontWeight: 700,
-                fontSize: '16px',
-                boxShadow: '0 4px 20px rgba(124,58,237,0.3)',
-              }}
-            >
-              ⬇ {t.step2_btn}
-            </a>
+  href="https://xmanyfpojzkjlwatkrcc.supabase.co/storage/v1/object/sign/downloads/vrbot-setup-v5.3.exe?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81NDNiZjU2MS0wZjUxLTQzYmYtYTc4My0xYWYwMzhjOTc2NGYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJkb3dubG9hZHMvdnJib3Qtc2V0dXAtdjUuMy5leGUiLCJpYXQiOjE3NzIyNjgwNDgsImV4cCI6MTgwMzgwNDA0OH0.pdlXiT_lYS7f9s97mgmYhpP5J1wvNSBaRSBBUe_jeoc"
+              target="_blank"
+              rel="noopener noreferrer"
+              download="vrbot-setup-v5.3.exe"
+  style={{
+    display: 'inline-block',
+    padding: '14px 32px',
+    borderRadius: '12px',
+    background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+    color: '#ffffff',
+    textDecoration: 'none',
+    fontWeight: 700,
+    fontSize: '16px',
+    boxShadow: '0 4px 20px rgba(124,58,237,0.3)',
+  }}
+>
+  ⬇ {t.step2_btn}
+</a>
             <p
               style={{
                 color: 'rgba(255,255,255,0.35)',
