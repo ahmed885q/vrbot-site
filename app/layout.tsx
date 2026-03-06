@@ -1,9 +1,33 @@
 import './styles/globals.css';
 import SiteHeader from '../components/SiteHeader';
-export const metadata = {
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
   title: 'VRBOT - Viking Rise Bot',
-  description: 'Smart automation bot for Viking Rise',
+  description: 'Smart automation bot for Viking Rise. Manage farms, gather resources, upgrade buildings, and attack enemies — all automated 24/7 with advanced AI.',
+  metadataBase: new URL('https://www.vrbot.me'),
+  icons: {
+    icon: '/icon.svg',
+  },
+  openGraph: {
+    title: 'VRBOT - Viking Rise Bot',
+    description: 'Smart automation bot for Viking Rise. Manage farms, gather resources, upgrade buildings — all automated 24/7 with AI.',
+    url: 'https://www.vrbot.me',
+    siteName: 'VRBOT',
+    locale: 'ar_SA',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'VRBOT - Viking Rise Bot',
+    description: 'Smart automation bot for Viking Rise. Manage farms, gather resources, upgrade buildings — all automated 24/7 with AI.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
+
 export default function RootLayout({
   children,
 }: {
