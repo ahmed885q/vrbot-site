@@ -1,4 +1,4 @@
-﻿import { supabaseAdmin } from '@/lib/supabase/admin'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 const MAX_REQUESTS = 50
 const WINDOW_MS = 60000

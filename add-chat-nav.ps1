@@ -1,3 +1,11 @@
+# Add Chat link to SiteHeader.tsx - full rewrite approach
+# Run: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; .\add-chat-nav.ps1
+
+$file = "components\SiteHeader.tsx"
+
+if (-not (Test-Path $file)) { Write-Host "ERROR: $file not found!" -ForegroundColor Red; exit 1 }
+
+$newContent = @'
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -97,48 +105,81 @@ export default function SiteHeader() {
           color: '#f59e0b',
           background: isDark ? 'rgba(245,158,11,0.12)' : 'rgba(245,158,11,0.08)',
           border: '1px solid rgba(245,158,11,0.3)',
+          borderRadius: '8px',
         }}>{t.chat}</a>
 
         {/* Theme Toggle */}
-        <button onClick={toggleTheme} title={isDark ? 'Light Mode' : 'Dark Mode'} style={{
-          background: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
-          border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.15)',
-          borderRadius: '8px', padding: '6px 10px', cursor: 'pointer',
-          fontSize: '18px', display: 'flex', alignItems: 'center', transition: 'all 0.3s',
-        }}>
+        <button
+          onClick={toggleTheme}
+          title={isDark ? 'Light Mode' : 'Dark Mode'}
+          style={{
+            background: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+            border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.15)',
+            borderRadius: '8px',
+            padding: '6px 10px',
+            cursor: 'pointer',
+            fontSize: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            transition: 'all 0.3s',
+          }}
+        >
           {isDark ? '☀️' : '🌙'}
         </button>
 
         {/* Language Switcher */}
         <div style={{ position: 'relative' }}>
-          <button onClick={() => setMenuOpen(!menuOpen)} style={{
-            background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.06)',
-            border: isDark ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(0,0,0,0.15)',
-            borderRadius: '8px', padding: '6px 14px',
-            color: isDark ? '#ffffff' : '#1a1a2e',
-            cursor: 'pointer', fontSize: '14px', fontWeight: 600,
-            display: 'flex', alignItems: 'center', gap: '6px',
-          }}>
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            style={{
+              background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.06)',
+              border: isDark ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(0,0,0,0.15)',
+              borderRadius: '8px',
+              padding: '6px 14px',
+              color: isDark ? '#ffffff' : '#1a1a2e',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
             {langConfig[lang].flag} {langConfig[lang].name} ▼
           </button>
 
           {menuOpen && (
             <div style={{
-              position: 'absolute', top: '42px', right: 0,
+              position: 'absolute',
+              top: '42px',
+              right: 0,
               background: isDark ? '#1a1a2e' : '#ffffff',
-              borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-              overflow: 'hidden', minWidth: '150px', zIndex: 9999,
+              borderRadius: '8px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+              overflow: 'hidden',
+              minWidth: '150px',
+              zIndex: 9999,
               border: isDark ? '1px solid #2a2a3a' : '1px solid #dee2e6',
             }}>
               {(Object.keys(langConfig) as Language[]).map((l) => (
-                <button key={l} onClick={() => changeLang(l)} style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  width: '100%', padding: '10px 16px', border: 'none',
-                  background: lang === l ? (isDark ? '#2a2a3a' : '#f0f7ff') : 'transparent',
-                  cursor: 'pointer', fontSize: '14px',
-                  fontWeight: lang === l ? 700 : 400,
-                  color: isDark ? '#e0e0e0' : '#1a1a2e', textAlign: 'left',
-                }}>
+                <button
+                  key={l}
+                  onClick={() => changeLang(l)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '10px 16px',
+                    border: 'none',
+                    background: lang === l ? (isDark ? '#2a2a3a' : '#f0f7ff') : 'transparent',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: lang === l ? 700 : 400,
+                    color: isDark ? '#e0e0e0' : '#1a1a2e',
+                    textAlign: 'left',
+                  }}
+                >
                   {langConfig[l].flag} {langConfig[l].name}
                   {lang === l && ' ✔'}
                 </button>
@@ -159,3 +200,8 @@ const navLinkBase: React.CSSProperties = {
   borderRadius: '6px',
   transition: 'all 0.2s',
 };
+'@
+
+[System.IO.File]::WriteAllText((Resolve-Path $file), $newContent, [System.Text.Encoding]::UTF8)
+Write-Host "OK  SiteHeader.tsx updated with Chat link" -ForegroundColor Green
+Write-Host "Restart: npm run dev" -ForegroundColor Yellow

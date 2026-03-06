@@ -1,4 +1,4 @@
-﻿import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
   .split(',')
