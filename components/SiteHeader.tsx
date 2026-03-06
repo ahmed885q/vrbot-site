@@ -6,17 +6,17 @@ type Language = 'ar' | 'en' | 'ru' | 'zh';
 type Theme = 'dark' | 'light';
 
 const langConfig: Record<Language, { name: string; flag: string; dir: 'rtl' | 'ltr' }> = {
-  ar: { name: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629', flag: '\uD83C\uDDF8\uD83C\uDDE6', dir: 'rtl' },
-  en: { name: 'English', flag: '\uD83C\uDDEC\uD83C\uDDE7', dir: 'ltr' },
-  ru: { name: '\u0420\u0443\u0441\u0441\u043a\u0438\u0439', flag: '\uD83C\uDDF7\uD83C\uDDFA', dir: 'ltr' },
-  zh: { name: '\u4e2d\u6587', flag: '\uD83C\uDDE8\uD83C\uDDF3', dir: 'ltr' },
+  ar: { name: 'العربية', flag: '🇸🇦', dir: 'rtl' },
+  en: { name: 'English', flag: '🇬🇧', dir: 'ltr' },
+  ru: { name: 'Русский', flag: '🇷🇺', dir: 'ltr' },
+  zh: { name: '中文', flag: '🇨🇳', dir: 'ltr' },
 };
 
-const navText: Record<Language, { farms: string; billing: string; download: string; dashboard: string; cloud: string }> = {
-  ar: { farms: '\uD83C\uDF3E \u0627\u0644\u0645\u0632\u0627\u0631\u0639', billing: '\uD83D\uDCB3 \u0627\u0644\u062f\u0641\u0639', download: '\u2B07\uFE0F \u062a\u062d\u0645\u064a\u0644', dashboard: '\uD83C\uDFAE \u0627\u0644\u062f\u0627\u0634\u0628\u0648\u0631\u062f', cloud: '☁️ Cloud' },
-  en: { farms: '\uD83C\uDF3E Farms', billing: '\uD83D\uDCB3 Billing', download: '\u2B07\uFE0F Download', dashboard: '\uD83C\uDFAE Dashboard', cloud: '☁️ Cloud' },
-  ru: { farms: '\uD83C\uDF3E \u0424\u0435\u0440\u043c\u044b', billing: '\uD83D\uDCB3 \u041e\u043f\u043b\u0430\u0442\u0430', download: '\u2B07\uFE0F \u0421\u043a\u0430\u0447\u0430\u0442\u044c', dashboard: '\uD83C\uDFAE \u041f\u0430\u043d\u0435\u043b\u044c', cloud: '☁️ Cloud' },
-  zh: { farms: '\uD83C\uDF3E \u519c\u573a', billing: '\uD83D\uDCB3 \u4ed8\u6b3e', download: '\u2B07\uFE0F \u4e0b\u8f7d', dashboard: '\uD83C\uDFAE \u9762\u677f', cloud: '☁️ Cloud' },
+const navText: Record<Language, { farms: string; billing: string; download: string; dashboard: string; chat: string }> = {
+  ar: { farms: '🌾 المزارع', billing: '💳 الدفع', download: '⬇️ تحميل', dashboard: '🎮 الداشبورد', chat: '💬 الشات' },
+  en: { farms: '🌾 Farms', billing: '💳 Billing', download: '⬇️ Download', dashboard: '🎮 Dashboard', chat: '💬 Chat' },
+  ru: { farms: '🌾 Фермы', billing: '💳 Оплата', download: '⬇️ Скачать', dashboard: '🎮 Панель', chat: '💬 Чат' },
+  zh: { farms: '🌾 农场', billing: '💳 付款', download: '⬇️ 下载', dashboard: '🎮 面板', chat: '💬 聊天' },
 };
 
 export default function SiteHeader() {
@@ -82,90 +82,65 @@ export default function SiteHeader() {
         alignItems: 'center',
         gap: '8px',
       }}>
-        \uD83E\uDD16 VRBOT
+        🤖 VRBOT
       </a>
 
       <nav style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <a href="/dashboard" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.farms}</a>
-        <a href="/billing" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.billing}</a>
-        <a href="https://cloud.vrbot.me" target="_blank" rel="noopener noreferrer" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.cloud}</a>
-                <a href="/download" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.download}</a>
+        <a href="/farms"     style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.farms}</a>
+        <a href="/billing"   style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.billing}</a>
+        <a href="/download"  style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.download}</a>
         <a href="/dashboard" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.dashboard}</a>
 
+        {/* Chat Link */}
+        <a href="/dashboard/chat" style={{
+          ...navLinkBase,
+          color: '#f59e0b',
+          background: isDark ? 'rgba(245,158,11,0.12)' : 'rgba(245,158,11,0.08)',
+          border: '1px solid rgba(245,158,11,0.3)',
+        }}>{t.chat}</a>
+
         {/* Theme Toggle */}
-        <button
-          onClick={toggleTheme}
-          title={isDark ? 'Light Mode' : 'Dark Mode'}
-          style={{
-            background: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
-            border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.15)',
-            borderRadius: '8px',
-            padding: '6px 10px',
-            cursor: 'pointer',
-            fontSize: '18px',
-            display: 'flex',
-            alignItems: 'center',
-            transition: 'all 0.3s',
-          }}
-        >
-          {isDark ? '\u2600\uFE0F' : '\uD83C\uDF19'}
+        <button onClick={toggleTheme} title={isDark ? 'Light Mode' : 'Dark Mode'} style={{
+          background: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+          border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.15)',
+          borderRadius: '8px', padding: '6px 10px', cursor: 'pointer',
+          fontSize: '18px', display: 'flex', alignItems: 'center', transition: 'all 0.3s',
+        }}>
+          {isDark ? '☀️' : '🌙'}
         </button>
 
         {/* Language Switcher */}
         <div style={{ position: 'relative' }}>
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            style={{
-              background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.06)',
-              border: isDark ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(0,0,0,0.15)',
-              borderRadius: '8px',
-              padding: '6px 14px',
-              color: isDark ? '#ffffff' : '#1a1a2e',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
+          <button onClick={() => setMenuOpen(!menuOpen)} style={{
+            background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.06)',
+            border: isDark ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(0,0,0,0.15)',
+            borderRadius: '8px', padding: '6px 14px',
+            color: isDark ? '#ffffff' : '#1a1a2e',
+            cursor: 'pointer', fontSize: '14px', fontWeight: 600,
+            display: 'flex', alignItems: 'center', gap: '6px',
+          }}>
             {langConfig[lang].flag} {langConfig[lang].name} ▼
           </button>
 
           {menuOpen && (
             <div style={{
-              position: 'absolute',
-              top: '42px',
-              right: 0,
+              position: 'absolute', top: '42px', right: 0,
               background: isDark ? '#1a1a2e' : '#ffffff',
-              borderRadius: '8px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-              overflow: 'hidden',
-              minWidth: '150px',
-              zIndex: 9999,
+              borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+              overflow: 'hidden', minWidth: '150px', zIndex: 9999,
               border: isDark ? '1px solid #2a2a3a' : '1px solid #dee2e6',
             }}>
               {(Object.keys(langConfig) as Language[]).map((l) => (
-                <button
-                  key={l}
-                  onClick={() => changeLang(l)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    width: '100%',
-                    padding: '10px 16px',
-                    border: 'none',
-                    background: lang === l ? (isDark ? '#2a2a3a' : '#f0f7ff') : 'transparent',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: lang === l ? 700 : 400,
-                    color: isDark ? '#e0e0e0' : '#1a1a2e',
-                    textAlign: 'left',
-                  }}
-                >
-                  {langConfig[l].flag} {langConfig[l].name}▼
-                  {lang === l && ' \u2714'}
+                <button key={l} onClick={() => changeLang(l)} style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  width: '100%', padding: '10px 16px', border: 'none',
+                  background: lang === l ? (isDark ? '#2a2a3a' : '#f0f7ff') : 'transparent',
+                  cursor: 'pointer', fontSize: '14px',
+                  fontWeight: lang === l ? 700 : 400,
+                  color: isDark ? '#e0e0e0' : '#1a1a2e', textAlign: 'left',
+                }}>
+                  {langConfig[l].flag} {langConfig[l].name}
+                  {lang === l && ' ✔'}
                 </button>
               ))}
             </div>
