@@ -30,6 +30,8 @@ const content: Record<Language, {
   pricing_pro_f4: string; pricing_pro_f5: string;
   pricing_pro_cta: string;
   pricing_per: string;
+  pricing_ldp_title: string; pricing_ldp_desc: string;
+  pricing_cloud_title: string; pricing_cloud_desc: string;
   faq_title: string;
   faq1_q: string; faq1_a: string;
   faq2_q: string; faq2_a: string;
@@ -88,6 +90,10 @@ const content: Record<Language, {
     pricing_pro_f5: 'أولوية الدعم',
     pricing_pro_cta: 'اشترك الآن',
     pricing_per: '/ مزرعة / شهرياً',
+    pricing_ldp_title: 'LDPlayer',
+    pricing_ldp_desc: 'للتشغيل المحلي',
+    pricing_cloud_title: 'سحابي ☁️',
+    pricing_cloud_desc: 'بدون جهاز كمبيوتر',
     faq_title: 'أسئلة شائعة',
     faq1_q: 'هل حسابي آمن من الحظر؟',
     faq1_a: 'نستخدم تقنيات محاكاة سلوك بشري متقدمة تشمل تأخيرات عشوائية، حركات طبيعية، وفترات راحة تلقائية لحماية حسابك.',
@@ -151,6 +157,10 @@ const content: Record<Language, {
     pricing_pro_f5: 'Priority support',
     pricing_pro_cta: 'Subscribe Now',
     pricing_per: '/ farm / month',
+    pricing_ldp_title: 'LDPlayer',
+    pricing_ldp_desc: 'Run locally on your PC',
+    pricing_cloud_title: 'Cloud ☁️',
+    pricing_cloud_desc: 'No computer needed',
     faq_title: 'FAQ',
     faq1_q: 'Is my account safe from bans?',
     faq1_a: 'We use advanced human behavior simulation including random delays, natural movements, and automatic rest periods to protect your account.',
@@ -214,6 +224,10 @@ const content: Record<Language, {
     pricing_pro_f5: 'Приоритетная поддержка',
     pricing_pro_cta: 'Подписаться',
     pricing_per: '/ ферма / месяц',
+    pricing_ldp_title: 'LDPlayer',
+    pricing_ldp_desc: 'Локальный запуск',
+    pricing_cloud_title: 'Облако ☁️',
+    pricing_cloud_desc: 'Без компьютера',
     faq_title: 'Частые вопросы',
     faq1_q: 'Мой аккаунт в безопасности?',
     faq1_a: 'Мы используем симуляцию поведения с задержками, естественными движениями и паузами для защиты.',
@@ -277,6 +291,10 @@ const content: Record<Language, {
     pricing_pro_f5: '优先支持',
     pricing_pro_cta: '立即订阅',
     pricing_per: '/ 农场 / 月',
+    pricing_ldp_title: 'LDPlayer',
+    pricing_ldp_desc: '本地运行',
+    pricing_cloud_title: '云端 ☁️',
+    pricing_cloud_desc: '无需电脑',
     faq_title: '常见问题',
     faq1_q: '我的账户安全吗？',
     faq1_a: '我们使用高级行为模拟技术，包括随机延迟、自然操作和自动休息来保护您的账户。',
@@ -458,33 +476,51 @@ export default function HomePage() {
 
       {/* PRICING */}
       <section id="pricing" style={{ padding:'80px 24px' }}>
-        <div style={{ maxWidth:800, margin:'0 auto' }}>
+        <div style={{ maxWidth:1100, margin:'0 auto' }}>
           <div style={{ textAlign:'center', marginBottom:64 }}>
             <h2 style={{ fontSize:36, fontWeight:800, color:'#fff', margin:'0 0 12px' }}>{t.pricing_title}</h2>
             <p style={{ fontSize:16, color:'rgba(255,255,255,.4)', margin:0 }}>{t.pricing_subtitle}</p>
           </div>
-          <div className="vr-g2" style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:24, alignItems:'start' }}>
+          <div className="vr-g3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:24, alignItems:'start' }}>
             {/* Free */}
-            <div style={{ background:'rgba(255,255,255,.025)', border:'1px solid rgba(255,255,255,.08)', borderRadius:24, padding:'40px 32px', transition:'all .35s' }}>
+            <div style={{ background:'rgba(255,255,255,.025)', border:'1px solid rgba(255,255,255,.08)', borderRadius:24, padding:'40px 28px', transition:'all .35s' }}>
               <p style={{ fontSize:14, color:'rgba(255,255,255,.4)', margin:'0 0 8px', fontWeight:500 }}>{t.pricing_free_desc}</p>
               <h3 style={{ fontSize:24, fontWeight:800, color:'#f1f5f9', margin:'0 0 4px' }}>{t.pricing_free_title}</h3>
               <div style={{ fontSize:48, fontWeight:900, color:'#fff', margin:'20px 0' }}>$0</div>
               <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:32 }}>
                 {[t.pricing_free_f1, t.pricing_free_f2, t.pricing_free_f3].map((f,i)=>(
-                  <span key={i} style={{ color:'rgba(255,255,255,.6)', fontSize:15 }}><span style={{ color:'#8b5cf6', marginInlineEnd:10, fontWeight:700 }}>âœ“</span>{f}</span>
+                  <span key={i} style={{ color:'rgba(255,255,255,.6)', fontSize:15 }}><span style={{ color:'#8b5cf6', marginInlineEnd:10, fontWeight:700 }}>✓</span>{f}</span>
                 ))}
               </div>
               <a href="/signup" className="vr-bs" style={{ width:'100%', justifyContent:'center', boxSizing:'border-box' }}>{t.pricing_free_cta}</a>
             </div>
-            {/* Pro */}
-            <div className="vr-pp" style={{ borderRadius:24, padding:'40px 32px', transition:'all .35s', position:'relative' }}>
+            {/* LDPlayer */}
+            <div style={{ background:'rgba(255,255,255,.025)', border:'2px solid rgba(124,58,237,0.3)', borderRadius:24, padding:'40px 28px', transition:'all .35s', position:'relative' }}>
               <div style={{ position:'absolute', top:-1, left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#7c3aed,#6366f1)', color:'#fff', padding:'6px 20px', borderRadius:'0 0 10px 10px', fontSize:12, fontWeight:700 }}>{t.pricing_pro_badge}</div>
-              <p style={{ fontSize:14, color:'rgba(255,255,255,.4)', margin:'0 0 8px', fontWeight:500 }}>{t.pricing_pro_desc}</p>
-              <h3 style={{ fontSize:24, fontWeight:800, color:'#f1f5f9', margin:'0 0 4px' }}>{t.pricing_pro_title}</h3>
-              <div style={{ margin:'20px 0' }}><div style={{ marginBottom:12 }}><span style={{ fontSize:40, fontWeight:900, color:'#fff' }}>$2</span><span style={{ fontSize:13, color:'rgba(255,255,255,.4)', marginInlineStart:8 }}>{t.pricing_per} (LDPlayer)</span></div><div style={{ paddingTop:12, borderTop:'1px solid rgba(255,255,255,.08)' }}><span style={{ fontSize:32, fontWeight:800, color:'#a78bfa' }}>$3</span><span style={{ fontSize:13, color:'rgba(255,255,255,.4)', marginInlineStart:8 }}>{t.pricing_per} (Cloud ☁️)</span></div></div>
+              <p style={{ fontSize:14, color:'rgba(255,255,255,.4)', margin:'0 0 8px', fontWeight:500 }}>{t.pricing_ldp_desc}</p>
+              <h3 style={{ fontSize:24, fontWeight:800, color:'#f1f5f9', margin:'0 0 4px' }}>{t.pricing_ldp_title}</h3>
+              <div style={{ margin:'20px 0' }}>
+                <span style={{ fontSize:48, fontWeight:900, color:'#fff' }}>$2</span>
+                <span style={{ fontSize:14, color:'rgba(255,255,255,.4)', marginInlineStart:8 }}>{t.pricing_per}</span>
+              </div>
               <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:32 }}>
                 {[t.pricing_pro_f1, t.pricing_pro_f2, t.pricing_pro_f3, t.pricing_pro_f4, t.pricing_pro_f5].map((f,i)=>(
-                  <span key={i} style={{ color:'rgba(255,255,255,.6)', fontSize:15 }}><span style={{ color:'#8b5cf6', marginInlineEnd:10, fontWeight:700 }}>âœ“</span>{f}</span>
+                  <span key={i} style={{ color:'rgba(255,255,255,.6)', fontSize:15 }}><span style={{ color:'#8b5cf6', marginInlineEnd:10, fontWeight:700 }}>✓</span>{f}</span>
+                ))}
+              </div>
+              <a href="/billing" className="vr-bp" style={{ width:'100%', justifyContent:'center', boxSizing:'border-box' }}>{t.pricing_pro_cta}</a>
+            </div>
+            {/* Cloud */}
+            <div className="vr-pp" style={{ borderRadius:24, padding:'40px 28px', transition:'all .35s', position:'relative' }}>
+              <p style={{ fontSize:14, color:'rgba(255,255,255,.4)', margin:'0 0 8px', fontWeight:500 }}>{t.pricing_cloud_desc}</p>
+              <h3 style={{ fontSize:24, fontWeight:800, color:'#c4b5fd', margin:'0 0 4px' }}>{t.pricing_cloud_title}</h3>
+              <div style={{ margin:'20px 0' }}>
+                <span style={{ fontSize:48, fontWeight:900, color:'#fff' }}>$3</span>
+                <span style={{ fontSize:14, color:'rgba(255,255,255,.4)', marginInlineStart:8 }}>{t.pricing_per}</span>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:32 }}>
+                {[t.pricing_pro_f1, t.pricing_pro_f2, t.pricing_pro_f3, t.pricing_pro_f4, t.pricing_pro_f5].map((f,i)=>(
+                  <span key={i} style={{ color:'rgba(255,255,255,.6)', fontSize:15 }}><span style={{ color:'#8b5cf6', marginInlineEnd:10, fontWeight:700 }}>✓</span>{f}</span>
                 ))}
               </div>
               <a href="/billing" className="vr-bp" style={{ width:'100%', justifyContent:'center', boxSizing:'border-box' }}>{t.pricing_pro_cta}</a>
