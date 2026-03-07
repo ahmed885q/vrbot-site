@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 type Language = 'ar' | 'en' | 'ru' | 'zh';
 
 const content: Record<Language, {
-  hero_title: string; hero_subtitle: string; hero_desc: string;
+  hero_title: string; hero_subtitle: string; herho_desc: string;
   cta_start: string; cta_pricing: string;
   trusted: string;
   features_title: string; features_subtitle: string;
@@ -45,7 +45,7 @@ const content: Record<Language, {
     cta_pricing: 'عرض الأسعار',
     trusted: 'يثق به أكثر من 500 لاعب حول العالم',
     features_title: 'كل ما تحتاجه في بوت واحد',
-    features_subtitle: '37 مهمة آلية تغطي كل جانب من اللعبة',
+    features_subtitle: '52 مهمة آلية تغطي كل جانب من اللعبة',
     f1_title: 'جمع الموارد',
     f1_desc: 'إرسال مسيرات جمع تلقائية مع إدارة ذكية للقوات والأوقات.',
     f2_title: 'بناء وتطوير',
@@ -67,7 +67,7 @@ const content: Record<Language, {
     step1_title: 'أنشئ حسابك',
     step1_desc: 'سجّل مجاناً وأضف معلومات مزرعتك الأولى.',
     step2_title: 'اختر المهام',
-    step2_desc: 'حدد المهام اللي تبي البوت يشغّلها من 37 مهمة متاحة.',
+    step2_desc: 'حدد المهام اللي تبي البوت يشغّلها من 52 مهمة متاحة.',
     step3_title: 'شغّل واسترخِ',
     step3_desc: 'البوت يشتغل 24/7 وأنت تتابع النتائج من لوحة التحكم.',
     pricing_title: 'خطط بسيطة وشفافة',
@@ -82,7 +82,7 @@ const content: Record<Language, {
     pricing_pro_title: 'احترافي',
     pricing_pro_desc: 'للاعبين الجادين',
     pricing_pro_f1: 'مزارع غير محدودة',
-    pricing_pro_f2: 'جميع الـ 37 مهمة',
+    pricing_pro_f2: 'جميع الـ 52 مهمة',
     pricing_pro_f3: 'حماية متقدمة',
     pricing_pro_f4: 'لوحة تحكم متقدمة',
     pricing_pro_f5: 'أولوية الدعم',
@@ -108,7 +108,7 @@ const content: Record<Language, {
     cta_pricing: 'View Pricing',
     trusted: 'Trusted by 500+ players worldwide',
     features_title: 'Everything You Need in One Bot',
-    features_subtitle: '37 automated tasks covering every aspect of the game',
+    features_subtitle: '52 automated tasks covering every aspect of the game',
     f1_title: 'Resource Gathering',
     f1_desc: 'Automated gathering marches with smart troop and timing management.',
     f2_title: 'Build & Upgrade',
@@ -130,7 +130,7 @@ const content: Record<Language, {
     step1_title: 'Create Account',
     step1_desc: 'Sign up free and add your first farm details.',
     step2_title: 'Choose Tasks',
-    step2_desc: 'Select which tasks to run from 37 available automations.',
+    step2_desc: 'Select which tasks to run from 52 available automations.',
     step3_title: 'Run & Relax',
     step3_desc: 'Bot runs 24/7 while you monitor results from the dashboard.',
     pricing_title: 'Simple, Transparent Pricing',
@@ -171,7 +171,7 @@ const content: Record<Language, {
     cta_pricing: 'Цены',
     trusted: 'Более 500 игроков по всему миру',
     features_title: 'Всё в одном боте',
-    features_subtitle: '37 автоматических задач для каждого аспекта игры',
+    features_subtitle: '52 автоматических задач для каждого аспекта игры',
     f1_title: 'Сбор ресурсов',
     f1_desc: 'Автоматические марши с умным управлением войсками.',
     f2_title: 'Строительство',
@@ -193,7 +193,7 @@ const content: Record<Language, {
     step1_title: 'Создайте аккаунт',
     step1_desc: 'Зарегистрируйтесь и добавьте первую ферму.',
     step2_title: 'Выберите задачи',
-    step2_desc: 'Отметьте нужные из 37 доступных автоматизаций.',
+    step2_desc: 'Отметьте нужные из 52 доступных автоматизаций.',
     step3_title: 'Запустите и отдыхайте',
     step3_desc: 'Бот работает 24/7, вы следите за результатами.',
     pricing_title: 'Простые и прозрачные цены',
@@ -208,7 +208,7 @@ const content: Record<Language, {
     pricing_pro_title: 'Про',
     pricing_pro_desc: 'Для серьёзных игроков',
     pricing_pro_f1: 'Безлимитные фермы',
-    pricing_pro_f2: 'Все 37 задач',
+    pricing_pro_f2: 'Все 52 задач',
     pricing_pro_f3: 'Продвинутая защита',
     pricing_pro_f4: 'Расширенная панель',
     pricing_pro_f5: 'Приоритетная поддержка',
@@ -234,7 +234,7 @@ const content: Record<Language, {
     cta_pricing: '查看价格',
     trusted: '全球500+玩家信赖',
     features_title: '一个机器人满足所有需求',
-    features_subtitle: '37项自动化任务覆盖游戏各个方面',
+    features_subtitle: '52项自动化任务覆盖游戏各个方面',
     f1_title: '资源采集',
     f1_desc: '自动派遣采集队伍，智能管理部队和时间。',
     f2_title: '建造升级',
@@ -256,7 +256,7 @@ const content: Record<Language, {
     step1_title: '创建账户',
     step1_desc: '免费注册并添加您的第一个农场。',
     step2_title: '选择任务',
-    step2_desc: '从37项自动化中选择要运行的任务。',
+    step2_desc: '从52项自动化中选择要运行的任务。',
     step3_title: '运行并放松',
     step3_desc: '机器人全天候运行，您在面板监控结果。',
     pricing_title: '简单透明的定价',
@@ -271,7 +271,7 @@ const content: Record<Language, {
     pricing_pro_title: '专业版',
     pricing_pro_desc: '适合认真玩家',
     pricing_pro_f1: '无限农场',
-    pricing_pro_f2: '全部37项任务',
+    pricing_pro_f2: '全部52项任务',
     pricing_pro_f3: '高级保护',
     pricing_pro_f4: '高级面板',
     pricing_pro_f5: '优先支持',
@@ -409,7 +409,7 @@ export default function HomePage() {
       {/* STATS */}
       <section style={{ padding:'0 24px 80px' }}>
         <div className="vr-g4" style={{ maxWidth:900, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:1, background:'rgba(255,255,255,.06)', borderRadius:20, overflow:'hidden' }}>
-          {[{ val:500, suffix:'+', label:t.stats_farms },{ val:37, suffix:'', label:t.stats_tasks },{ val:99, suffix:'.9%', label:t.stats_uptime },{ val:4, suffix:'', label:t.stats_languages }].map((s,i)=>(
+          {[{ val:500, suffix:'+', label:t.stats_farms },{ val:52, suffix:'', label:t.stats_tasks },{ val:99, suffix:'.9%', label:t.stats_uptime },{ val:4, suffix:'', label:t.stats_languages }].map((s,i)=>(
             <div key={i} style={{ background:'#09090b', padding:'36px 20px', textAlign:'center' }}>
               <div style={{ fontSize:36, fontWeight:800, color:'#fff', marginBottom:6 }}><CountUp end={s.val} suffix={s.suffix}/></div>
               <div style={{ fontSize:13, color:'rgba(255,255,255,.4)', fontWeight:500 }}>{s.label}</div>
