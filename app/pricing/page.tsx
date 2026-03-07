@@ -81,7 +81,7 @@ export default function PricingPage() {
             <ul style={{listStyle:'none',padding:0,margin:'16px 0',lineHeight:2}}>
               <li>{t.ldp_f1}</li><li>{t.ldp_f2}</li><li>{t.ldp_f3}</li><li>{t.ldp_f4}</li><li>{t.ldp_f5}</li>
             </ul>
-            <button style={{width:'100%',padding:'10px 0',borderRadius:8,border:'none',background:'linear-gradient(135deg,#7c3aed,#a855f7)',color:'#fff',cursor:'pointer',fontWeight:600}}>{t.ldp_cta}</button>
+            <a href="/billing?plan=ldplayer" style={{textDecoration:"none"}}><button style={{width:'100%',padding:'10px 0',borderRadius:8,border:'none',background:'linear-gradient(135deg,#7c3aed,#a855f7)',color:'#fff',cursor:'pointer',fontWeight:600}}>{t.ldp_cta}</button></a>
           </div>
 
           {/* Cloud Card */}
@@ -92,7 +92,7 @@ export default function PricingPage() {
             <ul style={{listStyle:'none',padding:0,margin:'16px 0',lineHeight:2}}>
               <li>{t.cloud_f1}</li><li>{t.cloud_f2}</li><li>{t.cloud_f3}</li><li>{t.cloud_f4}</li><li>{t.cloud_f5}</li>
             </ul>
-            <button style={{width:'100%',padding:'10px 0',borderRadius:8,border:'none',background:'linear-gradient(135deg,#7c3aed,#a855f7)',color:'#fff',cursor:'pointer',fontWeight:600}}>{t.cloud_cta}</button>
+            <a href="/billing?plan=cloud" style={{textDecoration:"none"}}><button style={{width:'100%',padding:'10px 0',borderRadius:8,border:'none',background:'linear-gradient(135deg,#7c3aed,#a855f7)',color:'#fff',cursor:'pointer',fontWeight:600}}>{t.cloud_cta}</button></a>
           </div>
 
         </div>

@@ -508,7 +508,7 @@ export default function HomePage() {
                   <span key={i} style={{ color:'rgba(255,255,255,.6)', fontSize:15 }}><span style={{ color:'#8b5cf6', marginInlineEnd:10, fontWeight:700 }}>✓</span>{f}</span>
                 ))}
               </div>
-              <a href="/billing" className="vr-bp" style={{ width:'100%', justifyContent:'center', boxSizing:'border-box' }}>{t.pricing_pro_cta}</a>
+              <a href="/billing?plan=ldplayer" className="vr-bp" style={{ width:'100%', justifyContent:'center', boxSizing:'border-box' }}>{t.pricing_pro_cta}</a>
             </div>
             {/* Cloud */}
             <div className="vr-pp" style={{ borderRadius:24, padding:'40px 28px', transition:'all .35s', position:'relative' }}>
@@ -523,7 +523,7 @@ export default function HomePage() {
                   <span key={i} style={{ color:'rgba(255,255,255,.6)', fontSize:15 }}><span style={{ color:'#8b5cf6', marginInlineEnd:10, fontWeight:700 }}>✓</span>{f}</span>
                 ))}
               </div>
-              <a href="/billing" className="vr-bp" style={{ width:'100%', justifyContent:'center', boxSizing:'border-box' }}>{t.pricing_pro_cta}</a>
+              <a href="/billing?plan=cloud" className="vr-bp" style={{ width:'100%', justifyContent:'center', boxSizing:'border-box' }}>{t.pricing_pro_cta}</a>
             </div>
           </div>
         </div>
