@@ -11,6 +11,7 @@ export default function SplashScreen({ onEnter }: { onEnter: () => void }) {
 
   return (
     <div
+      dir="ltr"
       onClick={handleClick}
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
