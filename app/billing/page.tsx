@@ -5,7 +5,8 @@ import { Card, Button, InputNumber, Space, Statistic, Alert, Row, Col, Divider }
 import { DollarOutlined, ShoppingCartOutlined, SafetyCertificateOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useLanguage, Language } from '@/lib/i18n';
 
-const FARM_PRICE = 3;
+const PRICE_LDP = 2;
+const PRICE_CLOUD = 3;
 
 const t: Record<Language, Record<string, string>> = {
   ar: {
@@ -118,6 +119,8 @@ export default function BillingPage() {
   const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const action = params?.get('action');
   const checkoutSuccess = params?.get('checkout');
+  const planType = params.get('plan');
+  const FARM_PRICE = planType === 'cloud' ? PRICE_CLOUD : PRICE_LDP;
   const totalPrice = (farmCount * FARM_PRICE).toFixed(2);
 
   const handlePayPalCheckout = async () => {
@@ -127,7 +130,7 @@ export default function BillingPage() {
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ farms: farmCount, email: '' }),
+        body: JSON.stringify({ farms: farmCount, email: '', plan: isCloud ? 'cloud' : 'ldplayer' }),
       });
       const data = await res.json();
       if (data.url) { window.location.href = data.url; }
