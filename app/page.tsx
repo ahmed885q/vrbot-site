@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 
+import SplashScreen from './components/SplashScreen';
 type Language = 'ar' | 'en' | 'ru' | 'zh';
 
 const content: Record<Language, {
@@ -356,7 +357,9 @@ function FAQ({ q, a }: { q: string; a: string }) {
 
 export default function HomePage() {
   const [lang, setLang] = useState<Language>('en');
-  const [mounted, setMounted] = useState(false);
+
+  const [showSplash, setShowSplash] = useState(true);
+const [mounted, setMounted] = useState(false);
   useEffect(() => {
     const saved = localStorage.getItem('vrbot_lang') as Language;
     if (saved && content[saved]) setLang(saved);
@@ -384,6 +387,8 @@ export default function HomePage() {
     { num: '02', title: t.step2_title, desc: t.step2_desc },
     { num: '03', title: t.step3_title, desc: t.step3_desc },
   ];
+
+  if (showSplash) return <SplashScreen onEnter={() => setShowSplash(false)} />;
 
   return (
     <div dir={isRtl ? 'rtl' : 'ltr'} style={{ fontFamily, background: '#09090b', color: '#fafafa', overflowX: 'hidden' }}>
