@@ -9,22 +9,22 @@ type Farm = { id: string; name: string; server: string | null; notes: string | n
 
 const tx: Record<Lang, Record<string, string>> = {
   ar: {
-    title: "ÙÙØ­Ø© Ø§ÙØªØ­ÙÙ", welcome: "ÙØ±Ø­Ø¨Ø§Ù", tokens: "Ø§ÙØªÙÙÙØ§Øª", available: "ÙØªØ§Ø­", used: "ÙØ³ØªØ®Ø¯Ù", total: "Ø§ÙØ¥Ø¬ÙØ§ÙÙ",
-    trial: "ØªØ¬Ø±Ø¨Ø© ÙØ¬Ø§ÙÙØ©", trialExpires: "ØªÙØªÙÙ ÙÙ", trialExpired: "Ø§ÙØªÙØª Ø§ÙØªØ¬Ø±Ø¨Ø©", buyMore: "Ø´Ø±Ø§Ø¡ ÙØ²Ø§Ø±Ø¹",
-    farms: "Ø§ÙÙØ²Ø§Ø±Ø¹", noFarms: "ÙØ§ ØªÙØ¬Ø¯ ÙØ²Ø§Ø±Ø¹", noFarmsDesc: "Ø£Ø¶Ù ÙØ²Ø±Ø¹ØªÙ Ø§ÙØ£ÙÙÙ", addFarm: "Ø¥Ø¶Ø§ÙØ© ÙØ²Ø±Ø¹Ø©",
-    farmName: "Ø§Ø³Ù Ø§ÙÙØ²Ø±Ø¹Ø©", farmServer: "Ø§ÙØ³ÙØ±ÙØ± (Ø§Ø®ØªÙØ§Ø±Ù)", farmNotes: "ÙÙØ§Ø­Ø¸Ø§Øª (Ø§Ø®ØªÙØ§Ø±Ù)",
-    cancel: "Ø¥ÙØºØ§Ø¡", create: "Ø¥ÙØ´Ø§Ø¡", creating: "Ø¬Ø§Ø±Ù Ø§ÙØ¥ÙØ´Ø§Ø¡...", deleteFarm: "Ø­Ø°Ù", deleteConfirm: "Ø­Ø°Ù ÙØ°Ù Ø§ÙÙØ²Ø±Ø¹Ø©Ø",
-    loading: "Ø¬Ø§Ø±Ù Ø§ÙØªØ­ÙÙÙ...", logout: "ØªØ³Ø¬ÙÙ Ø®Ø±ÙØ¬", selectAll: "ØªØ­Ø¯ÙØ¯ Ø§ÙÙÙ", deselectAll: "Ø¥ÙØºØ§Ø¡ Ø§ÙØªØ­Ø¯ÙØ¯",
-    runSelected: "ØªØ´ØºÙÙ Ø§ÙÙØ­Ø¯Ø¯", stopAll: "Ø¥ÙÙØ§Ù Ø§ÙÙÙ", selected: "ÙØ­Ø¯Ø¯", online: "ÙØªØµÙ", offline: "ØºÙØ± ÙØªØµÙ",
-    running: "ÙØ¹ÙÙ", idle: "Ø®Ø§ÙÙ", error: "Ø®Ø·Ø£", search: "Ø¨Ø­Ø«...", tasks: "Ø§ÙÙÙØ§Ù", bulkActions: "ØªØ­ÙÙ Ø¬ÙØ§Ø¹Ù",
-    farmStatus: "Ø­Ø§ÙØ© Ø§ÙÙØ²Ø±Ø¹Ø©", noAgent: "Ø´ØºÙÙ Ø§ÙÙ Agent", agentOnline: "Agent ÙØªØµÙ", selectFarm: "Ø§Ø®ØªØ± ÙØ²Ø±Ø¹Ø©",
-    selectTasks: "Ø§Ø®ØªØ± Ø§ÙÙÙØ§Ù", logs: "Ø§ÙØ³Ø¬ÙØ§Øª",
-    cloudOnline: "âï¸ Ø§ÙØ³Ø­Ø§Ø¨Ø© ÙØªØµÙØ©", cloudOffline: "âï¸ Ø§ÙØ³Ø­Ø§Ø¨Ø© ØºÙØ± ÙØªØµÙØ©",
-    cloudStatus: "Ø­Ø§ÙØ© Ø§ÙØ³Ø­Ø§Ø¨Ø©", provisioning: "Ø¬Ø§Ø±Ù Ø§ÙØªØ¬ÙÙØ²", cloudActive: "ÙØ´Ø· Ø¹ÙÙ Ø§ÙØ³Ø­Ø§Ø¨Ø©",
-    cloudError: "Ø®Ø·Ø£ ÙÙ Ø§ÙØ³Ø­Ø§Ø¨Ø©", local: "ÙØ­ÙÙ", retryCloud: "Ø¥Ø¹Ø§Ø¯Ø© Ø±Ø¨Ø·", cloudFarms: "ÙØ²Ø§Ø±Ø¹ Ø³Ø­Ø§Ø¨ÙØ©",
+    title: "لوحة التحكم", welcome: "مرحباً", tokens: "التوكنات", available: "متاح", used: "مستخدم", total: "الإجمالي",
+    trial: "تجربة مجانية", trialExpires: "تنتهي في", trialExpired: "انتهت التجربة", buyMore: "شراء مزارع",
+    farms: "المزارع", noFarms: "لا توجد مزارع", noFarmsDesc: "أضف مزرعتك الأولى", addFarm: "إضافة مزرعة",
+    farmName: "اسم المزرعة", farmServer: "السيرفر (اختياري)", farmNotes: "ملاحظات (اختياري)",
+    cancel: "إلغاء", create: "إنشاء", creating: "جاري الإنشاء...", deleteFarm: "حذف", deleteConfirm: "حذف هذه المزرعة؟",
+    loading: "جاري التحميل...", logout: "تسجيل خروج", selectAll: "تحديد الكل", deselectAll: "إلغاء التحديد",
+    runSelected: "تشغيل المحدد", stopAll: "إيقاف الكل", selected: "محدد", online: "متصل", offline: "غير متصل",
+    running: "يعمل", idle: "خامل", error: "خطأ", search: "بحث...", tasks: "المهام", bulkActions: "تحكم جماعي",
+    farmStatus: "حالة المزرعة", noAgent: "شغّل الـ Agent", agentOnline: "Agent متصل", selectFarm: "اختر مزرعة",
+    selectTasks: "اختر المهام", logs: "السجلات",
+    cloudOnline: "☁️ السحابة متصلة", cloudOffline: "☁️ السحابة غير متصلة",
+    cloudStatus: "حالة السحابة", provisioning: "جاري التجهيز", cloudActive: "نشط على السحابة",
+    cloudError: "خطأ في السحابة", local: "محلي", retryCloud: "إعادة ربط", cloudFarms: "مزارع سحابية",
   },
   en: {
-    title: "Dashboard", welcome: "Welcome", tokens: "Tokens", available: "Available", used: "Used", total: "Total",
+    title: "Dashboard", welcome: "Welcome", tokens: "Tokens", available: "Available", used: "Used", totalal",
     trial: "Free Trial", trialExpires: "Expires", trialExpired: "Trial expired", buyMore: "Buy Farms",
     farms: "Farms", noFarms: "No farms yet", noFarmsDesc: "Add your first farm", addFarm: "Add Farm",
     farmName: "Farm name", farmServer: "Server (optional)", farmNotes: "Notes (optional)",
@@ -34,18 +34,18 @@ const tx: Record<Lang, Record<string, string>> = {
     running: "Running", idle: "Idle", error: "Error", search: "Search...", tasks: "Tasks", bulkActions: "Bulk Actions",
     farmStatus: "Farm Status", noAgent: "Run the Agent", agentOnline: "Agent Online", selectFarm: "Select a farm",
     selectTasks: "Select tasks", logs: "Logs",
-    cloudOnline: "âï¸ Cloud Connected", cloudOffline: "âï¸ Cloud Offline",
+    cloudOnline: "☁️ Cloud Connected", cloudOffline: "☁️ Cloud Offline",
     cloudStatus: "Cloud Status", provisioning: "Provisioning", cloudActive: "Active on Cloud",
     cloudError: "Cloud Error", local: "Local", retryCloud: "Retry Cloud", cloudFarms: "Cloud Farms",
   },
 };
 
 const TASK_GROUPS = [
-  { key: "resources", icon: "ð¾", color: "#10b981", tasks: ["Gather Resources", "Collect Farms", "Open Chests", "Collect Free Items"] },
-  { key: "combat", icon: "âï¸", color: "#ef4444", tasks: ["Kill Monster", "Hunt Niflung", "Rally Niflung", "Auto Scout"] },
-  { key: "alliance", icon: "ð°", color: "#8b5cf6", tasks: ["Tribe Tech", "Tribe Gifts", "Alliance Help", "Send Gifts"] },
-  { key: "daily", icon: "ð", color: "#f59e0b", tasks: ["Mail Rewards", "Hall of Valor", "Prosperity", "Quest Rewards"] },
-  { key: "upgrade", icon: "ð¨", color: "#3b82f6", tasks: ["Building Upgrade", "Train Troops", "Research Tech", "Heal Wounded"] },
+  { key: "resources", icon: "🌾", color: "#10b981", tasks: ["Gather Resources", "Collect Farms", "Open Chests", "Collect Free Items"] },
+  { key: "combat", icon: "⚔️", color: "#ef4444", tasks: ["Kill Monster", "Hunt Niflung", "Rally Niflung", "Auto Scout"] },
+  { key: "alliance", icon: "🏰", color: "#8b5cf6", tasks: ["Tribe Tech", "Tribe Gifts", "Alliance Help", "Send Gifts"] },
+  { key: "daily", icon: "📋", color: "#f59e0b", tasks: ["Mail Rewards", "Hall of Valor", "Prosperity", "Quest Rewards"] },
+  { key: "upgrade", icon: "🔨", color: "#3b82f6", tasks: ["Building Upgrade", "Train Troops", "Research Tech", "Heal Wounded"] },
 ];
 
 export default function DashboardClient() {
@@ -202,10 +202,10 @@ export default function DashboardClient() {
         loadFarms(); loadTokens();
         if (d.farm?.id) setSelectedFarmId(d.farm.id);
         if (d.cloud?.error) {
-          setMsg(lang === "ar" ? "â ï¸ ØªÙ Ø¥ÙØ´Ø§Ø¡ Ø§ÙÙØ²Ø±Ø¹Ø© ÙÙÙ ÙØ´Ù Ø§ÙØ±Ø¨Ø· Ø¨Ø§ÙØ³Ø­Ø§Ø¨Ø©" : "â ï¸ Farm created but cloud provisioning failed");
+          setMsg(lang === "ar" ? "⚠️ تم إنشاء المزرعة لكن فشل الربط بالسحابة" : "⚠️ Farm created but cloud provisioning failed");
           setTimeout(() => setMsg(""), 5000);
         } else if (d.farm?.cloud_status === "provisioning") {
-          setMsg(lang === "ar" ? "âï¸ Ø¬Ø§Ø±Ù ØªØ¬ÙÙØ² Ø§ÙÙØ²Ø±Ø¹Ø© Ø¹ÙÙ Ø§ÙØ³Ø­Ø§Ø¨Ø©..." : "âï¸ Provisioning farm on cloud...");
+          setMsg(lang === "ar" ? "☁️ جاري تجهيز المزرعة على السحابة..." : "☁️ Provisioning farm on cloud...");
           setTimeout(() => setMsg(""), 5000);
         }
       }
@@ -235,14 +235,14 @@ export default function DashboardClient() {
       });
       const d = await res.json();
       if (d.ok) {
-        setMsg(lang === "ar" ? "âï¸ Ø¬Ø§Ø±Ù Ø¥Ø¹Ø§Ø¯Ø© ØªØ¬ÙÙØ² Ø§ÙÙØ²Ø±Ø¹Ø© Ø¹ÙÙ Ø§ÙØ³Ø­Ø§Ø¨Ø©..." : "âï¸ Re-provisioning farm on cloud...");
+        setMsg(lang === "ar" ? "☁️ جاري إعادة تجهيز المزرعة على السحابة..." : "☁️ Re-provisioning farm on cloud...");
         setTimeout(() => { setMsg(""); loadFarms(); }, 3000);
       } else {
         setMsg(d.error || "Cloud error");
         setTimeout(() => setMsg(""), 5000);
       }
     } catch {
-      setMsg(lang === "ar" ? "â Ø§ÙØ³Ø­Ø§Ø¨Ø© ØºÙØ± ÙØªØµÙØ©" : "â Cloud server unreachable");
+      setMsg(lang === "ar" ? "❌ السحابة غير متصلة" : "❌ Cloud server unreachable");
       setTimeout(() => setMsg(""), 5000);
     }
   }
@@ -265,20 +265,20 @@ export default function DashboardClient() {
       runTasks(fid, Array.from(selectedTasks));
       setFarmStatuses(prev => ({ ...prev, [fid]: { status: "running", task: "Starting...", updated: Date.now() } }));
     });
-    setMsg(`â¶ Running ${selectedTasks.size} tasks on ${targets.length} farm${targets.length > 1 ? "s" : ""}`);
+    setMsg(`▶ Running ${selectedTasks.size} tasks on ${targets.length} farm${targets.length > 1 ? "s" : ""}`);
     setTimeout(() => setMsg(""), 3000);
   }
 
   function handleStopAll() {
     stopTasks();
     setFarmStatuses({});
-    setMsg("â¹ All tasks stopped");
+    setMsg("⏹ All tasks stopped");
     setTimeout(() => setMsg(""), 3000);
   }
 
   function getFarmStatus(id: string) { return farmStatuses[id] || { status: "idle" }; }
   function statusColor(st: string) { return st === "running" ? "#10b981" : st === "error" ? "#ef4444" : "#64748b"; }
-  function statusIcon(st: string) { return st === "running" ? "ð" : st === "error" ? "â" : "â¸ï¸"; }
+  function statusIcon(st: string) { return st === "running" ? "🔄" : st === "error" ? "❌" : "⏸️"; }
 
   function cloudStatusColor(cs?: string) {
     if (!cs) return "#64748b";
@@ -309,13 +309,13 @@ export default function DashboardClient() {
   const getLogText = (m: HubMessage) => {
     switch (m.type) {
       case "task_status": return `${m.payload?.status}: ${m.payload?.task || ""}`;
-      case "task_complete": return `â ${m.payload?.task}`;
-      case "task_error": return `â ${m.payload?.error}`;
+      case "task_complete": return `✅ ${m.payload?.task}`;
+      case "task_error": return `❌ ${m.payload?.error}`;
       case "error": return `Error: ${m.payload?.text}`;
       case "log": return m.payload?.message;
       case "agent_online": return "Agent connected";
       case "agent_offline": return "Agent disconnected";
-      case "command": return `â¶ ${m.payload?.tasks?.join(", ") || m.payload?.text}`;
+      case "command": return `▶ ${m.payload?.tasks?.join(", ") || m.payload?.text}`;
       case "system": return m.payload?.text;
       default: return m.type;
     }
@@ -334,7 +334,7 @@ export default function DashboardClient() {
       {/* HEADER */}
       <div style={{ background: "linear-gradient(135deg, #0f1629, #1a1145)", borderBottom: "1px solid rgba(139,92,246,0.15)", padding: "14px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#fff" }}>ð¤ {s.title}</h1>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#fff" }}>🤖 {s.title}</h1>
           <p style={{ margin: "2px 0 0", fontSize: 12, color: "rgba(255,255,255,0.4)" }}>{s.welcome}, {user.email?.split("@")[0]}</p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -345,7 +345,7 @@ export default function DashboardClient() {
               {cloudOnline ? s.cloudOnline : s.cloudOffline}
             </span>
           </div>
-          <button onClick={() => setLang(lang === "ar" ? "en" : "ar")} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, color: "#fff", fontSize: 12, cursor: "pointer" }}>{lang === "ar" ? "EN" : "Ø¹Ø±Ø¨Ù"}</button>
+          <button onClick={() => setLang(lang === "ar" ? "en" : "ar")} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, color: "#fff", fontSize: 12, cursor: "pointer" }}>{lang === "ar" ? "EN" : "عربي"}</button>
           <a href="/billing" style={{ padding: "8px 16px", background: "linear-gradient(135deg, #7c3aed, #6366f1)", color: "#fff", borderRadius: 8, textDecoration: "none", fontSize: 12, fontWeight: 700 }}>{s.buyMore}</a>
           <a href="/auth/logout" style={{ padding: "8px 12px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", borderRadius: 8, textDecoration: "none", fontSize: 11, border: "1px solid rgba(255,255,255,0.08)" }}>{s.logout}</a>
         </div>
@@ -355,11 +355,11 @@ export default function DashboardClient() {
         {/* TOP STATS */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 20 }}>
           {[
-            { v: farms.length, l: s.farms, icon: "ð¾", c: "#10b981" },
-            { v: tokens?.tokens_available ?? 0, l: s.available, icon: "ð«", c: "#a78bfa" },
-            { v: cloudFarmsCount, l: s.cloudFarms, icon: "âï¸", c: cloudOnline ? "#06b6d4" : "#64748b" },
-            { v: runningCount, l: s.running, icon: "ð", c: "#3b82f6" },
-            { v: agents.length, l: agentOnline ? s.agentOnline : s.noAgent, icon: agentOnline ? "ð¢" : "ð´", c: agentOnline ? "#10b981" : "#ef4444" },
+            { v: farms.length, l: s.farms, icon: "🌾", c: "#10b981" },
+            { v: tokens?.tokens_available ?? 0, l: s.available, icon: "🎫", c: "#a78bfa" },
+            { v: cloudFarmsCount, l: s.cloudFarms, icon: "☁️", c: cloudOnline ? "#06b6d4" : "#64748b" },
+            { v: runningCount, l: s.running, icon: "🔄", c: "#3b82f6" },
+            { v: agents.length, l: agentOnline ? s.agentOnline : s.noAgent, icon: agentOnline ? "🟢" : "🔴", c: agentOnline ? "#10b981" : "#ef4444" },
           ].map((st, i) => (
             <div key={i} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "14px 16px", border: `1px solid ${st.c}20`, animation: `fadeIn ${0.3 + i * 0.1}s ease` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -374,16 +374,16 @@ export default function DashboardClient() {
         {cloudStatus && cloudOnline && (
           <div style={{ background: "rgba(6,182,212,0.06)", borderRadius: 12, padding: "12px 16px", border: "1px solid rgba(6,182,212,0.15)", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 16 }}>âï¸</span>
+              <span style={{ fontSize: 16 }}>☁️</span>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#06b6d4" }}>{s.cloudStatus}: {cloudStatus.running ? (lang === "ar" ? "ÙØ¹ÙÙ" : "Running") : (lang === "ar" ? "ÙØªÙÙÙ" : "Stopped")}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#06b6d4" }}>{s.cloudStatus}: {cloudStatus.running ? (lang === "ar" ? "يعمل" : "Running") : (lang === "ar" ? "متوقف" : "Stopped")}</div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>
-                  {lang === "ar" ? "Ø§ÙÙØ²Ø§Ø±Ø¹" : "Farms"}: {cloudStatus.total_farms || 0} | {lang === "ar" ? "ÙØ´Ø·" : "Active"}: {cloudStatus.enabled_farms || 0} | {lang === "ar" ? "ÙØ¹ÙÙ" : "Running"}: {cloudStatus.running_farms || 0}
+                  {lang === "ar" ? "المزارع" : "Farms"}: {cloudStatus.total_farms || 0} | {lang === "ar" ? "نشط" : "Active"}: {cloudStatus.enabled_farms || 0} | {lang === "ar" ? "يعمل" : "Running"}: {cloudStatus.running_farms || 0}
                 </div>
               </div>
             </div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>
-              {lang === "ar" ? "Ø§ÙÙÙØ§Ù Ø§ÙÙÙÙ" : "Tasks today"}: {cloudStatus.total_tasks_today || 0}
+              {lang === "ar" ? "المهام اليوم" : "Tasks today"}: {cloudStatus.total_tasks_today || 0}
             </div>
           </div>
         )}
@@ -424,10 +424,10 @@ export default function DashboardClient() {
             {/* BULK ACTION BAR */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
               <button onClick={handleRunSelected} disabled={selectedTasks.size === 0} style={{ padding: "10px 20px", background: selectedTasks.size > 0 ? "linear-gradient(135deg, #10b981, #059669)" : "rgba(255,255,255,0.04)", color: selectedTasks.size > 0 ? "#fff" : "rgba(255,255,255,0.3)", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: selectedTasks.size > 0 ? "pointer" : "not-allowed" }}>
-                â¶ {s.runSelected} {checkedFarms.size > 0 ? `(${checkedFarms.size} ${s.farms})` : selectedFarmId ? "(1)" : ""} {selectedTasks.size > 0 ? `â¢ ${selectedTasks.size} ${s.tasks}` : ""}
+                ▶ {s.runSelected} {checkedFarms.size > 0 ? `(${checkedFarms.size} ${s.farms})` : selectedFarmId ? "(1)" : ""} {selectedTasks.size > 0 ? `• ${selectedTasks.size} ${s.tasks}` : ""}
               </button>
-              <button onClick={handleStopAll} style={{ padding: "10px 16px", background: "rgba(239,68,68,0.1)", color: "#f87171", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>â¹ {s.stopAll}</button>
-              {checkedFarms.size > 0 && <span style={{ fontSize: 12, color: "#a78bfa", fontWeight: 600 }}>â {checkedFarms.size} {s.selected}</span>}
+              <button onClick={handleStopAll} style={{ padding: "10px 16px", background: "rgba(239,68,68,0.1)", color: "#f87171", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>⏹ {s.stopAll}</button>
+              {checkedFarms.size > 0 && <span style={{ fontSize: 12, color: "#a78bfa", fontWeight: 600 }}>✓ {checkedFarms.size} {s.selected}</span>}
             </div>
           </div>
         )}
@@ -435,7 +435,7 @@ export default function DashboardClient() {
         {/* NOT CONNECTED */}
         {!agentOnline && user && (
           <div style={{ background: "rgba(239,68,68,0.06)", borderRadius: 14, padding: "20px", border: "1px solid rgba(239,68,68,0.15)", marginBottom: 20, textAlign: "center" }}>
-            <div style={{ fontSize: 13, color: "#f87171", fontWeight: 600 }}>ð´ {connected ? "Hub Connected - No Agents" : "Disconnected"}</div>
+            <div style={{ fontSize: 13, color: "#f87171", fontWeight: 600 }}>🔴 {connected ? "Hub Connected - No Agents" : "Disconnected"}</div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>Run <code style={{ background: "rgba(255,255,255,0.06)", padding: "2px 6px", borderRadius: 4 }}>vrbot_main.py --hub</code> on your PC</div>
           </div>
         )}
@@ -456,12 +456,12 @@ export default function DashboardClient() {
         {/* FARMS HEADER */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#fff" }}>ð¾ {s.farms} ({farms.length})</h2>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#fff" }}>🌾 {s.farms} ({farms.length})</h2>
             {farms.length > 5 && <input value={farmSearch} onChange={e => setFarmSearch(e.target.value)} placeholder={s.search} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, color: "#fff", fontSize: 12, width: 180 }} />}
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            {farms.length > 1 && <button onClick={toggleAllChecked} style={{ padding: "6px 12px", background: checkedFarms.size === filteredFarms.length ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 6, color: "#a78bfa", fontSize: 11, cursor: "pointer" }}>â {checkedFarms.size === filteredFarms.length ? s.deselectAll : s.selectAll}</button>}
-            <button onClick={() => setView(view === "grid" ? "list" : "grid")} style={{ padding: "6px 10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, color: "rgba(255,255,255,0.4)", fontSize: 11, cursor: "pointer" }}>{view === "grid" ? "â° List" : "â¦ Grid"}</button>
+            {farms.length > 1 && <button onClick={toggleAllChecked} style={{ padding: "6px 12px", background: checkedFarms.size === filteredFarms.length ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 6, color: "#a78bfa", fontSize: 11, cursor: "pointer" }}>☑ {checkedFarms.size === filteredFarms.length ? s.deselectAll : s.selectAll}</button>}
+            <button onClick={() => setView(view === "grid" ? "list" : "grid")} style={{ padding: "6px 10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, color: "rgba(255,255,255,0.4)", fontSize: 11, cursor: "pointer" }}>{view === "grid" ? "☰ List" : "▦ Grid"}</button>
             <button onClick={() => { if (tokens && tokens.tokens_available > 0) { setShowAddFarm(true); setFarmError(""); } }} style={{ padding: "6px 14px", background: tokens && tokens.tokens_available > 0 ? "linear-gradient(135deg, #10b981, #059669)" : "rgba(255,255,255,0.06)", color: tokens && tokens.tokens_available > 0 ? "#fff" : "rgba(255,255,255,0.3)", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: tokens && tokens.tokens_available > 0 ? "pointer" : "not-allowed" }}>+ {s.addFarm}</button>
           </div>
         </div>
@@ -470,7 +470,7 @@ export default function DashboardClient() {
         {loadingFarms ? <div style={{ textAlign: "center", padding: 40, color: "rgba(255,255,255,0.3)" }}>{s.loading}</div>
         : farms.length === 0 ? (
           <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 16, padding: "48px 24px", textAlign: "center", border: "1px dashed rgba(255,255,255,0.08)" }}>
-            <div style={{ fontSize: 48, marginBottom: 12, opacity: 0.3 }}>ð¾</div>
+            <div style={{ fontSize: 48, marginBottom: 12, opacity: 0.3 }}>🌾</div>
             <div style={{ fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.5)" }}>{s.noFarms}</div>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", marginTop: 6 }}>{s.noFarmsDesc}</div>
           </div>
@@ -491,13 +491,13 @@ export default function DashboardClient() {
                     <td style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.03)" }}><span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, color: statusColor(st.status), background: statusColor(st.status) + "15" }}>{statusIcon(st.status)} {st.status}</span></td>
                     <td style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, color: cloudStatusColor(f.cloud_status), background: cloudStatusColor(f.cloud_status) + "15" }}>
-                        {f.cloud_status === "active" ? "âï¸" : f.cloud_status === "provisioning" ? "â³" : f.cloud_status === "cloud_error" ? "â ï¸" : "ð»"} {cloudStatusLabel(f.cloud_status)}
+                        {f.cloud_status === "active" ? "☁️" : f.cloud_status === "provisioning" ? "⏳" : f.cloud_status === "cloud_error" ? "⚠️" : "💻"} {cloudStatusLabel(f.cloud_status)}
                       </span>
-                      {f.cloud_status === "cloud_error" && <button onClick={(e) => { e.stopPropagation(); handleRetryCloud(f.id); }} style={{ marginLeft: 4, padding: "1px 6px", background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.2)", borderRadius: 4, color: "#06b6d4", fontSize: 9, cursor: "pointer" }}>â»</button>}
+                      {f.cloud_status === "cloud_error" && <button onClick={(e) => { e.stopPropagation(); handleRetryCloud(f.id); }} style={{ marginLeft: 4, padding: "1px 6px", background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.2)", borderRadius: 4, color: "#06b6d4", fontSize: 9, cursor: "pointer" }}>↻</button>}
                     </td>
                     <td style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.03)", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{st.task || "-"}</td>
                     <td style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.03)", fontSize: 11, color: "rgba(255,255,255,0.25)" }}>{new Date(f.created_at).toLocaleDateString()}</td>
-                    <td style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.03)" }}><button onClick={(e) => { e.stopPropagation(); handleDeleteFarm(f.id); }} style={{ padding: "3px 8px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 4, color: "#f87171", fontSize: 10, cursor: "pointer" }}>â</button></td>
+                    <td style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.03)" }}><button onClick={(e) => { e.stopPropagation(); handleDeleteFarm(f.id); }} style={{ padding: "3px 8px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 4, color: "#f87171", fontSize: 10, cursor: "pointer" }}>✕</button></td>
                   </tr>
                 );
               })}</tbody>
@@ -525,15 +525,15 @@ export default function DashboardClient() {
                   {/* Status row */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 4 }}>
                     <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: `${statusColor(st.status)}15`, color: statusColor(st.status), fontWeight: 600 }}>{st.status}{st.task ? ` â¢ ${st.task}` : ""}</span>
+                      <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: `${statusColor(st.status)}15`, color: statusColor(st.status), fontWeight: 600 }}>{st.status}{st.task ? ` • ${st.task}` : ""}</span>
                       {/* Cloud badge */}
                       <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: `${cloudStatusColor(f.cloud_status)}15`, color: cloudStatusColor(f.cloud_status), fontWeight: 600 }}>
-                        {f.cloud_status === "active" ? "âï¸" : f.cloud_status === "provisioning" ? "â³" : f.cloud_status === "cloud_error" ? "â ï¸" : "ð»"} {cloudStatusLabel(f.cloud_status)}
+                        {f.cloud_status === "active" ? "☁️" : f.cloud_status === "provisioning" ? "⏳" : f.cloud_status === "cloud_error" ? "⚠️" : "💻"} {cloudStatusLabel(f.cloud_status)}
                       </span>
                     </div>
                     <div style={{ display: "flex", gap: 4 }}>
-                      {f.cloud_status === "cloud_error" && <button onClick={(e) => { e.stopPropagation(); handleRetryCloud(f.id); }} style={{ padding: "2px 6px", background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.15)", borderRadius: 4, color: "#06b6d4", fontSize: 9, cursor: "pointer" }}>â»</button>}
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteFarm(f.id); }} style={{ padding: "2px 6px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 4, color: "#f87171", fontSize: 10, cursor: "pointer" }}>â</button>
+                      {f.cloud_status === "cloud_error" && <button onClick={(e) => { e.stopPropagation(); handleRetryCloud(f.id); }} style={{ padding: "2px 6px", background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.15)", borderRadius: 4, color: "#06b6d4", fontSize: 9, cursor: "pointer" }}>↻</button>}
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteFarm(f.id); }} style={{ padding: "2px 6px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 4, color: "#f87171", fontSize: 10, cursor: "pointer" }}>✕</button>
                     </div>
                   </div>
                 </div>
@@ -545,17 +545,17 @@ export default function DashboardClient() {
 
       {/* ADD FARM MODAL */}
       {showAddFarm && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backrouund: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 20 }} onClick={() => setShowAddFarm(false)}>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 20 }} onClick={() => setShowAddFarm(false)}>
           <div onClick={e => e.stopPropagation()} style={{ background: "#1a1f2e", borderRadius: 16, padding: "24px", width: "100%", maxWidth: 400, border: "1px solid rgba(139,92,246,0.2)" }}>
-            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: "#fff" }}>ð¾ {s.addFarm}</h3>
+            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: "#fff" }}>🌾 {s.addFarm}</h3>
             <div style={{ display: "grid", gap: 10 }}>
               <input placeholder={s.farmName} value={newFarmName} onChange={e => setNewFarmName(e.target.value)} autoFocus style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 13, outline: "none" }} />
               <input placeholder={s.farmServer} value={newFarmServer} onChange={e => setNewFarmServer(e.target.value)} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 13, outline: "none" }} />
               <input placeholder={s.farmNotes} value={newFarmNotes} onChange={e => setNewFarmNotes(e.target.value)} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 13, outline: "none" }} />
               {/* Cloud provisioning note */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 6, background: "rgba(6,182,212,0.06)", border: "1px solid rgba(6,182,212,0.12)" }}>
-                <span style={{ fontSize: 14 }}>âï¸</span>
-                <span style={{ fontSize: 11, color: "#06b6d4" }}>{lang === "ar" ? "Ø³ÙØªÙ ØªØ¬ÙÙØ² Ø§ÙÙØ²Ø±Ø¹Ø© ØªÙÙØ§Ø¦ÙØ§Ù Ø¹ÙÙ Ø§ÙØ³Ø­Ø§Ø¨Ø©" : "Farm will be automatically provisioned on the cloud"}</span>
+                <span style={{ fontSize: 14 }}>☁️</span>
+                <span style={{ fontSize: 11, color: "#06b6d4" }}>{lang === "ar" ? "سيتم تجهيز المزرعة تلقائياً على السحابة" : "Farm will be automatically provisioned on the cloud"}</span>
               </div>
               {farmError && <div style={{ padding: "8px 12px", borderRadius: 6, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", fontSize: 12 }}>{farmError}</div>}
               <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
