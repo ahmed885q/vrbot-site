@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseService } from "@/lib/supabase/server";
+import { provisionFarms } from "@/lib/orchestrator";
 
 export async function POST(req: Request) {
   const cookieStore = cookies();
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
   const name = String(body?.name ?? "").trim();
   const server = String(body?.server ?? "").trim() || null;
   const notes = String(body?.notes ?? "").trim() || null;
+  const cloudEnabled = body?.cloud !== false; // default: provision on cloud
 
   if (!name)
     return NextResponse.json({ error: "Missing farm name" }, { status: 400 });
@@ -63,11 +65,17 @@ export async function POST(req: Request) {
     );
   }
 
-  // --- CREATE FARM ---
+  // --- CREATE FARM IN SUPABASE ---
   const { data: farm, error } = await supabase
     .from("user_farms")
-    .insert({ user_id: user.id, name, server, notes })
-    .select("id,name,server,notes,created_at")
+    .insert({
+      user_id: user.id,
+      name,
+      server,
+      notes,
+      cloud_status: cloudEnabled ? "pending" : "local",
+    })
+    .select("id,name,server,notes,created_at,cloud_status")
     .single();
 
   if (error)
@@ -81,9 +89,49 @@ export async function POST(req: Request) {
       { onConflict: "farm_id" }
     );
 
+  // --- PROVISION ON CLOUD (async, non-blocking) ---
+  let cloudResult: any = null;
+  if (cloudEnabled) {
+    try {
+      cloudResult = await provisionFarms({
+        customerEmail: user.email || "",
+        customerName: user.user_metadata?.name || user.email?.split("@")[0] || "User",
+        plan: "basic",
+        farmCount: 1,
+        nifling: false,
+        orderId: `dashboard-${farm.id}-${Date.now()}`,
+      });
+
+      // Update farm with cloud info
+      if (cloudResult.job_id || cloudResult.customer_id) {
+        await service
+          .from("user_farms")
+          .update({
+            cloud_customer_id: cloudResult.customer_id || null,
+            cloud_job_id: cloudResult.job_id || null,
+            cloud_status: "provisioning",
+          })
+          .eq("id", farm.id);
+
+        farm.cloud_status = "provisioning";
+      }
+    } catch (cloudError: any) {
+      // Cloud provisioning failed but farm was created in Supabase
+      // Mark as local-only, user can retry cloud provisioning later
+      await service
+        .from("user_farms")
+        .update({ cloud_status: "cloud_error" })
+        .eq("id", farm.id);
+
+      farm.cloud_status = "cloud_error";
+      cloudResult = { error: cloudError?.message || "Cloud server unreachable" };
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     farm,
     tokens_remaining: tokenResult.remaining,
+    cloud: cloudResult,
   });
 }
