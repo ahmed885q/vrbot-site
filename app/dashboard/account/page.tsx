@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
 type Lang = 'ar' | 'en' | 'ru' | 'zh'
 const t: Record<string, Record<Lang, string>> = {
@@ -70,7 +70,7 @@ export default function AccountPage() {
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseBrowserClient()
   const L = (k: string) => t[k]?.[lang] || t[k]?.['en'] || k
 
   useEffect(() => {
