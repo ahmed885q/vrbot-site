@@ -7,31 +7,31 @@ import {
 
 type Lang = 'ar' | 'en' | 'ru' | 'zh'
 const t: Record<string, Record<Lang, string>> = {
-  title:       { ar: 'Ø·Ø§Ø¨ÙØ± Nifling', en: 'Nifling Queue', ru: 'ÐÑÐµÑÐµÐ´Ñ Nifling', zh: 'Niflingéå' },
-  subtitle:    { ar: 'Ø¥Ø¯Ø§Ø±Ø© Ø·ÙØ¨Ø§Øª Nifling ÙØ§ÙØ£ÙÙÙÙØ§Øª', en: 'Manage Nifling requests & priorities', ru: 'Ð£Ð¿ÑÐ°Ð²Ð»ÐµÐ½Ð¸Ðµ Ð·Ð°Ð¿ÑÐ¾ÑÐ°Ð¼Ð¸', zh: 'ç®¡çè¯·æ±åä¼åçº§' },
-  queued:      { ar: 'Ø¨Ø§ÙØ§ÙØªØ¸Ø§Ø±', en: 'Queued', ru: 'Ð Ð¾ÑÐµÑÐµÐ´Ð¸', zh: 'æéä¸­' },
-  running:     { ar: 'ÙØ¹ÙÙ', en: 'Running', ru: 'Ð Ð°Ð±Ð¾ÑÐ°ÐµÑ', zh: 'è¿è¡ä¸­' },
-  completed:   { ar: 'ÙÙØªÙÙ Ø§ÙÙÙÙ', en: 'Completed Today', ru: 'ÐÐ°Ð²ÐµÑÑÐµÐ½Ð¾', zh: 'ä»æ¥å®æ' },
-  failed:      { ar: 'ÙØ´Ù Ø§ÙÙÙÙ', en: 'Failed Today', ru: 'ÐÑÐ¸Ð±ÐºÐ¸', zh: 'ä»æ¥å¤±è´¥' },
-  avgWait:     { ar: 'ÙØªÙØ³Ø· Ø§ÙØ§ÙØªØ¸Ø§Ø±', en: 'Avg Wait', ru: 'Ð¡Ñ. Ð¾Ð¶Ð¸Ð´Ð°Ð½Ð¸Ðµ', zh: 'å¹³åç­å¾' },
-  avgDuration: { ar: 'ÙØªÙØ³Ø· Ø§ÙÙØ¯Ø©', en: 'Avg Duration', ru: 'Ð¡Ñ. Ð´Ð»Ð¸ÑÐµÐ»ÑÐ½Ð¾ÑÑÑ', zh: 'å¹³åæ¶é¿' },
-  reqId:       { ar: 'ÙØ¹Ø±Ù Ø§ÙØ·ÙØ¨', en: 'Request ID', ru: 'ID Ð·Ð°Ð¿ÑÐ¾ÑÐ°', zh: 'è¯·æ±ID' },
-  farmId:      { ar: 'Ø§ÙÙØ²Ø±Ø¹Ø©', en: 'Farm', ru: 'Ð¤ÐµÑÐ¼Ð°', zh: 'ååº' },
-  customer:    { ar: 'Ø§ÙØ¹ÙÙÙ', en: 'Customer', ru: 'ÐÐ»Ð¸ÐµÐ½Ñ', zh: 'å®¢æ·' },
-  priority:    { ar: 'Ø§ÙØ£ÙÙÙÙØ©', en: 'Priority', ru: 'ÐÑÐ¸Ð¾ÑÐ¸ÑÐµÑ', zh: 'ä¼åçº§' },
-  status:      { ar: 'Ø§ÙØ­Ø§ÙØ©', en: 'Status', ru: 'Ð¡ÑÐ°ÑÑÑ', zh: 'ç¶æ' },
-  requested:   { ar: 'ÙÙØª Ø§ÙØ·ÙØ¨', en: 'Requested At', ru: 'ÐÑÐµÐ¼Ñ Ð·Ð°Ð¿ÑÐ¾ÑÐ°', zh: 'è¯·æ±æ¶é´' },
-  started:     { ar: 'Ø¨Ø¯Ø£', en: 'Started', ru: 'ÐÐ°ÑÐ°Ð»Ð¾', zh: 'å¼å§' },
-  completedAt: { ar: 'Ø§ÙØªÙÙ', en: 'Completed', ru: 'ÐÐ°Ð²ÐµÑÑÐµÐ½Ð¾', zh: 'å®æ' },
-  actions:     { ar: 'Ø§ÙØ¥Ø¬Ø±Ø§Ø¡Ø§Øª', en: 'Actions', ru: 'ÐÐµÐ¹ÑÑÐ²Ð¸Ñ', zh: 'æä½' },
-  cancel:      { ar: 'Ø¥ÙØºØ§Ø¡', en: 'Cancel', ru: 'ÐÑÐ¼ÐµÐ½Ð°', zh: 'åæ¶' },
-  newReq:      { ar: 'Ø·ÙØ¨ Ø¬Ø¯ÙØ¯', en: 'New Request', ru: 'ÐÐ¾Ð²ÑÐ¹ Ð·Ð°Ð¿ÑÐ¾Ñ', zh: 'æ°è¯·æ±' },
-  refresh:     { ar: 'ØªØ­Ø¯ÙØ«', en: 'Refresh', ru: 'ÐÐ±Ð½Ð¾Ð²Ð¸ÑÑ', zh: 'å·æ°' },
-  farmIdInput: { ar: 'ÙØ¹Ø±Ù Ø§ÙÙØ²Ø±Ø¹Ø©', en: 'Farm ID', ru: 'ID ÑÐµÑÐ¼Ñ', zh: 'ååºID' },
-  submit:      { ar: 'Ø¥Ø±Ø³Ø§Ù', en: 'Submit', ru: 'ÐÑÐ¿ÑÐ°Ð²Ð¸ÑÑ', zh: 'æäº¤' },
-  loading:     { ar: 'Ø¬Ø§Ø±Ù Ø§ÙØªØ­ÙÙÙ...', en: 'Loading...', ru: 'ÐÐ°Ð³ÑÑÐ·ÐºÐ°...', zh: 'å è½½ä¸­...' },
-  noData:      { ar: 'ÙØ§ ØªÙØ¬Ø¯ Ø·ÙØ¨Ø§Øª', en: 'No requests', ru: 'ÐÐµÑ Ð·Ð°Ð¿ÑÐ¾ÑÐ¾Ð²', zh: 'ææ è¯·æ±' },
-  all:         { ar: 'Ø§ÙÙÙ', en: 'All', ru: 'ÐÑÐµ', zh: 'å¨é¨' },
+  title:       { ar: 'طابور Nifling', en: 'Nifling Queue', ru: 'Очередь Nifling', zh: 'Nifling 队列' },
+  subtitle:    { ar: 'إدارة طلبات Nifling والأولويات', en: 'Manage Nifling requests & priorities', ru: 'Управление запросами и приоритетами Nifling', zh: '管理 Nifling 请求和优先级' },
+  queued:      { ar: 'بالانتظار', en: 'Queued', ru: 'В очереди', zh: '排队中' },
+  running:     { ar: 'يعمل', en: 'Running', ru: 'Работает', zh: '运行中' },
+  completed:   { ar: 'مكتمل اليوم', en: 'Completed Today', ru: 'Завершено сегодня', zh: '今日完成' },
+  failed:      { ar: 'فشل اليوم', en: 'Failed Today', ru: 'Ошибки сегодня', zh: '今日失败' },
+  avgWait:     { ar: 'متوسط الانتظار', en: 'Avg Wait', ru: 'Ср. ожидание', zh: '平均等待' },
+  avgDuration: { ar: 'متوسط المدة', en: 'Avg Duration', ru: 'Ср. длительность', zh: '平均时长' },
+  reqId:       { ar: 'معرف الطلب', en: 'Request ID', ru: 'ID запроса', zh: '请求ID' },
+  farmId:      { ar: 'المزرعة', en: 'Farm', ru: 'Ферма', zh: '农场' },
+  customer:    { ar: 'العميل', en: 'Customer', ru: 'Клиент', zh: '客户' },
+  priority:    { ar: 'الأولوية', en: 'Priority', ru: 'Приоритет', zh: '优先级' },
+  status:      { ar: 'الحالة', en: 'Status', ru: 'Статус', zh: '状态' },
+  requested:   { ar: 'وقت الطلب', en: 'Requested At', ru: 'Время запроса', zh: '请求时间' },
+  started:     { ar: 'بدأ', en: 'Started', ru: 'Начало', zh: '开始' },
+  completedAt: { ar: 'انتهى', en: 'Completed', ru: 'Завершено', zh: '完成' },
+  actions:     { ar: 'الإجراءات', en: 'Actions', ru: 'Действия', zh: '操作' },
+  cancel:      { ar: 'إلغاء', en: 'Cancel', ru: 'Отмена', zh: '取消' },
+  newReq:      { ar: 'طلب جديد', en: 'New Request', ru: 'Новый запрос', zh: '新请求' },
+  refresh:     { ar: 'تحديث', en: 'Refresh', ru: 'Обновить', zh: '刷新' },
+  farmIdInput: { ar: 'معرف المزرعة', en: 'Farm ID', ru: 'ID фермы', zh: '农场ID' },
+  submit:      { ar: 'إرسال', en: 'Submit', ru: 'Отправить', zh: '提交' },
+  loading:     { ar: 'جاري التحميل...', en: 'Loading...', ru: 'Загрузка...', zh: '加载中...' },
+  noData:      { ar: 'لا توجد طلبات', en: 'No requests', ru: 'Нет запросов', zh: '暂无请求' },
+  all:         { ar: 'الكل', en: 'All', ru: 'Все', zh: '全部' },
 }
 const s = {
   page: { padding: '24px', direction: 'rtl' as const, fontFamily: 'system-ui, sans-serif', color: '#cbd5e1' },
@@ -103,7 +103,7 @@ export default function NiflingPage() {
   if (loading) return <div style={{ ...s.card, textAlign: 'center', margin: '40px' }}>{L('loading')}</div>
 
   return (
-    <div style={s.page}>
+    <div style={{...s.page, direction: lang === 'ar' ? 'rtl' : 'ltr'}}>
       <div style={s.header}>
         <div>
           <h1 style={s.title}>{L('title')}</h1>
