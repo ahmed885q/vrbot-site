@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
 // ─── Chat Admin Controls ──────────────────────────────────────────
 // This component provides admin moderation for the VRBOT Chat system.
@@ -97,7 +97,7 @@ export function MessageAdminActions({
 export function BannedUsersPanel({ isAdmin, lang }: { isAdmin: boolean; lang: Lang }) {
   const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseBrowserClient()
   const L = (k: string) => t[k]?.[lang] || t[k]?.['en'] || k
 
   const fetchBanned = useCallback(async () => {
@@ -150,7 +150,7 @@ export function BannedUsersPanel({ isAdmin, lang }: { isAdmin: boolean; lang: La
 
 // ─── Main Admin Controls Hook ────────────────────────────────────────
 export function useChatAdmin() {
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseBrowserClient()
   const [toast, setToast] = useState('')
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
