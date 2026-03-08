@@ -182,7 +182,158 @@ export default function OrchestratorPage() {
 
   useEffect(() => {
     try {
- → 65.109.214.187:8080`}
+      const saved = localStorage.getItem('vrbot_lang') as Lang
+      if (saved && tx[saved]) setLang(saved)
+    } catch {}
+  }, [])
+
+  const fetchData = useCallback(async () => {
+    try {
+      setError(null)
+      const [statusRes, farmsRes] = await Promise.allSettled([
+        fetch('/api/cloud/status'),
+        fetch('/api/cloud/farms'),
+      ])
+
+      if (statusRes.status === 'fulfilled' && statusRes.value.ok) {
+        const data = await statusRes.value.json()
+        setServerStatus(data)
+      } else {
+        setServerStatus(null)
+        setError('Cloud server unreachable')
+      }
+
+      if (farmsRes.status === 'fulfilled' && farmsRes.value.ok) {
+        const data = await farmsRes.value.json()
+        setFarms(data.farms || [])
+      }
+
+      // Try batch status
+      try {
+        const batchRes = await fetch('/api/cloud/status')
+        if (batchRes.ok) {
+          const d = await batchRes.json()
+          if (d.ok) setBatchStatus(d)
+        }
+      } catch {}
+
+      setLastUpdated(new Date())
+    } catch (e: any) {
+      setError(e?.message || 'Unknown error')
+      setServerStatus(null)
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  useEffect(() => {
+    if (!autoRefresh) return
+    const interval = setInterval(fetchData, 15000)
+    return () => clearInterval(interval)
+  }, [autoRefresh, fetchData])
+
+  async function handleSchedulerAction(action: 'start' | 'stop') {
+    setActionLoading(true)
+    try {
+      const res = await fetch(`/api/cloud/status`, { method: 'GET' })
+      // For start/stop we need a dedicated endpoint - use the orchestrator directly via a new route
+      // For now, just refresh the data
+      await fetchData()
+    } catch {}
+    setActionLoading(false)
+  }
+
+  const isOnline = serverStatus && serverStatus.ok
+  const isRunning = isOnline && serverStatus.running
+
+  function statBox(label: string, value: any, color: string, icon: string) {
+    return (
+      <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '14px 16px', border: `1px solid ${color}20`, minWidth: 120 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{label}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color, marginTop: 2 }}>{value ?? '-'}</div>
+          </div>
+          <span style={{ fontSize: 20, opacity: 0.4 }}>{icon}</span>
+        </div>
+      </div>
+    )
+  }
+
+  function farmStatusColor(st: string) {
+    if (st === 'running' || st === 'active') return '#10b981'
+    if (st === 'error') return '#ef4444'
+    if (st === 'idle') return '#64748b'
+    if (st === 'provisioning') return '#f59e0b'
+    return '#94a3b8'
+  }
+
+  if (loading) {
+    return (
+      <div dir={isRtl ? 'rtl' : 'ltr'} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+        <div style={{ fontSize: 24, marginBottom: 8, animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</div>
+        <div>{s.loading}</div>
+        <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
+      </div>
+    )
+  }
+
+  return (
+    <div dir={isRtl ? 'rtl' : 'ltr'} style={{ color: '#cbd5e1', fontFamily: 'Segoe UI, sans-serif' }}>
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}button:hover{opacity:.85}`}</style>
+
+      {/* HEADER */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff' }}>📦 {s.title}</h1>
+          {lastUpdated && (
+            <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+              {s.lastUpdated}: {lastUpdated.toLocaleTimeString()}
+            </p>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Auto refresh toggle */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#94a3b8', cursor: 'pointer' }}>
+            <input type="checkbox" checked={autoRefresh} onChange={() => setAutoRefresh(!autoRefresh)} style={{ accentColor: '#6366f1' }} />
+            {s.autoRefresh}
+          </label>
+          <button onClick={fetchData} style={{ padding: '8px 16px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, color: '#a78bfa', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            🔄 {s.refresh}
+          </button>
+        </div>
+      </div>
+
+      {/* SERVER STATUS BANNER */}
+      <div style={{
+        background: isOnline ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)',
+        borderRadius: 14,
+        padding: '16px 20px',
+        border: `1px solid ${isOnline ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
+        marginBottom: 20,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 12,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 14, height: 14, borderRadius: '50%',
+            background: isOnline ? '#10b981' : '#ef4444',
+            boxShadow: isOnline ? '0 0 12px rgba(16,185,129,0.5)' : '0 0 12px rgba(239,68,68,0.5)',
+            animation: 'pulse 2s infinite',
+          }} />
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: isOnline ? '#10b981' : '#ef4444' }}>
+              {s.status}: {isOnline ? s.online : s.offline}
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+              {s.scheduler}: {isRunning ? s.running : s.stopped}
+              {isOnline && ` | cloud.vrbot.me → 65.109.214.187:8080`}
             </div>
           </div>
         </div>
