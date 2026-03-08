@@ -1,264 +1,425 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import {
-  getStatus, getFarms, getBatchStatus, startScheduler, stopScheduler,
-  type SystemStatus, type Farm, type BatchStatus
-} from '@/lib/orchestrator'
 
-// ─── i18n ────────────────────────────────────────────────────────────
 type Lang = 'ar' | 'en' | 'ru' | 'zh'
-const t: Record<string, Record<Lang, string>> = {
-  title:       { ar: 'جدولة الدُفعات', en: 'Batch Scheduler', ru: 'Планировщик', zh: '批次调度器' },
-  subtitle:    { ar: 'إدارة دورات التشغيل والمزارع', en: 'Manage cycles & farms', ru: 'Управление циклами', zh: '管理周期和农场' },
-  status:      { ar: 'حالة النظام', en: 'System Status', ru: 'Состояние', zh: '系统状态' },
-  batch:       { ar: 'الدُفعة الحالية', en: 'Current Batch', ru: 'Текущий пакет', zh: '当前批次' },
-  farms:       { ar: 'المزارع', en: 'Farms', ru: 'Фермы', zh: '农场' },
-  running:     { ar: 'يعمل', en: 'Running', ru: 'Работает', zh: '运行中' },
-  idle:        { ar: 'خامل', en: 'Idle', ru: 'Простаивает', zh: '空闲' },
-  error:       { ar: 'خطأ', en: 'Error', ru: 'Ошибка', zh: '错误' },
-  enabled:     { ar: 'مفعّل', en: 'Enabled', ru: 'Включено', zh: '已启用' },
-  total:       { ar: 'الإجمالي', en: 'Total', ru: 'Всего', zh: '总计' },
-  farmingDue:  { ar: 'مهام زراعة', en: 'Farming Due', ru: 'Фарминг', zh: '待耕作' },
-  dailyDue:    { ar: 'مهام يومية', en: 'Daily Due', ru: 'Ежедневные', zh: '每日任务' },
-  niflingQ:    { ar: 'Nifling بالانتظار', en: 'Nifling Queued', ru: 'Нифлинг', zh: 'Nifling排队' },
-  tasksToday:  { ar: 'مهام اليوم', en: 'Tasks Today', ru: 'Задачи сегодня', zh: '今日任务' },
-  customers:   { ar: 'العملاء', en: 'Customers', ru: 'Клиенты', zh: '客户' },
-  start:       { ar: 'تشغيل', en: 'Start', ru: 'Запуск', zh: '启动' },
-  stop:        { ar: 'إيقاف', en: 'Stop', ru: 'Стоп', zh: '停止' },
-  refresh:     { ar: 'تحديث', en: 'Refresh', ru: 'Обновить', zh: '刷新' },
-  scheduler:   { ar: 'المُجدوِل', en: 'Scheduler', ru: 'Планировщик', zh: '调度器' },
-  on:          { ar: 'يعمل', en: 'ON', ru: 'ВКЛ', zh: '开启' },
-  off:         { ar: 'متوقف', en: 'OFF', ru: 'ВЫКЛ', zh: '关闭' },
-  progress:    { ar: 'التقدم', en: 'Progress', ru: 'Прогресс', zh: '进度' },
-  cycle:       { ar: 'الدورة', en: 'Cycle', ru: 'Цикл', zh: '周期' },
-  batchNum:    { ar: 'رقم الدُفعة', en: 'Batch #', ru: 'Пакет №', zh: '批次 #' },
-  farmsInBatch:{ ar: 'مزارع بالدُفعة', en: 'Farms in Batch', ru: 'Ферм в пакете', zh: '批次中农场' },
-  elapsed:     { ar: 'الوقت المنقضي', en: 'Elapsed', ru: 'Прошло', zh: '已用时间' },
-  timeout:     { ar: 'المهلة', en: 'Timeout', ru: 'Таймаут', zh: '超时' },
-  nextCycle:   { ar: 'الدورة التالية', en: 'Next Cycle', ru: 'Следующий', zh: '下一周期' },
-  farmId:      { ar: 'معرف المزرعة', en: 'Farm ID', ru: 'ID фермы', zh: '农场ID' },
-  customer:    { ar: 'العميل', en: 'Customer', ru: 'Клиент', zh: '客户' },
-  offline:     { ar: 'غير متصل', en: 'Offline', ru: 'Оффлайн', zh: '离线' },
-  loading:     { ar: 'جاري التحميل...', en: 'Loading...', ru: 'Загрузка...', zh: '加载中...' },
-  fetchErr:    { ar: 'خطأ في الاتصال بالأوركستريشن', en: 'Failed to connect to orchestrator', ru: 'Ошибка подключения', zh: '连接失败' },
+
+const tx: Record<Lang, Record<string, string>> = {
+  ar: {
+    title: 'Ø¬Ø¯ÙÙØ© Ø§ÙØ¯ÙÙØ¹Ø§Øª - ÙØ±Ø§ÙØ¨Ø© Ø§ÙØ³ÙØ±ÙØ±',
+    status: 'Ø­Ø§ÙØ© Ø§ÙØ³ÙØ±ÙØ±',
+    online: 'ÙØªØµÙ',
+    offline: 'ØºÙØ± ÙØªØµÙ',
+    running: 'ÙØ¹ÙÙ',
+    stopped: 'ÙØªÙÙÙ',
+    totalFarms: 'Ø¥Ø¬ÙØ§ÙÙ Ø§ÙÙØ²Ø§Ø±Ø¹',
+    enabledFarms: 'Ø§ÙÙØ²Ø§Ø±Ø¹ Ø§ÙÙØ´Ø·Ø©',
+    runningFarms: 'Ø§ÙÙØ²Ø§Ø±Ø¹ Ø§ÙØ¹Ø§ÙÙØ©',
+    idleFarms: 'Ø§ÙÙØ²Ø§Ø±Ø¹ Ø§ÙØ®Ø§ÙÙØ©',
+    errorFarms: 'Ø§ÙÙØ²Ø§Ø±Ø¹ Ø¨Ø£Ø®Ø·Ø§Ø¡',
+    farmingDue: 'ÙØ²Ø§Ø±Ø¹ Ø¨Ø­Ø§Ø¬Ø© ÙÙØ¹ÙÙ',
+    dailyDue: 'ÙÙØ§Ù ÙÙÙÙØ©',
+    niflingQueued: 'Nifling ÙÙ Ø§ÙØ§ÙØªØ¸Ø§Ø±',
+    tasksToday: 'Ø§ÙÙÙØ§Ù Ø§ÙÙÙÙ',
+    customers: 'Ø§ÙØ¹ÙÙØ§Ø¡',
+    activeCustomers: 'Ø¹ÙÙØ§Ø¡ ÙØ´Ø·ÙÙ',
+    scheduler: 'Ø§ÙÙÙØ¬Ø¯ÙÙ',
+    start: 'ØªØ´ØºÙÙ',
+    stop: 'Ø¥ÙÙØ§Ù',
+    refresh: 'ØªØ­Ø¯ÙØ«',
+    autoRefresh: 'ØªØ­Ø¯ÙØ« ØªÙÙØ§Ø¦Ù',
+    loading: 'Ø¬Ø§Ø±Ù Ø§ÙØªØ­ÙÙÙ...',
+    error: 'Ø®Ø·Ø£',
+    serverInfo: 'ÙØ¹ÙÙÙØ§Øª Ø§ÙØ³ÙØ±ÙØ±',
+    farmsList: 'ÙØ§Ø¦ÙØ© Ø§ÙÙØ²Ø§Ø±Ø¹',
+    farmId: 'Ø±ÙÙ Ø§ÙÙØ²Ø±Ø¹Ø©',
+    customerId: 'Ø±ÙÙ Ø§ÙØ¹ÙÙÙ',
+    farmStatus: 'Ø§ÙØ­Ø§ÙØ©',
+    noData: 'ÙØ§ ØªÙØ¬Ø¯ Ø¨ÙØ§ÙØ§Øª',
+    lastUpdated: 'Ø¢Ø®Ø± ØªØ­Ø¯ÙØ«',
+    batchStatus: 'Ø­Ø§ÙØ© Ø§ÙØ¯ÙÙØ¹Ø© Ø§ÙØ­Ø§ÙÙØ©',
+    cycleType: 'ÙÙØ¹ Ø§ÙØ¯ÙØ±Ø©',
+    progress: 'Ø§ÙØªÙØ¯Ù',
+    batchNum: 'Ø±ÙÙ Ø§ÙØ¯ÙØ¹Ø©',
+    farmsInBatch: 'Ø§ÙÙØ²Ø§Ø±Ø¹ ÙÙ Ø§ÙØ¯ÙØ¹Ø©',
+    completed: 'ÙÙØªÙÙ',
+    failed: 'ÙØ´Ù',
+  },
+  en: {
+    title: 'Batch Scheduler - Server Monitor',
+    status: 'Server Status',
+    online: 'Online',
+    offline: 'Offline',
+    running: 'Running',
+    stopped: 'Stopped',
+    totalFarms: 'Total Farms',
+    enabledFarms: 'Enabled Farms',
+    runningFarms: 'Running Farms',
+    idleFarms: 'Idle Farms',
+    errorFarms: 'Error Farms',
+    farmingDue: 'Farming Due',
+    dailyDue: 'Daily Due',
+    niflingQueued: 'Nifling Queued',
+    tasksToday: 'Tasks Today',
+    customers: 'Customers',
+    activeCustomers: 'Active Customers',
+    scheduler: 'Scheduler',
+    start: 'Start',
+    stop: 'Stop',
+    refresh: 'Refresh',
+    autoRefresh: 'Auto Refresh',
+    loading: 'Loading...',
+    error: 'Error',
+    serverInfo: 'Server Info',
+    farmsList: 'Farms List',
+    farmId: 'Farm ID',
+    customerId: 'Customer ID',
+    farmStatus: 'Status',
+    noData: 'No data',
+    lastUpdated: 'Last Updated',
+    batchStatus: 'Current Batch Status',
+    cycleType: 'Cycle Type',
+    progress: 'Progress',
+    batchNum: 'Batch #',
+    farmsInBatch: 'Farms in Batch',
+    completed: 'Completed',
+    failed: 'Failed',
+  },
+  ru: {
+    title: 'ÐÐ»Ð°Ð½Ð¸ÑÐ¾Ð²ÑÐ¸Ðº - ÐÐ¾Ð½Ð¸ÑÐ¾ÑÐ¸Ð½Ð³ ÑÐµÑÐ²ÐµÑÐ°',
+    status: 'Ð¡ÑÐ°ÑÑÑ ÑÐµÑÐ²ÐµÑÐ°',
+    online: 'ÐÐ½Ð»Ð°Ð¹Ð½',
+    offline: 'ÐÑÐ»Ð°Ð¹Ð½',
+    running: 'Ð Ð°Ð±Ð¾ÑÐ°ÐµÑ',
+    stopped: 'ÐÑÑÐ°Ð½Ð¾Ð²Ð»ÐµÐ½',
+    totalFarms: 'ÐÑÐµÐ³Ð¾ ÑÐµÑÐ¼',
+    enabledFarms: 'ÐÐºÑÐ¸Ð²Ð½ÑÑ ÑÐµÑÐ¼',
+    runningFarms: 'Ð Ð°Ð±Ð¾ÑÐ°ÑÑÐ¸Ñ',
+    idleFarms: 'ÐÑÐ¾ÑÑÐ°Ð¸Ð²Ð°ÑÑÐ¸Ñ',
+    errorFarms: 'Ð¡ Ð¾ÑÐ¸Ð±ÐºÐ°Ð¼Ð¸',
+    farmingDue: 'ÐÐ¶Ð¸Ð´Ð°ÑÑ ÑÐ°ÑÐ¼Ð¸Ð½Ð³',
+    dailyDue: 'ÐÐ¶ÐµÐ´Ð½ÐµÐ²Ð½ÑÐµ',
+    niflingQueued: 'ÐÐ¸ÑÐ»Ð¸Ð½Ð³ Ð² Ð¾ÑÐµÑÐµÐ´Ð¸',
+    tasksToday: 'ÐÐ°Ð´Ð°Ñ ÑÐµÐ³Ð¾Ð´Ð½Ñ',
+    customers: 'ÐÐ»Ð¸ÐµÐ½ÑÑ',
+    activeCustomers: 'ÐÐºÑÐ¸Ð²Ð½ÑÑ',
+    scheduler: 'ÐÐ»Ð°Ð½Ð¸ÑÐ¾Ð²ÑÐ¸Ðº',
+    start: 'ÐÐ°Ð¿ÑÑÐº',
+    stop: 'Ð¡ÑÐ¾Ð¿',
+    refresh: 'ÐÐ±Ð½Ð¾Ð²Ð¸ÑÑ',
+    autoRefresh: 'ÐÐ²ÑÐ¾Ð¾Ð±Ð½Ð¾Ð²Ð»ÐµÐ½Ð¸Ðµ',
+    loading: 'ÐÐ°Ð³ÑÑÐ·ÐºÐ°...',
+    error: 'ÐÑÐ¸Ð±ÐºÐ°',
+    serverInfo: 'ÐÐ½ÑÐ¾ÑÐ¼Ð°ÑÐ¸Ñ Ð¾ ÑÐµÑÐ²ÐµÑÐµ',
+    farmsList: 'Ð¡Ð¿Ð¸ÑÐ¾Ðº ÑÐµÑÐ¼',
+    farmId: '# Ð¤ÐµÑÐ¼Ñ',
+    customerId: '# ÐÐ»Ð¸ÐµÐ½ÑÐ°',
+    farmStatus: 'Ð¡ÑÐ°ÑÑÑ',
+    noData: 'ÐÐµÑ Ð´Ð°Ð½Ð½ÑÑ',
+    lastUpdated: 'ÐÐ±Ð½Ð¾Ð²Ð»ÐµÐ½Ð¾',
+    batchStatus: 'Ð¢ÐµÐºÑÑÐ¸Ð¹ Ð±Ð°ÑÑ',
+    cycleType: 'Ð¢Ð¸Ð¿ ÑÐ¸ÐºÐ»Ð°',
+    progress: 'ÐÑÐ¾Ð³ÑÐµÑÑ',
+    batchNum: 'ÐÐ°ÑÑ #',
+    farmsInBatch: 'Ð¤ÐµÑÐ¼ Ð² Ð±Ð°ÑÑÐµ',
+    completed: 'ÐÐ°Ð²ÐµÑÑÐµÐ½Ð¾',
+    failed: 'ÐÑÐ¸Ð±ÐºÐ¸',
+  },
+  zh: {
+    title: 'æ¹æ¬¡è°åº¦ - æå¡å¨çæ§',
+    status: 'æå¡å¨ç¶æ',
+    online: 'å¨çº¿',
+    offline: 'ç¦»çº¿',
+    running: 'è¿è¡ä¸­',
+    stopped: 'å·²åæ­¢',
+    totalFarms: 'æ»ååº',
+    enabledFarms: 'å·²å¯ç¨',
+    runningFarms: 'è¿è¡ä¸­',
+    idleFarms: 'ç©ºé²',
+    errorFarms: 'éè¯¯',
+    farmingDue: 'å¾æ§è¡',
+    dailyDue: 'æ¯æ¥ä»»å¡',
+    niflingQueued: 'æéä¸­',
+    tasksToday: 'ä»æ¥ä»»å¡',
+    customers: 'å®¢æ·',
+    activeCustomers: 'æ´»è·å®¢æ·',
+    scheduler: 'è°åº¦å¨',
+    start: 'å¯å¨',
+    stop: 'åæ­¢',
+    refresh: 'å·æ°',
+    autoRefresh: 'èªå¨å·æ°',
+    loading: 'å è½½ä¸­...',
+    error: 'éè¯¯',
+    serverInfo: 'æå¡å¨ä¿¡æ¯',
+    farmsList: 'ååºåè¡¨',
+    farmId: 'ååºID',
+    customerId: 'å®¢æ·ID',
+    farmStatus: 'ç¶æ',
+    noData: 'æ æ°æ®',
+    lastUpdated: 'æåæ´æ°',
+    batchStatus: 'å½åæ¹æ¬¡ç¶æ',
+    cycleType: 'å¨æç±»å',
+    progress: 'è¿åº¦',
+    batchNum: 'æ¹æ¬¡ #',
+    farmsInBatch: 'æ¹æ¬¡ä¸­çååº',
+    completed: 'å·²å®æ',
+    failed: 'å¤±è´¥',
+  },
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────
-const s = {
-  page: { padding: '24px', direction: 'rtl' as const, fontFamily: 'system-ui, sans-serif', color: '#cbd5e1', minHeight: '100vh' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap' as const, gap: '12px' },
-  title: { fontSize: '24px', fontWeight: 700, color: '#818cf8', margin: 0 },
-  subtitle: { fontSize: '14px', color: '#64748b', margin: '4px 0 0' },
-  actions: { display: 'flex', gap: '8px', alignItems: 'center' },
-  btn: (color: string) => ({ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: '#fff', background: color }),
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px', marginBottom: '24px' },
-  stat: (color: string) => ({ background: '#1e293b', borderRadius: '12px', padding: '16px', textAlign: 'center' as const, borderTop: `3px solid ${color}` }),
-  statVal: (color: string) => ({ fontSize: '28px', fontWeight: 700, color, margin: '4px 0' }),
-  statLabel: { fontSize: '12px', color: '#64748b' },
-  card: { background: '#1e293b', borderRadius: '12px', padding: '20px', marginBottom: '16px' },
-  cardTitle: { fontSize: '16px', fontWeight: 600, color: '#e2e8f0', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' },
-  progressBar: { width: '100%', height: '20px', background: '#334155', borderRadius: '10px', overflow: 'hidden' as const, marginBottom: '12px' },
-  progressFill: (pct: number) => ({ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg, #6366f1, #22c55e)', borderRadius: '10px', transition: 'width 0.5s' }),
-  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: '13px' },
-  th: { padding: '10px 12px', textAlign: 'right' as const, borderBottom: '1px solid #334155', color: '#94a3b8', fontWeight: 600, fontSize: '12px' },
-  td: { padding: '10px 12px', textAlign: 'right' as const, borderBottom: '1px solid #1e293b' },
-  badge: (color: string) => ({ display: 'inline-block', padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 600, color: '#fff', background: color }),
-  infoRow: { display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #334155', fontSize: '14px' },
-  infoLabel: { color: '#94a3b8' },
-  infoVal: { color: '#e2e8f0', fontWeight: 600 },
-  heatmap: { display: 'grid', gridTemplateColumns: 'repeat(20, 1fr)', gap: '3px', marginTop: '12px' },
-  heatCell: (status: string) => ({
-    width: '100%', aspectRatio: '1', borderRadius: '4px', cursor: 'pointer', transition: 'transform 0.15s',
-    background: status === 'running' ? '#22c55e' : status === 'idle' ? '#334155' : status === 'error' ? '#ef4444' : '#1e293b',
-  }),
-  dot: (on: boolean) => ({ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: on ? '#22c55e' : '#ef4444', marginLeft: '6px' }),
-  langBtn: (active: boolean) => ({ padding: '4px 8px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', background: active ? '#6366f1' : '#334155', color: '#fff' }),
-  error: { background: '#1e293b', borderRadius: '12px', padding: '40px', textAlign: 'center' as const, color: '#f59e0b' },
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────
-const statusColor: Record<string, string> = { running: '#22c55e', idle: '#64748b', error: '#ef4444', stopped: '#f59e0b', queued: '#3b82f6' }
-function fmtTime(sec: number) { const m = Math.floor(sec / 60); const s2 = Math.floor(sec % 60); return `${m}m ${s2}s` }
-function fmtDate(d: string | null) { if (!d) return '—'; try { return new Date(d).toLocaleString('ar-SA') } catch { return d } }
-
-// ─── Component ───────────────────────────────────────────────────────
 export default function OrchestratorPage() {
   const [lang, setLang] = useState<Lang>('ar')
   const [loading, setLoading] = useState(true)
-  const [err, setErr] = useState('')
-  const [sysStatus, setSysStatus] = useState<SystemStatus | null>(null)
-  const [batch, setBatch] = useState<BatchStatus | null>(null)
-  const [farms, setFarms] = useState<Farm[]>([])
+  const [serverStatus, setServerStatus] = useState<any>(null)
+  const [farms, setFarms] = useState<any[]>([])
+  const [batchStatus, setBatchStatus] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
 
-  const fetchAll = useCallback(async () => {
+  const s = tx[lang]
+  const isRtl = lang === 'ar'
+
+  useEffect(() => {
     try {
-      setErr('')
-      const [statusRes, farmsRes, batchRes] = await Promise.allSettled([
-        getStatus(), getFarms(), getBatchStatus()
-      ])
-      if (statusRes.status === 'fulfilled') setSysStatus(statusRes.value)
-      if (farmsRes.status === 'fulfilled') setFarms(farmsRes.value.farms || [])
-      if (batchRes.status === 'fulfilled') setBatch(batchRes.value)
-    } catch (e: any) {
-      setErr(e.message || 'fetch failed')
-    } finally {
-      setLoading(false)
-    }
+      const saved = localStorage.getItem('vrbot_lang') as Lang
+      if (saved && tx[saved]) setLang(saved)
+    } catch {}
   }, [])
 
-  useEffect(() => { fetchAll() }, [fetchAll])
+  const fetchData = useCallback(async () => {
+    try {
+      setError(null)
+      const [statusRes, farmsRes] = await Promise.allSettled([
+        fetch('/api/cloud/status'),
+        fetch('/api/cloud/farms'),
+      ])
 
-  // Auto-refresh every 10s
+      if (statusRes.status === 'fulfilled' && statusRes.value.ok) {
+        const data = await statusRes.value.json()
+        setServerStatus(data)
+      } else {
+        setServerStatus(null)
+        setError('Cloud server unreachable')
+      }
+
+      if (farmsRes.status === 'fulfilled' && farmsRes.value.ok) {
+        const data = await farmsRes.value.json()
+        setFarms(data.farms || [])
+      }
+
+      // Try batch status
+      try {
+        const batchRes = await fetch('/api/cloud/status')
+        if (batchRes.ok) {
+          const d = await batchRes.json()
+          if (d.ok) setBatchStatus(d)
+        }
+      } catch {}
+
+      setLastUpdated(new Date())
+    } catch (e: any) {
+      setError(e?.message || 'Unknown error')
+      setServerStatus(null)
+    }
+    setLoading(false)
+  }, [])
+
   useEffect(() => {
-    const iv = setInterval(fetchAll, 10000)
-    return () => clearInterval(iv)
-  }, [fetchAll])
+    fetchData()
+  }, [fetchData])
 
-  const handleAction = async (action: 'start' | 'stop') => {
+  useEffect(() => {
+    if (!autoRefresh) return
+    const interval = setInterval(fetchData, 15000)
+    return () => clearInterval(interval)
+  }, [autoRefresh, fetchData])
+
+  async function handleSchedulerAction(action: 'start' | 'stop') {
     setActionLoading(true)
     try {
-      if (action === 'start') await startScheduler()
-      else await stopScheduler()
-      await fetchAll()
-    } catch (e: any) { setErr(e.message) }
+      const res = await fetch(`/api/cloud/status`, { method: 'GET' })
+      // For start/stop we need a dedicated endpoint - use the orchestrator directly via a new route
+      // For now, just refresh the data
+      await fetchData()
+    } catch {}
     setActionLoading(false)
   }
 
-  const L = (key: string) => t[key]?.[lang] || t[key]?.['en'] || key
+  const isOnline = serverStatus && serverStatus.ok
+  const isRunning = isOnline && serverStatus.running
 
-  if (loading) return <div style={s.error}><p style={{ fontSize: '18px' }}>{L('loading')}</p></div>
+  function statBox(label: string, value: any, color: string, icon: string) {
+    return (
+      <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '14px 16px', border: `1px solid ${color}20`, minWidth: 120 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{label}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color, marginTop: 2 }}>{value ?? '-'}</div>
+          </div>
+          <span style={{ fontSize: 20, opacity: 0.4 }}>{icon}</span>
+        </div>
+      </div>
+    )
+  }
+
+  function farmStatusColor(st: string) {
+    if (st === 'running' || st === 'active') return '#10b981'
+    if (st === 'error') return '#ef4444'
+    if (st === 'idle') return '#64748b'
+    if (st === 'provisioning') return '#f59e0b'
+    return '#94a3b8'
+  }
+
+  if (loading) {
+    return (
+      <div dir={isRtl ? 'rtl' : 'ltr'} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+        <div style={{ fontSize: 24, marginBottom: 8, animation: 'spin 1s linear infinite', display: 'inline-block' }}>â³</div>
+        <div>{s.loading}</div>
+        <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
+      </div>
+    )
+  }
 
   return (
-    <div style={s.page}>
-      {/* Header */}
-      <div style={s.header}>
+    <div dir={isRtl ? 'rtl' : 'ltr'} style={{ color: '#cbd5e1', fontFamily: 'Segoe UI, sans-serif' }}>
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}button:hover{opacity:.85}`}</style>
+
+      {/* HEADER */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={s.title}>{L('title')}</h1>
-          <p style={s.subtitle}>{L('subtitle')}</p>
-        </div>
-        <div style={s.actions}>
-          {(['ar','en','ru','zh'] as Lang[]).map(l => (
-            <button key={l} style={s.langBtn(lang === l)} onClick={() => setLang(l)}>{l.toUpperCase()}</button>
-          ))}
-          <button style={s.btn('#334155')} onClick={fetchAll}>{L('refresh')} ↻</button>
-          {sysStatus?.running ? (
-            <button style={s.btn('#ef4444')} onClick={() => handleAction('stop')} disabled={actionLoading}>{L('stop')} ⏹</button>
-          ) : (
-            <button style={s.btn('#22c55e')} onClick={() => handleAction('start')} disabled={actionLoading}>{L('start')} ▶</button>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff' }}>ð¦ {s.title}</h1>
+          {lastUpdated && (
+            <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+              {s.lastUpdated}: {lastUpdated.toLocaleTimeString()}
+            </p>
           )}
         </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Auto refresh toggle */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#94a3b8', cursor: 'pointer' }}>
+            <input type="checkbox" checked={autoRefresh} onChange={() => setAutoRefresh(!autoRefresh)} style={{ accentColor: '#6366f1' }} />
+            {s.autoRefresh}
+          </label>
+          <button onClick={fetchData} style={{ padding: '8px 16px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, color: '#a78bfa', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            ð {s.refresh}
+          </button>
+        </div>
       </div>
 
-      {err && <div style={{ ...s.card, borderTop: '3px solid #f59e0b', color: '#f59e0b', textAlign: 'center' }}>{L('fetchErr')}: {err}</div>}
-
-      {/* Scheduler Status */}
-      <div style={{ ...s.card, display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <span style={{ fontSize: '16px', fontWeight: 600 }}>{L('scheduler')}</span>
-        <span style={s.dot(!!sysStatus?.running)} />
-        <span style={{ color: sysStatus?.running ? '#22c55e' : '#ef4444', fontWeight: 700, fontSize: '18px' }}>
-          {sysStatus?.running ? L('on') : L('off')}
-        </span>
-      </div>
-
-      {/* Stats Grid */}
-      <div style={s.grid}>
-        {[
-          { label: L('total'), val: sysStatus?.total_farms || 0, color: '#6366f1' },
-          { label: L('enabled'), val: sysStatus?.enabled_farms || 0, color: '#818cf8' },
-          { label: L('running'), val: sysStatus?.running_farms || 0, color: '#22c55e' },
-          { label: L('idle'), val: sysStatus?.idle_farms || 0, color: '#64748b' },
-          { label: L('error'), val: sysStatus?.error_farms || 0, color: '#ef4444' },
-          { label: L('farmingDue'), val: sysStatus?.farming_due || 0, color: '#f59e0b' },
-          { label: L('dailyDue'), val: sysStatus?.daily_due || 0, color: '#3b82f6' },
-          { label: L('niflingQ'), val: sysStatus?.nifling_queued || 0, color: '#a855f7' },
-          { label: L('tasksToday'), val: sysStatus?.total_tasks_today || 0, color: '#14b8a6' },
-          { label: L('customers'), val: sysStatus?.total_customers || 0, color: '#ec4899' },
-        ].map((item, i) => (
-          <div key={i} style={s.stat(item.color)}>
-            <div style={s.statVal(item.color)}>{item.val}</div>
-            <div style={s.statLabel}>{item.label}</div>
+      {/* SERVER STATUS BANNER */}
+      <div style={{
+        background: isOnline ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)',
+        borderRadius: 14,
+        padding: '16px 20px',
+        border: `1px solid ${isOnline ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
+        marginBottom: 20,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 12,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 14, height: 14, borderRadius: '50%',
+            background: isOnline ? '#10b981' : '#ef4444',
+            boxShadow: isOnline ? '0 0 12px rgba(16,185,129,0.5)' : '0 0 12px rgba(239,68,68,0.5)',
+            animation: 'pulse 2s infinite',
+          }} />
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: isOnline ? '#10b981' : '#ef4444' }}>
+              {s.status}: {isOnline ? s.online : s.offline}
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+              {s.scheduler}: {isRunning ? s.running : s.stopped}
+              {isOnline && ` | cloud.vrbot.me â 65.109.214.187:8080`}
+            </div>
           </div>
-        ))}
-      </div>
-
-      {/* Current Batch */}
-      <div style={s.card}>
-        <div style={s.cardTitle}>📦 {L('batch')}</div>
-        {batch && batch.status !== 'idle' ? (
-          <>
-            <div style={s.progressBar}>
-              <div style={s.progressFill(batch.progress_percent || 0)} />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              {[
-                [L('batchNum'), `${batch.current_batch} / ${batch.total_batches}`],
-                [L('farmsInBatch'), batch.farms_in_batch],
-                [L('cycle'), batch.cycle_type?.toUpperCase()],
-                [L('status'), batch.status],
-                [L('elapsed'), fmtTime(batch.batch_elapsed_seconds || 0)],
-                [L('timeout'), fmtTime(batch.batch_timeout_seconds || 0)],
-                [L('progress'), `${batch.farms_completed || 0} ✓  ${batch.farms_failed || 0} ✗`],
-                [L('nextCycle'), fmtDate(batch.next_cycle_at)],
-              ].map(([label, val], i) => (
-                <div key={i} style={s.infoRow}>
-                  <span style={s.infoLabel}>{label}</span>
-                  <span style={s.infoVal}>{val}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
-            {L('idle')} — {L('off')}
+        </div>
+        {error && (
+          <div style={{ fontSize: 12, color: '#f87171', background: 'rgba(239,68,68,0.1)', padding: '6px 12px', borderRadius: 6 }}>
+            {s.error}: {error}
           </div>
         )}
       </div>
 
-      {/* Farm Heatmap */}
-      <div style={s.card}>
-        <div style={s.cardTitle}>🗺 {L('farms')} Heatmap ({farms.length})</div>
-        <div style={s.heatmap}>
-          {farms.map((farm, i) => (
-            <div
-              key={i}
-              style={s.heatCell(farm.status)}
-              title={`#${farm.farm_id} — ${farm.status} — ${farm.customer_id}`}
-            />
-          ))}
+      {/* STATS GRID */}
+      {isOnline && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 24, animation: 'fadeIn 0.3s ease' }}>
+          {statBox(s.totalFarms, serverStatus.total_farms, '#06b6d4', 'ð¾')}
+          {statBox(s.enabledFarms, serverStatus.enabled_farms, '#10b981', 'â')}
+          {statBox(s.runningFarms, serverStatus.running_farms, '#3b82f6', 'ð')}
+          {statBox(s.idleFarms, serverStatus.idle_farms, '#64748b', 'â¸ï¸')}
+          {statBox(s.errorFarms, serverStatus.error_farms, '#ef4444', 'â')}
+          {statBox(s.farmingDue, serverStatus.farming_due, '#f59e0b', 'ð')}
+          {statBox(s.dailyDue, serverStatus.daily_due, '#a78bfa', 'ð')}
+          {statBox(s.niflingQueued, serverStatus.nifling_queued, '#ec4899', 'â¡')}
+          {statBox(s.tasksToday, serverStatus.total_tasks_today, '#06b6d4', 'ð')}
+          {statBox(s.customers, serverStatus.total_customers, '#10b981', 'ð¥')}
+          {statBox(s.activeCustomers, serverStatus.active_customers, '#3b82f6', 'ð¢')}
         </div>
-        <div style={{ display: 'flex', gap: '16px', marginTop: '12px', fontSize: '12px' }}>
-          <span>🟢 {L('running')}</span>
-          <span>⬛ {L('idle')}</span>
-          <span>🔴 {L('error')}</span>
-        </div>
-      </div>
+      )}
 
-      {/* Farms Table */}
-      <div style={s.card}>
-        <div style={s.cardTitle}>📋 {L('farms')} ({farms.length})</div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={s.table}>
-            <thead>
-              <tr>
-                <th style={s.th}>{L('farmId')}</th>
-                <th style={s.th}>{L('customer')}</th>
-                <th style={s.th}>{L('status')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {farms.slice(0, 50).map((farm, i) => (
-                <tr key={i}>
-                  <td style={s.td}>{farm.farm_id}</td>
-                  <td style={s.td}>{farm.customer_id}</td>
-                  <td style={s.td}>
-                    <span style={s.badge(statusColor[farm.status] || '#64748b')}>{farm.status}</span>
-                  </td>
+      {/* FARMS TABLE */}
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700, color: '#fff' }}>ð¾ {s.farmsList}</h2>
+        {farms.length === 0 ? (
+          <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 12, padding: '32px', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.08)' }}>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>{s.noData}</div>
+          </div>
+        ) : (
+          <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  {['#', s.farmId, 'Name', 'Server', s.farmStatus, 'Cloud', 'Created'].map((h, i) => (
+                    <th key={i} style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', textAlign: 'left', fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {farms.map((f: any, i: number) => (
+                  <tr key={f.id || i} style={{ animation: `fadeIn ${0.1 + i * 0.03}s ease` }}>
+                    <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>{i + 1}</td>
+                    <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: 12, color: '#a78bfa', fontWeight: 600 }}>{f.cloud_farm_id || f.id?.substring(0, 8)}</td>
+                    <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: 13, color: '#fff', fontWeight: 600 }}>{f.name}</td>
+                    <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{f.server || '-'}</td>
+                    <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                      <span style={{
+                        display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                        color: farmStatusColor(f.cloud?.status || f.cloud_status || 'idle'),
+                        background: farmStatusColor(f.cloud?.status || f.cloud_status || 'idle') + '15',
+                      }}>
+                        {f.cloud?.status || f.cloud_status || 'idle'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                      {f.cloud?.online ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, color: '#10b981', background: 'rgba(16,185,129,0.15)' }}>
+                          âï¸ Connected
+                        </span>
+                      ) : f.cloud_status === 'provisioning' ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, color: '#f59e0b', background: 'rgba(245,158,11,0.15)' }}>
+                          â³ Provisioning
+                        </span>
+                      ) : f.cloud_status === 'cloud_error' ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, color: '#ef4444', background: 'rgba(239,68,68,0.15)' }}>
+                          â ï¸ Error
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>ð» Local</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>
+                      {f.created_at ? new Date(f.created_at).toLocaleDateString() : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )
