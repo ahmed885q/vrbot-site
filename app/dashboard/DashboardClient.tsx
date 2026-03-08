@@ -24,7 +24,7 @@ const tx: Record<Lang, Record<string, string>> = {
     cloudError: "خطأ في السحابة", local: "محلي", retryCloud: "إعادة ربط", cloudFarms: "مزارع سحابية",
   },
   en: {
-    title: "Dashboard", welcome: "Welcome", tokens: "Tokens", available: "Available", used: "Used", totalal",
+    title: "Dashboard", welcome: "Welcome", tokens: "Tokens", available: "Available", used: "Used", total: "total",
     trial: "Free Trial", trialExpires: "Expires", trialExpired: "Trial expired", buyMore: "Buy Farms",
     farms: "Farms", noFarms: "No farms yet", noFarmsDesc: "Add your first farm", addFarm: "Add Farm",
     farmName: "Farm name", farmServer: "Server (optional)", farmNotes: "Notes (optional)",
