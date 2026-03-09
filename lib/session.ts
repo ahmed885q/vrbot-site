@@ -11,7 +11,7 @@ export async function validateSession(): Promise<Session | null> {
   const token = cookies().get('admin_session')?.value
   if (!token) return null
 
-  const parts = token.split('.')
+  const parts = token.split('|')
   if (parts.length !== 3) return null
 
   const [email, timestamp, signature] = parts
