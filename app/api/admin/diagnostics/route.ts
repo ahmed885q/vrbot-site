@@ -24,7 +24,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const db = getDB();
   let hubHealth: any = null;
-  try { const r = await fetch(process.env.WS_HUB_HEALTH_URL || "http://65.109.213.9:8787/health", { signal: AbortSignal.timeout(5000) }); hubHealth = await r.json(); } catch (e: any) { hubHealth = { error: e.message, status: "offline" }; }
+  try { const r = await fetch(process.env.WS_HUB_HEALTH_URL || "http://65.109.214.187:8080/api/status", { signal: AbortSignal.timeout(5000) }); hubHealth = await r.json(); } catch (e: any) { hubHealth = { error: e.message, status: "offline" }; }
   const [farmsRes, tokensRes, subsRes, keysRes, settingsRes, usersRes] = await Promise.all([
     db.from("user_farms").select("id, user_id, name, server, bot_enabled, bot_status, created_at, last_bot_activity"),
     db.from("tokens").select("user_id, tokens_total, tokens_used, trial_granted, trial_expires_at, updated_at"),
