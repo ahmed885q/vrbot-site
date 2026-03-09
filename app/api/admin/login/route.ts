@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     .update(email + timestamp)
     .digest('hex')
 
-  const token = `${email}.${timestamp}.${signature}`
+  const token = `${email}|${timestamp}|${signature}`
 
   cookies().set({
     name: 'admin_session',
