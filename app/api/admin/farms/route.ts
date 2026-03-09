@@ -5,11 +5,11 @@ import crypto from "crypto";
 import { supabaseService } from "@/lib/supabase/server";
 import { provisionFarms } from "@/lib/orchestrator";
 
-// --- Admin session verification ---
+// --h- Admin session verification ---
 function verifyAdmin(): { valid: boolean; email?: string } {
   const cookie = cookies().get("admin_session")?.value;
   if (!cookie) return { valid: false };
-  const [email, timestamp, signature] = cookie.split(".");
+  const [email, timestamp, signature] = cookie.split("|");
   if (!email || !timestamp || !signature) return { valid: false };
   const secret = process.env.ADMIN_SESSION_SECRET;
   if (!secret) return { valid: false };
