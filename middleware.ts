@@ -1,11 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 
 const PROTECTED_ROUTES = [
   '/dashboard',
-  '/dashboard',
   '/billing',
-  '/dashboard',
   '/admin',
 ]
 
@@ -34,18 +33,61 @@ function getIp(req: NextRequest) {
   return '0.0.0.0'
 }
 
+function getAdminEmails(): string[] {
+  return (process.env.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+}
+
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
+
   if (isExcluded(pathname)) return NextResponse.next()
 
   if (isProtectedRoute(pathname)) {
-    const supabaseAuthToken = req.cookies.get('sb-xmanyfpojzkjlwatkrcc-auth-token')?.value
-      || req.cookies.get('sb-xmanyfpojzkjlwatkrcc-auth-token.0')?.value
+    const supabaseAuthToken =
+      req.cookies.get('sb-xmanyfpojzkjlwatkrcc-auth-token')?.value ||
+      req.cookies.get('sb-xmanyfpojzkjlwatkrcc-auth-token.0')?.value
 
     if (!supabaseAuthToken) {
       const loginUrl = new URL('/login', req.url)
       loginUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(loginUrl)
+    }
+
+    // Admin route protection: verify user is admin by email
+    if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+      try {
+        const res = NextResponse.next()
+        const supabase = createServerClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          {
+            cookies: {
+              getAll() { return req.cookies.getAll() },
+              setAll(cookiesToSet) {
+                cookiesToSet.forEach(({ name, value, options }) => {
+                  res.cookies.set(name, value, options)
+                })
+              },
+            },
+          }
+        )
+        const { data } = await supabase.auth.getUser()
+        const user = data.user
+        if (!user) {
+          return NextResponse.redirect(new URL('/login', req.url))
+        }
+        const admins = getAdminEmails()
+        const isAdmin = !!user.email && admins.includes(user.email.toLowerCase())
+        if (!isAdmin) {
+          return NextResponse.redirect(new URL('/dashboard', req.url))
+        }
+        return res
+      } catch {
+        return NextResponse.redirect(new URL('/dashboard', req.url))
+      }
     }
   }
 
