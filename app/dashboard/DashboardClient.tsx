@@ -46,6 +46,7 @@ const TASK_GROUPS = [
   { key: "alliance", icon: "🏰", color: "#8b5cf6", tasks: ["Tribe Tech", "Tribe Gifts", "Alliance Help", "Send Gifts"] },
   { key: "daily", icon: "📋", color: "#f59e0b", tasks: ["Mail Rewards", "Hall of Valor", "Prosperity", "Quest Rewards"] },
   { key: "upgrade", icon: "🔨", color: "#3b82f6", tasks: ["Building Upgrade", "Train Troops", "Research Tech", "Heal Wounded"] },
+    { id: 'transfer', icon: '📦', color: '#06b6d4', tasks: ['Send Food', 'Send Wood', 'Send Stone', 'Send Gold', 'Send All Resources'] },
 ];
 
 export default function DashboardClient() {
@@ -75,6 +76,7 @@ export default function DashboardClient() {
   const [cloudOnline, setCloudOnline] = useState(false);
   const [cloudStatus, setCloudStatus] = useState<any>(null);
   const [loadingCloud, setLoadingCloud] = useState(true);
+  const [transferRecipient, setTransferRecipient] = useState('');
 
   const s = tx[lang];
   const isRtl = lang === "ar";
@@ -421,6 +423,19 @@ export default function DashboardClient() {
                 </div>
               ))}
             </div>
+              {Object.keys(selectedTasks).some(t => t.startsWith('Send ')) && (
+                <div style={{ marginTop: 12, padding: '12px 16px', background: '#1e293b', borderRadius: 10, border: '1px solid #06b6d4' }}>
+                  <div style={{ fontSize: 13, color: '#06b6d4', marginBottom: 8, fontWeight: 600 }}>📦 {lang === 'ar' ? 'إرسال الموارد' : 'Send Resources To'}</div>
+                  <input
+                    type="text"
+                    value={transferRecipient}
+                    onChange={e => setTransferRecipient(e.target.value)}
+                    placeholder={lang === 'ar' ? 'اسم اللاعب المستلم' : 'Recipient player name'}
+                    style={{ width: '100%', padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: 8, color: '#e2e8f0', fontSize: 13, outline: 'none' }}
+                  />
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 6 }}>{lang === 'ar' ? 'سيتم إرسال الموارد عبر الإرسال داخل اللعبة' : 'Resources will be sent via in-game transfer'}</div>
+                </div>
+              )}
             {/* BULK ACTION BAR */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
               <button onClick={handleRunSelected} disabled={selectedTasks.size === 0} style={{ padding: "10px 20px", background: selectedTasks.size > 0 ? "linear-gradient(135deg, #10b981, #059669)" : "rgba(255,255,255,0.04)", color: selectedTasks.size > 0 ? "#fff" : "rgba(255,255,255,0.3)", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: selectedTasks.size > 0 ? "pointer" : "not-allowed" }}>
