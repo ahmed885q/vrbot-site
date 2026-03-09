@@ -516,10 +516,10 @@ export default function DiagnosticsPage() {
                     <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>{setting.desc}</div>
                   </div>
                   <button
-                    style={S.btn(data?.protection?.[setting.key] ? '#22c55e' : '#374151', '#fff')}
-                    onClick={() => doAction('toggle_protection', { key: setting.key, value: !data?.protection?.[setting.key] })}
+                    style={S.btn(data?.antiDetection?.[setting.key] ? '#22c55e' : '#374151', '#fff')}
+                    onClick={() => doAction('save_protection', { settings: { [setting.key]: !data?.antiDetection?.[setting.key] } })}
                   >
-                    {data?.protection?.[setting.key] ? 'ON' : 'OFF'}
+                    {data?.antiDetection?.[setting.key] ? 'ON' : 'OFF'}
                   </button>
                 </div>
               ))}
