@@ -124,10 +124,12 @@ function formatUptime(seconds: number): string {
 export default function AgentConfigPanel({
   userId,
   lang = "ar",
+  isAdmin = false,
   sendCommand,
 }: {
   userId: string;
   lang?: string;
+  isAdmin?: boolean;
   sendCommand?: (cmd: string, params?: Record<string, any>) => boolean;
 }) {
   const isRtl = lang === "ar";
@@ -435,8 +437,8 @@ export default function AgentConfigPanel({
 
   return (
     <div style={s.container} dir={isRtl ? "rtl" : "ltr"}>
-      {/* ─── Agents Section ─── */}
-      <div style={s.section}>
+      {/* ─── Agents Section (Admin Only) ─── */}
+      {isAdmin && <div style={s.section}>
         <div style={s.sectionTitle}>
           <span>🤖</span> {t.agents[lang]}
           <span style={{ ...s.meta, marginInlineStart: "auto" }}>
@@ -704,10 +706,10 @@ export default function AgentConfigPanel({
             </div>
           ))
         )}
-      </div>
+      </div>}
 
-      {/* ─── Tokens Section ─── */}
-      <div style={s.section}>
+      {/* ─── Tokens Section (Admin Only) ─── */}
+      {isAdmin && <div style={s.section}>
         <div style={s.sectionTitle}>
           <span>🔑</span> {t.tokens[lang]}
         </div>
@@ -763,7 +765,7 @@ export default function AgentConfigPanel({
             + {t.generateToken[lang]}
           </button>
         </div>
-      </div>
+      </div>}
 
       <style>{`
         @keyframes pulse {
