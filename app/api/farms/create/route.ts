@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseService } from "@/lib/supabase/server";
 import { provisionFarms } from "@/lib/orchestrator";
+import crypto from "crypto";
 
 export async function POST(req: Request) {
   const cookieStore = cookies();
@@ -89,6 +90,42 @@ export async function POST(req: Request) {
       { onConflict: "farm_id" }
     );
 
+  // --- AUTO-CREATE AGENT + TOKEN ---
+  const agentId = `farm-${farm.id}`;
+  const agentToken = `vrbot_${crypto.randomBytes(32).toString("hex")}`;
+  let agentInfo: any = null;
+
+  try {
+    // 1. Create agent record in DB
+    await service.rpc("upsert_agent_status", {
+      p_user_id: user.id,
+      p_agent_id: agentId,
+      p_device_id: name,
+      p_status: "offline",
+      p_bot_state: "STOPPED",
+    });
+
+    // 2. Create auth token linked to this farm
+    await service.from("agent_tokens").insert({
+      user_id: user.id,
+      token: agentToken,
+      label: `auto:${name}`,
+      is_active: true,
+    });
+
+    // 3. Link agent to farm in config
+    await service
+      .from("agents")
+      .update({ config: { farm_id: farm.id, farm_name: name, auto_created: true } })
+      .eq("user_id", user.id)
+      .eq("agent_id", agentId);
+
+    agentInfo = { agent_id: agentId, token: agentToken };
+  } catch (agentErr: any) {
+    console.error("Auto-create agent/token error:", agentErr?.message);
+    // Non-blocking — farm was created, agent can be set up manually
+  }
+
   // --- PROVISION ON CLOUD (async, non-blocking) ---
   let cloudResult: any = null;
   if (cloudEnabled) {
@@ -100,6 +137,12 @@ export async function POST(req: Request) {
         farmCount: 1,
         nifling: false,
         orderId: `dashboard-${farm.id}-${Date.now()}`,
+        // Pass agent credentials to inject into cloud container env
+        ...(agentInfo ? {
+          agentUserId: user.id,
+          agentToken: agentToken,
+          agentId: agentId,
+        } : {}),
       });
 
       // Update farm with cloud info
@@ -133,5 +176,6 @@ export async function POST(req: Request) {
     farm,
     tokens_remaining: tokenResult.remaining,
     cloud: cloudResult,
+    agent: agentInfo,
   });
 }
