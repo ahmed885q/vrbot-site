@@ -184,6 +184,10 @@ export async function provisionFarms(params: {
   farmCount: number;
   nifling?: boolean;
   orderId: string;
+  // Agent credentials to inject into cloud container env
+  agentUserId?: string;
+  agentToken?: string;
+  agentId?: string;
 }): Promise<{ success: boolean; job_id: string; customer_id: string }> {
   return orchFetch("/api/webhook/order", {
     method: "POST",
@@ -195,6 +199,12 @@ export async function provisionFarms(params: {
       farm_count: params.farmCount,
       nifling: params.nifling || false,
       order_id: params.orderId,
+      // Pass agent credentials for container env injection
+      ...(params.agentUserId ? {
+        agent_user_id: params.agentUserId,
+        agent_token: params.agentToken,
+        agent_id: params.agentId,
+      } : {}),
     }),
   });
 }
