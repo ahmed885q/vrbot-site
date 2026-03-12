@@ -19,6 +19,47 @@ export type HubMessage = {
   [key: string]: any;
 };
 
+// ── Agent Live Status (from BotStateManager) ──
+export type AgentLiveStatus = {
+  state: string; // STOPPED, STARTING, RUNNING, PAUSED, CAPTCHA_WAIT, ERROR_RECOVERY, SHUTTING_DOWN
+  current_task: string;
+  task_state: string;
+  cycle: number;
+  total_ok: number;
+  total_fail: number;
+  total_skip: number;
+  uptime_seconds: number;
+  game_restarts: number;
+  captchas_detected: number;
+  last_error: string;
+  last_updated: number;
+};
+
+// ── Alert from agent ──
+export type AgentAlert = {
+  alert_type: string; // task_final_failure, captcha, error_recovery
+  message: string;
+  task?: string;
+  error?: string;
+  recovered?: boolean;
+  timestamp: number;
+};
+
+const EMPTY_STATUS: AgentLiveStatus = {
+  state: "OFFLINE",
+  current_task: "",
+  task_state: "",
+  cycle: 0,
+  total_ok: 0,
+  total_fail: 0,
+  total_skip: 0,
+  uptime_seconds: 0,
+  game_restarts: 0,
+  captchas_detected: 0,
+  last_error: "",
+  last_updated: 0,
+};
+
 type UseHubOptions = {
   userId: string;
   onMessage?: (msg: HubMessage) => void;
@@ -29,6 +70,8 @@ export function useHub({ userId, onMessage, autoConnect = true }: UseHubOptions)
   const [connected, setConnected] = useState(false);
   const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [logs, setLogs] = useState<HubMessage[]>([]);
+  const [agentStatus, setAgentStatus] = useState<AgentLiveStatus>(EMPTY_STATUS);
+  const [alerts, setAlerts] = useState<AgentAlert[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
   const onMessageRef = useRef(onMessage);
@@ -36,6 +79,10 @@ export function useHub({ userId, onMessage, autoConnect = true }: UseHubOptions)
 
   const addLog = useCallback((msg: HubMessage) => {
     setLogs((prev) => [...prev.slice(-99), msg]); // Keep last 100
+  }, []);
+
+  const addAlert = useCallback((alert: AgentAlert) => {
+    setAlerts((prev) => [...prev.slice(-49), alert]); // Keep last 50
   }, []);
 
   const connect = useCallback(() => {
@@ -86,13 +133,61 @@ export function useHub({ userId, onMessage, autoConnect = true }: UseHubOptions)
               setAgents((prev) =>
                 prev.filter((a) => a.clientId !== msg.agentId)
               );
+              setAgentStatus(EMPTY_STATUS);
               addLog(msg);
+              break;
+
+            // ── NEW: Agent live status from BotStateManager ──
+            case "agent_status":
+              if (msg.payload) {
+                setAgentStatus({
+                  state: msg.payload.state || "UNKNOWN",
+                  current_task: msg.payload.current_task || "",
+                  task_state: msg.payload.task_state || "",
+                  cycle: msg.payload.cycle || 0,
+                  total_ok: msg.payload.total_ok || 0,
+                  total_fail: msg.payload.total_fail || 0,
+                  total_skip: msg.payload.total_skip || 0,
+                  uptime_seconds: msg.payload.uptime_seconds || 0,
+                  game_restarts: msg.payload.game_restarts || 0,
+                  captchas_detected: msg.payload.captchas_detected || 0,
+                  last_error: msg.payload.last_error || "",
+                  last_updated: Date.now(),
+                });
+              }
+              addLog(msg);
+              break;
+
+            // ── NEW: Agent heartbeat (periodic status snapshot) ──
+            case "agent_heartbeat":
+              if (msg.payload?.state) {
+                setAgentStatus((prev) => ({
+                  ...prev,
+                  ...msg.payload,
+                  last_updated: Date.now(),
+                }));
+              }
+              break;
+
+            // ── NEW: Agent alerts (errors, captchas, failures) ──
+            case "agent_alert":
+              if (msg.payload) {
+                const alert: AgentAlert = {
+                  alert_type: msg.payload.alert_type || "unknown",
+                  message: msg.payload.message || "",
+                  task: msg.payload.task,
+                  error: msg.payload.error,
+                  recovered: msg.payload.recovered,
+                  timestamp: msg.timestamp || Date.now(),
+                };
+                addAlert(alert);
+                addLog(msg);
+              }
               break;
 
             case "task_status":
             case "task_complete":
             case "task_error":
-            case "agent_status":
             case "log":
               addLog(msg);
               break;
@@ -125,7 +220,7 @@ export function useHub({ userId, onMessage, autoConnect = true }: UseHubOptions)
         ws.close();
       };
     } catch {}
-  }, [userId, addLog]);
+  }, [userId, addLog, addAlert]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimer.current) {
@@ -168,6 +263,26 @@ export function useHub({ userId, onMessage, autoConnect = true }: UseHubOptions)
     return true;
   }, [addLog]);
 
+  // Send pause/resume commands
+  const sendCommand = useCallback((command: string, params?: Record<string, any>) => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return false;
+    wsRef.current.send(JSON.stringify({
+      type: command,
+      ...(params || {}),
+    }));
+    addLog({
+      type: "command",
+      payload: { text: command, ...params },
+      timestamp: Date.now(),
+    });
+    return true;
+  }, [addLog]);
+
+  // Clear alerts
+  const clearAlerts = useCallback(() => {
+    setAlerts([]);
+  }, []);
+
   // Ping every 30s
   useEffect(() => {
     const interval = setInterval(() => {
@@ -190,9 +305,13 @@ export function useHub({ userId, onMessage, autoConnect = true }: UseHubOptions)
     connected,
     agents,
     logs,
+    agentStatus,
+    alerts,
     connect,
     disconnect,
     runTasks,
     stopTasks,
+    sendCommand,
+    clearAlerts,
   };
 }

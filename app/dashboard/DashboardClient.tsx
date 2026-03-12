@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createSupabaseBrowserClient } from "../../lib/supabase/client";
 import { useHub, type HubMessage } from "../../lib/useHub";
+import LiveMonitor from "./LiveMonitor";
 
 type Lang = "ar" | "en";
 type TokenInfo = { tokens_total: number; tokens_used: number; tokens_available: number; trial_granted: boolean; trial_expired: boolean; trial_expires_at?: string };
@@ -94,11 +95,25 @@ export default function DashboardClient() {
       if (m.type === "task_error" && m.payload?.farmId) {
         setFarmStatuses(prev => ({ ...prev, [m.payload.farmId]: { status: "error", task: m.payload.error, updated: Date.now() } }));
       }
+      // Update farm status from agent_status (BotStateManager)
+      if (m.type === "agent_status" && m.payload) {
+        const state = m.payload.state;
+        const task = m.payload.current_task;
+        if (state === "RUNNING" && task) {
+          // Mark all checked farms as running
+          setFarmStatuses(prev => {
+            const next = { ...prev };
+            // Update a virtual "global" status so we know the agent is active
+            next["__agent__"] = { status: state.toLowerCase(), task, updated: Date.now() };
+            return next;
+          });
+        }
+      }
     }, []),
     autoConnect: !!user?.id,
   });
 
-  const { connected, agents, logs, runTasks, stopTasks } = hubData;
+  const { connected, agents, logs, agentStatus, alerts, runTasks, stopTasks, sendCommand, clearAlerts } = hubData;
   const agentOnline = connected && agents.length > 0;
 
   useEffect(() => {
@@ -391,6 +406,15 @@ export default function DashboardClient() {
         )}
 
         {msg && <div style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 10, padding: "10px 16px", marginBottom: 16, color: "#34d399", fontSize: 13, fontWeight: 600 }}>{msg}</div>}
+
+        {/* LIVE MONITOR — real-time agent state, stats, alerts */}
+        <LiveMonitor
+          agentStatus={agentStatus}
+          alerts={alerts}
+          onClearAlerts={clearAlerts}
+          lang={lang}
+          agentOnline={agentOnline}
+        />
 
         {/* AGENT STATUS + TASK SELECTOR */}
         {agentOnline && (
