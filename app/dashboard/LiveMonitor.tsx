@@ -62,6 +62,9 @@ const STATE_CONFIG: Record<string, { color: string; icon: string; label_ar: stri
   SHUTTING_DOWN:  { color: "#64748b", icon: "⏹", label_ar: "يُغلق",     label_en: "Shutting Down" },
   STOPPED:        { color: "#64748b", icon: "⏹", label_ar: "متوقف",     label_en: "Stopped" },
   OFFLINE:        { color: "#475569", icon: "●", label_ar: "غير متصل",  label_en: "Offline" },
+  FATAL_ERROR:    { color: "#dc2626", icon: "💀", label_ar: "خطأ قاتل",   label_en: "Fatal Error" },
+  UNRESPONSIVE:   { color: "#d97706", icon: "⚠",  label_ar: "لا يستجيب",  label_en: "Unresponsive" },
+  DISCONNECTED:   { color: "#475569", icon: "⛔", label_ar: "غير متصل",  label_en: "Disconnected" },
 };
 
 function formatUptime(seconds: number): string {

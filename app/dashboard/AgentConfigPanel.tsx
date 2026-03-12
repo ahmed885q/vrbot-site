@@ -74,6 +74,18 @@ const t: Record<string, Record<string, string>> = {
   active: { ar: "نشط", en: "Active" },
   revoked: { ar: "ملغي", en: "Revoked" },
   lastUsed: { ar: "آخر استخدام", en: "Last Used" },
+  farmId: { ar: "معرّف المزرعة", en: "Farm ID" },
+  farmName: { ar: "اسم المزرعة", en: "Farm Name" },
+  tasksEnabled: { ar: "المهام المفعلة", en: "Tasks Enabled" },
+  cycleDelayMin: { ar: "الحد الأدنى للتأخير", en: "Cycle Delay Min" },
+  cycleDelayMax: { ar: "الحد الأقصى للتأخير", en: "Cycle Delay Max" },
+  breakEvery: { ar: "فترة راحة كل", en: "Break Every" },
+  breakDurationMin: { ar: "الحد الأدنى لمدة الراحة", en: "Break Duration Min" },
+  breakDurationMax: { ar: "الحد الأقصى لمدة الراحة", en: "Break Duration Max" },
+  antiDetection: { ar: "تجنب الكشف", en: "Anti Detection" },
+  autoRestart: { ar: "إعادة تشغيل تلقائية", en: "Auto Restart" },
+  advancedJson: { ar: "JSON متقدم", en: "Advanced JSON" },
+  readOnly: { ar: "للقراءة فقط", en: "Read Only" },
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -127,6 +139,8 @@ export default function AgentConfigPanel({
   const [configMsg, setConfigMsg] = useState("");
   const [tokenLabel, setTokenLabel] = useState("default");
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [useAdvancedJson, setUseAdvancedJson] = useState(false);
+  const [configForm, setConfigForm] = useState<Record<string, any>>({});
 
   // Fetch agents
   const fetchAgents = useCallback(async () => {
@@ -195,7 +209,23 @@ export default function AgentConfigPanel({
   // Save config
   const handleSaveConfig = async (agentId: string) => {
     try {
-      const parsed = JSON.parse(configDraft);
+      let parsed: Record<string, any>;
+      if (useAdvancedJson) {
+        parsed = JSON.parse(configDraft);
+      } else {
+        // Build from form
+        parsed = {
+          farm_name: configForm.farm_name || "",
+          tasks_enabled: configForm.tasks_enabled || [],
+          cycle_delay_min: configForm.cycle_delay_min || 0,
+          cycle_delay_max: configForm.cycle_delay_max || 0,
+          break_every: configForm.break_every || 0,
+          break_duration_min: configForm.break_duration_min || 0,
+          break_duration_max: configForm.break_duration_max || 0,
+          anti_detection: configForm.anti_detection || false,
+          auto_restart: configForm.auto_restart || false,
+        };
+      }
       // Send config update via WebSocket
       if (sendCommand) {
         sendCommand("update_config", { agent_id: agentId, config: parsed });
@@ -503,6 +533,8 @@ export default function AgentConfigPanel({
                       setConfigDraft(
                         JSON.stringify(agent.config || {}, null, 2)
                       );
+                      setConfigForm(agent.config || {});
+                      setUseAdvancedJson(false);
                       setConfigMsg("");
                     }
                   }}
@@ -516,12 +548,148 @@ export default function AgentConfigPanel({
               {/* Config Editor */}
               {editingAgent === agent.agent_id && (
                 <div style={{ marginTop: "12px" }}>
-                  <textarea
-                    style={s.configEditor}
-                    value={configDraft}
-                    onChange={(e) => setConfigDraft(e.target.value)}
-                    spellCheck={false}
-                  />
+                  {/* Toggle for Advanced JSON */}
+                  <div style={{ marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <input
+                      type="checkbox"
+                      checked={useAdvancedJson}
+                      onChange={(e) => {
+                        setUseAdvancedJson(e.target.checked);
+                        if (!e.target.checked) {
+                          setConfigForm(agent.config || {});
+                        } else {
+                          setConfigDraft(JSON.stringify(agent.config || {}, null, 2));
+                        }
+                      }}
+                      style={{ cursor: "pointer" }}
+                    />
+                    <label style={{ fontSize: "12px", color: "#e2e8f0", cursor: "pointer" }}>
+                      {t.advancedJson[lang]}
+                    </label>
+                  </div>
+
+                  {useAdvancedJson ? (
+                    <>
+                      <textarea
+                        style={s.configEditor}
+                        value={configDraft}
+                        onChange={(e) => setConfigDraft(e.target.value)}
+                        spellCheck={false}
+                      />
+                    </>
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                      {/* Farm ID - readonly */}
+                      <div>
+                        <label style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+                          {t.farmId[lang]} ({t.readOnly[lang]})
+                        </label>
+                        <input
+                          type="text"
+                          value={agent.agent_id}
+                          disabled
+                          style={{ ...s.input, opacity: 0.5, cursor: "not-allowed" }}
+                        />
+                      </div>
+                      {/* Farm Name */}
+                      <div>
+                        <label style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+                          {t.farmName[lang]}
+                        </label>
+                        <input
+                          type="text"
+                          value={configForm.farm_name || ""}
+                          onChange={(e) => setConfigForm({ ...configForm, farm_name: e.target.value })}
+                          style={s.input}
+                        />
+                      </div>
+                      {/* Cycle Delay Min */}
+                      <div>
+                        <label style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+                          {t.cycleDelayMin[lang]}
+                        </label>
+                        <input
+                          type="number"
+                          value={configForm.cycle_delay_min || 0}
+                          onChange={(e) => setConfigForm({ ...configForm, cycle_delay_min: parseInt(e.target.value) || 0 })}
+                          style={s.input}
+                        />
+                      </div>
+                      {/* Cycle Delay Max */}
+                      <div>
+                        <label style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+                          {t.cycleDelayMax[lang]}
+                        </label>
+                        <input
+                          type="number"
+                          value={configForm.cycle_delay_max || 0}
+                          onChange={(e) => setConfigForm({ ...configForm, cycle_delay_max: parseInt(e.target.value) || 0 })}
+                          style={s.input}
+                        />
+                      </div>
+                      {/* Break Every */}
+                      <div>
+                        <label style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+                          {t.breakEvery[lang]}
+                        </label>
+                        <input
+                          type="number"
+                          value={configForm.break_every || 0}
+                          onChange={(e) => setConfigForm({ ...configForm, break_every: parseInt(e.target.value) || 0 })}
+                          style={s.input}
+                        />
+                      </div>
+                      {/* Break Duration Min */}
+                      <div>
+                        <label style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+                          {t.breakDurationMin[lang]}
+                        </label>
+                        <input
+                          type="number"
+                          value={configForm.break_duration_min || 0}
+                          onChange={(e) => setConfigForm({ ...configForm, break_duration_min: parseInt(e.target.value) || 0 })}
+                          style={s.input}
+                        />
+                      </div>
+                      {/* Break Duration Max */}
+                      <div>
+                        <label style={{ fontSize: "11px", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+                          {t.breakDurationMax[lang]}
+                        </label>
+                        <input
+                          type="number"
+                          value={configForm.break_duration_max || 0}
+                          onChange={(e) => setConfigForm({ ...configForm, break_duration_max: parseInt(e.target.value) || 0 })}
+                          style={s.input}
+                        />
+                      </div>
+                      {/* Anti Detection - Toggle */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingTop: "20px" }}>
+                        <input
+                          type="checkbox"
+                          checked={configForm.anti_detection || false}
+                          onChange={(e) => setConfigForm({ ...configForm, anti_detection: e.target.checked })}
+                          style={{ cursor: "pointer" }}
+                        />
+                        <label style={{ fontSize: "12px", color: "#e2e8f0", cursor: "pointer" }}>
+                          {t.antiDetection[lang]}
+                        </label>
+                      </div>
+                      {/* Auto Restart - Toggle */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingTop: "20px" }}>
+                        <input
+                          type="checkbox"
+                          checked={configForm.auto_restart || false}
+                          onChange={(e) => setConfigForm({ ...configForm, auto_restart: e.target.checked })}
+                          style={{ cursor: "pointer" }}
+                        />
+                        <label style={{ fontSize: "12px", color: "#e2e8f0", cursor: "pointer" }}>
+                          {t.autoRestart[lang]}
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
                   <div style={s.btnRow}>
                     <button
                       style={s.btn("#10b981")}
