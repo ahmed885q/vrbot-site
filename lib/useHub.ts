@@ -74,6 +74,7 @@ export function useHub({ userId, onMessage, autoConnect = true }: UseHubOptions)
   const [alerts, setAlerts] = useState<AgentAlert[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
+  const lastPongRef = useRef<number>(Date.now());
   const onMessageRef = useRef(onMessage);
   onMessageRef.current = onMessage;
 
@@ -110,6 +111,7 @@ export function useHub({ userId, onMessage, autoConnect = true }: UseHubOptions)
           switch (msg.type) {
             case "auth_ok":
               setConnected(true);
+              lastPongRef.current = Date.now();
               addLog({ type: "system", payload: { text: "Connected to Hub" } });
               break;
 
@@ -198,6 +200,10 @@ export function useHub({ userId, onMessage, autoConnect = true }: UseHubOptions)
 
             case "error":
               addLog({ type: "error", payload: { text: msg.message } });
+              break;
+
+            case "pong":
+              lastPongRef.current = Date.now();
               break;
           }
 
@@ -292,6 +298,24 @@ export function useHub({ userId, onMessage, autoConnect = true }: UseHubOptions)
     }, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Stale agent detection — mark offline if no pong for 90s
+  useEffect(() => {
+    const staleCheck = setInterval(() => {
+      if (connected && agents.length > 0) {
+        const elapsed = Date.now() - lastPongRef.current;
+        if (elapsed > 90000) {
+          // No pong for 90s — agent likely disconnected
+          setAgentStatus((prev) => ({
+            ...prev,
+            state: prev.state === "OFFLINE" ? "OFFLINE" : "UNRESPONSIVE",
+            last_updated: Date.now(),
+          }));
+        }
+      }
+    }, 15000); // Check every 15s
+    return () => clearInterval(staleCheck);
+  }, [connected, agents.length]);
 
   // Auto connect
   useEffect(() => {
