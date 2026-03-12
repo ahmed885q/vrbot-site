@@ -56,6 +56,7 @@ export default function DashboardClient() {
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [tokens, setTokens] = useState<TokenInfo | null>(null);
   const [loadingTokens, setLoadingTokens] = useState(true);
   const [farms, setFarms] = useState<Farm[]>([]);
@@ -125,7 +126,16 @@ export default function DashboardClient() {
   useEffect(() => {
     if (!mounted) return;
     const sb = createSupabaseBrowserClient();
-    sb.auth.getUser().then(({ data }) => { setUser(data.user); setLoadingUser(false); });
+    sb.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      setLoadingUser(false);
+      // Check admin status
+      if (data.user?.email) {
+        fetch("/api/admin/check").then(r => r.ok ? r.json() : null).then(d => {
+          if (d?.isAdmin) setIsAdmin(true);
+        }).catch(() => {});
+      }
+    });
   }, [mounted]);
 
   const loadTokens = useCallback(async () => {
@@ -422,6 +432,7 @@ export default function DashboardClient() {
           <AgentConfigPanel
             userId={user.id}
             lang={lang}
+            isAdmin={isAdmin}
             sendCommand={sendCommand}
           />
         )}
