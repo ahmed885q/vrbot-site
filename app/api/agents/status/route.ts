@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       bot_state, current_task, cycle,
       total_ok, total_fail, total_skip,
       uptime_seconds, game_restarts, captchas_detected,
-      last_error, ip_address,
+      last_error, ip_address, config,
     } = body;
 
     if (!user_id || !agent_id) {
@@ -49,6 +49,15 @@ export async function POST(req: NextRequest) {
     if (error) {
       console.error("upsert_agent_status error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Update config jsonb separately if provided
+    if (config && typeof config === "object" && data) {
+      await supabaseAdmin
+        .from("agents")
+        .update({ config })
+        .eq("user_id", user_id)
+        .eq("agent_id", agent_id);
     }
 
     return NextResponse.json({ ok: true, agent_db_id: data });

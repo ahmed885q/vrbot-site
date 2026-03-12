@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { createSupabaseBrowserClient } from "../../lib/supabase/client";
 import { useHub, type HubMessage } from "../../lib/useHub";
 import LiveMonitor from "./LiveMonitor";
+import AgentConfigPanel from "./AgentConfigPanel";
 
 type Lang = "ar" | "en";
 type TokenInfo = { tokens_total: number; tokens_used: number; tokens_available: number; trial_granted: boolean; trial_expired: boolean; trial_expires_at?: string };
@@ -415,6 +416,15 @@ export default function DashboardClient() {
           lang={lang}
           agentOnline={agentOnline}
         />
+
+        {/* AGENT CONFIG PANEL — manage agents & tokens */}
+        {user && (
+          <AgentConfigPanel
+            userId={user.id}
+            lang={lang}
+            sendCommand={sendCommand}
+          />
+        )}
 
         {/* AGENT STATUS + TASK SELECTOR */}
         {agentOnline && (
