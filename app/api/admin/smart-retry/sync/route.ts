@@ -47,6 +47,18 @@ export async function POST(req: NextRequest) {
 
       if (error) {
         console.error(`Batch ${i} error:`, error.message)
+        // Return error details on first failure for debugging
+        if (errors === 0) {
+          return NextResponse.json({
+            status: 'error',
+            debug_error: error.message,
+            debug_code: error.code,
+            debug_details: error.details,
+            debug_hint: error.hint,
+            batch_index: i,
+            sample_row: batch[0],
+          })
+        }
         errors += batch.length
       } else {
         upserted += batch.length
