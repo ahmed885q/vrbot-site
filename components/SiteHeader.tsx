@@ -12,11 +12,11 @@ const langConfig: Record<Language, { name: string; flag: string; dir: 'rtl' | 'l
   zh: { name: '中文', flag: '🇨🇳', dir: 'ltr' },
 };
 
-const navText: Record<Language, { farms: string; billing: string; download: string; dashboard: string; chat: string; cloud: string }> = {
-  ar: { farms: '🌾 المزارع', billing: '💳 الدفع', download: '⬇️ تحميل', dashboard: '🎮 الداشبورد', chat: '💬 الشات', cloud: '☁️ Cloud' },
-  en: { farms: '🌾 Farms', billing: '💳 Billing', download: '⬇️ Download', dashboard: '🎮 Dashboard', chat: '💬 Chat', cloud: '☁️ Cloud' },
-  ru: { farms: '🌾 Фермы', billing: '💳 Оплата', download: '⬇️ Скачать', dashboard: '🎮 Панель', chat: '💬 Чат', cloud: '☁️ Cloud' },
-  zh: { farms: '🌾 农场', billing: '💳 付款', download: '⬇️ 下载', dashboard: '🎮 面板', chat: '💬 聊天', cloud: '☁️ Cloud' },
+const navText: Record<Language, { farms: string; billing: string; download: string; dashboard: string; live: string; notifications: string; chat: string; cloud: string }> = {
+  ar: { farms: '🌾 المزارع', billing: '💳 الدفع', download: '⬇️ تحميل', dashboard: '🎮 الداشبورد', live: '📺 Live', notifications: '🔔 إشعارات', chat: '💬 الشات', cloud: '☁️ Cloud' },
+  en: { farms: '🌾 Farms', billing: '💳 Billing', download: '⬇️ Download', dashboard: '🎮 Dashboard', live: '📺 Live', notifications: '🔔 Notifications', chat: '💬 Chat', cloud: '☁️ Cloud' },
+  ru: { farms: '🌾 Фермы', billing: '💳 Оплата', download: '⬇️ Скачать', dashboard: '🎮 Панель', live: '📺 Live', notifications: '🔔 Уведомления', chat: '💬 Чат', cloud: '☁️ Cloud' },
+  zh: { farms: '🌾 农场', billing: '💳 付款', download: '⬇️ 下载', dashboard: '🎮 面板', live: '📺 Live', notifications: '🔔 通知', chat: '💬 聊天', cloud: '☁️ Cloud' },
 };
 
 export default function SiteHeader() {
@@ -90,6 +90,8 @@ export default function SiteHeader() {
         <a href="/billing"   style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.billing}</a>
         <a href="/download"  style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.download}</a>
         <a href="/dashboard" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.dashboard}</a>
+        <a href="/dashboard/live" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.live}</a>
+        <a href="/dashboard/notifications" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.notifications}</a>
 
           <a href="https://cloud.vrbot.me" target="_blank" rel="noopener noreferrer" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.cloud}</a>
 
