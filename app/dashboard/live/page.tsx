@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { createSupabaseBrowserClient } from '../../../lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
 const supabase = createSupabaseBrowserClient()
