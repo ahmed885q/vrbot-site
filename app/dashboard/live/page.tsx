@@ -320,7 +320,7 @@ export default function LivePage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch('/api/farms/list')
+      const res = await fetch('/api/farms/live')
       const d = await res.json()
       setFarms(d.farms || [])
     } catch {}
