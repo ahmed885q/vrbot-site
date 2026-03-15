@@ -39,8 +39,9 @@ function FarmCard({
   const drag = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
+    // Always connect to cloud.vrbot.me which has the nginx WS proxy
     const wsUrl = typeof window !== 'undefined' && window.location.protocol === 'https:'
-      ? `wss://${window.location.host}/ws/stream/${farm.farm_id}`
+      ? `wss://cloud.vrbot.me/ws/stream/${farm.farm_id}`
       : `ws://${WS_HOST}:${WS_PORT}/stream/${farm.farm_id}`
 
     const ws = new WebSocket(wsUrl)
