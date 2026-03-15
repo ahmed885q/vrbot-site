@@ -7,8 +7,6 @@ const supabase = createClient(
 )
 
 // POST: Bulk upsert solutions from server
-// Body: { solutions: [...], columns?: string[] }
-// If columns is provided, only those columns will be sent to Supabase
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.VRBOT_API_KEY}`) {
@@ -17,12 +15,28 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { solutions, columns } = body
+    const { solutions } = body
 
     if (!solutions || !Array.isArray(solutions)) {
       return NextResponse.json({ error: 'solutions array required' }, { status: 400 })
     }
 
+    // Step 1: Discover actual columns by trying a minimal insert
+    let knownCols = ['task_name', 'screen_hash', 'action_name', 'success_count']
+    const extraCols = ['fail_count', 'source', 'action_params', 'last_used']
+
+    for (const col of extraCols) {
+      const testRow: any = { task_name: '__col_test__', screen_hash: `__test_${col}__`, action_name: 'test' }
+      testRow[col] = col === 'action_params' ? {} : col === 'last_used' ? new Date().toISOString() : col === 'source' ? 'test' : 0
+      const { error } = await supabase.from('learned_solutions').upsert([testRow], { onConflict: 'task_name,screen_hash' })
+      if (!error) {
+        knownCols.push(col)
+        // Clean up test row
+        await supabase.from('learned_solutions').delete().eq('task_name', '__col_test__').eq('screen_hash', `__test_${col}__`)
+      }
+    }
+
+    // Step 2: Bulk upsert with only known columns
     const BATCH_SIZE = 100
     let upserted = 0
     let errors = 0
@@ -35,12 +49,11 @@ export async function POST(req: NextRequest) {
           screen_hash: s.screen_hash,
           action_name: s.action_name,
         }
-        const ok = (c: string) => !columns || columns.includes(c)
-        if (ok('success_count')) row.success_count = s.success_count || 0
-        if (ok('fail_count') && s.fail_count !== undefined) row.fail_count = s.fail_count
-        if (ok('source') && s.source) row.source = s.source
-        if (ok('action_params') && s.action_params) row.action_params = s.action_params
-        if (ok('last_used') && s.last_used) row.last_used = s.last_used
+        if (knownCols.includes('success_count')) row.success_count = s.success_count || 0
+        if (knownCols.includes('fail_count')) row.fail_count = s.fail_count || 0
+        if (knownCols.includes('source')) row.source = s.source || 'server'
+        if (knownCols.includes('action_params') && s.action_params) row.action_params = s.action_params
+        if (knownCols.includes('last_used') && s.last_used) row.last_used = s.last_used
         return row
       })
 
@@ -50,23 +63,20 @@ export async function POST(req: NextRequest) {
 
       if (error) {
         lastError = error.message
-        if (errors === 0) {
-          return NextResponse.json({
-            status: 'error',
-            debug_error: error.message,
-            debug_code: error.code,
-            debug_hint: error.hint,
-            batch_index: i,
-            sample_row: batch[0],
-          })
-        }
         errors += batch.length
       } else {
         upserted += batch.length
       }
     }
 
-    return NextResponse.json({ status: 'synced', total: solutions.length, upserted, errors, lastError })
+    return NextResponse.json({
+      status: errors === 0 ? 'synced' : 'partial',
+      total: solutions.length,
+      upserted,
+      errors,
+      lastError,
+      detected_columns: knownCols,
+    })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
