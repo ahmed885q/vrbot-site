@@ -6,6 +6,26 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// GET: Describe current table columns
+export async function GET(req: NextRequest) {
+  const authHeader = req.headers.get('authorization')
+  if (authHeader !== `Bearer ${process.env.VRBOT_API_KEY}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  try {
+    // Try to select one row to see column names
+    const { data, error } = await supabase
+      .from('learned_solutions')
+      .select('*')
+      .limit(1)
+    if (error) return NextResponse.json({ error: error.message, code: error.code })
+    const columns = data && data.length > 0 ? Object.keys(data[0]) : 'table_empty'
+    return NextResponse.json({ status: 'ok', columns, sample: data?.[0] })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
+}
+
 // POST: Create learned_solutions table if not exists
 export async function POST(req: NextRequest) {
   // Verify admin API key
