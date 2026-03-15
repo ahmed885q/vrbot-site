@@ -27,16 +27,20 @@ export async function POST(req: NextRequest) {
     let errors = 0
 
     for (let i = 0; i < solutions.length; i += BATCH_SIZE) {
-      const batch = solutions.slice(i, i + BATCH_SIZE).map((s: any) => ({
-        task_name: s.task_name,
-        screen_hash: s.screen_hash,
-        action_name: s.action_name,
-        action_params: s.action_params || {},
-        success_count: s.success_count || 0,
-        fail_count: s.fail_count || 0,
-        source: s.source || 'server',
-        last_used: s.last_used || new Date().toISOString(),
-      }))
+      const batch = solutions.slice(i, i + BATCH_SIZE).map((s: any) => {
+        const row: any = {
+          task_name: s.task_name,
+          screen_hash: s.screen_hash,
+          action_name: s.action_name,
+          success_count: s.success_count || 0,
+          source: s.source || 'server',
+        }
+        // Only include optional columns if they have values
+        if (s.action_params && Object.keys(s.action_params).length > 0) row.action_params = s.action_params
+        if (s.fail_count) row.fail_count = s.fail_count
+        if (s.last_used) row.last_used = s.last_used
+        return row
+      })
 
       const { error } = await supabase
         .from('learned_solutions')
