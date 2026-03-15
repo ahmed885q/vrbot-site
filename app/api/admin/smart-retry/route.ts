@@ -19,11 +19,14 @@ export async function GET() {
 
     const total_solutions  = solutions?.length ?? 0
     const total_rescues    = solutions?.reduce((s, r) => s + (r.success_count || 0), 0) ?? 0
-    const cloud_solutions  = solutions?.filter(s => s.source === 'cloud').length ?? 0
+    // source column may not exist — safely check
+    const cloud_solutions  = solutions?.filter(s => s.source && s.source === 'cloud').length ?? 0
     const avg_success_rate = total_solutions === 0 ? 0 :
       solutions!.reduce((sum, s) => {
-        const total = (s.success_count || 0) + (s.fail_count || 0)
-        return sum + (total > 0 ? (s.success_count / total) * 100 : 100)
+        const successes = s.success_count || 0
+        const failures  = s.fail_count || 0
+        const total = successes + failures
+        return sum + (total > 0 ? (successes / total) * 100 : 100)
       }, 0) / total_solutions
 
     return NextResponse.json({
