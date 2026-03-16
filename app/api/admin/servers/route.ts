@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const ADMIN_KEY = process.env.ADMIN_API_KEY || "";
+const ADMIN_KEY = process.env.ADMIN_API_KEY || "vrbot_admin_2026";
 
 export async function GET(req: Request) {
   const key = req.headers.get("X-Admin-Key");
