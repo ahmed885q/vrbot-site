@@ -25,14 +25,12 @@ export async function POST(req: Request) {
       }
     );
 
-    // 1. تحقق من الـ auth
     const { data: userData } = await supabase.auth.getUser();
     const user = userData?.user;
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. قرأ البيانات
     const body = await req.json().catch(() => ({}));
     const name = String(body?.name ?? "").trim();
     const igg_email = String(body?.igg_email ?? "").trim() || null;
@@ -42,13 +40,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing farm name" }, { status: 400 });
     }
 
-    // 3. استخدم service role للـ insert
     const service = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_KEY!
     );
 
-    // 4. أدخل المزرعة
     const { data: farm, error } = await service
       .from("cloud_farms")
       .insert({
@@ -69,7 +65,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5. أرسل طلب login لـ Hetzner في الخلفية (non-blocking)
     if (igg_email && igg_password) {
       const hetznerUrl = `http://${process.env.HETZNER_IP || "88.99.64.19"}:8888/api/farms/login`;
       fetch(hetznerUrl, {
@@ -88,13 +83,9 @@ export async function POST(req: Request) {
         .then(async (r) => {
           const d = await r.json().catch(() => ({}));
           if (d.android_id) {
-            // حدّث المزرعة بـ android_id
             await service
               .from("cloud_farms")
-              .update({
-                status: "running",
-                game_account: igg_email,
-              })
+              .update({ status: "running", game_account: igg_email })
               .eq("id", farm.id);
           }
         })
