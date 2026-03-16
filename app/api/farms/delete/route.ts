@@ -61,12 +61,13 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // سجّل الحدث
-    await service.from("farm_alerts").insert({
+    // سجّل الحدث في farm_events
+    await service.from("farm_events").insert({
       user_id:    userData.user.id,
       farm_name:  farmName,
       event_type: "farm_deleted",
       message:    `تم حذف مزرعة ${farmName}`,
+      tasks:      [],
     }).catch(() => {});
 
     return NextResponse.json({ ok: true, deleted: farmName });
