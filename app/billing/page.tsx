@@ -119,10 +119,34 @@ export default function BillingPage() {
   const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const action = params?.get('action');
   const checkoutSuccess = params?.get('checkout');
-  const planType = params.get('plan');
-  const FARM_PRICE = planType === 'cloud' ? PRICE_CLOUD : PRICE_LDP;
+  const planType = params?.get('plan');
+  const isCloud = planType === 'cloud';
+  const FARM_PRICE = isCloud ? PRICE_CLOUD : PRICE_LDP;
   const totalPrice = (farmCount * FARM_PRICE).toFixed(2);
 
+  // اشتراك شهري عبر PayPal
+  const handleSubscribe = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/paypal/create-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ farm_count: farmCount }),
+      });
+      const d = await res.json();
+      if (d.approve_url) {
+        window.location.href = d.approve_url;
+      } else {
+        setError(d.error || s.err_checkout);
+      }
+    } catch {
+      setError(s.err_connection);
+    }
+    setLoading(false);
+  };
+
+  // دفع مرة واحدة عبر PayPal
   const handlePayPalCheckout = async () => {
     setLoading(true);
     setError('');
@@ -180,9 +204,9 @@ export default function BillingPage() {
         </Row>
         <Divider />
         {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 16 }} closable onClose={() => setError('')} />}
-        <Button type="primary" size="large" icon={<ShoppingCartOutlined />} onClick={handlePayPalCheckout} loading={loading} block
+        <Button type="primary" size="large" icon={<ShoppingCartOutlined />} onClick={handleSubscribe} loading={loading} block
           style={{ height: 56, fontSize: 18, background: '#0070ba', borderColor: '#0070ba' }}>
-          {loading ? s.loading_paypal : `${s.pay_via} $${totalPrice}`}
+          {loading ? s.loading_paypal : `${s.pay_via} $${totalPrice} ${s.per_month}`}
         </Button>
         <div style={{ textAlign: 'center', marginTop: 12 }}>
           <Space><SafetyCertificateOutlined style={{ color: '#52c41a' }} /><span style={{ color: '#888', fontSize: 12 }}>{s.secure}</span></Space>

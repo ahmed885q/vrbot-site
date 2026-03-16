@@ -87,6 +87,78 @@ export async function POST(req: Request) {
       }
       break;
     }
+    case "BILLING.SUBSCRIPTION.ACTIVATED": {
+      const customId  = resource.custom_id || "";
+      const [userId, farmCountStr] = customId.split("|");
+      const farmCount = parseInt(farmCountStr || "1");
+      const subId     = resource.id;
+
+      if (userId) {
+        const endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + 1);
+
+        const service = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_KEY!
+        );
+
+        const { data: existing } = await service
+          .from("subscriptions")
+          .select("id")
+          .eq("user_id", userId)
+          .single();
+
+        if (existing) {
+          await service.from("subscriptions").update({
+            status:                 "active",
+            plan:                   "pro",
+            stripe_subscription_id: subId,
+            stripe_customer_id:     "paypal",
+            current_period_end:     endDate.toISOString(),
+            updated_at:             new Date().toISOString(),
+          }).eq("user_id", userId);
+        } else {
+          await service.from("subscriptions").insert({
+            user_id:                userId,
+            status:                 "active",
+            plan:                   "pro",
+            stripe_subscription_id: subId,
+            stripe_customer_id:     "paypal",
+            current_period_end:     endDate.toISOString(),
+          });
+        }
+
+        // Log event in farm_alerts (existing table)
+        await service.from("farm_alerts").insert({
+          user_id:  userId,
+          farm_id:  "00000000-0000-0000-0000-000000000000",
+          type:     "subscription_activated",
+          severity: "info",
+          message:  `تم تفعيل اشتراك ${farmCount} مزرعة ✅`,
+        }).catch(() => {});
+
+        console.log(`[Webhook] Subscription activated: ${subId} for user ${userId}, ${farmCount} farms`);
+      }
+      break;
+    }
+
+    case "BILLING.SUBSCRIPTION.CANCELLED": {
+      const service = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_KEY!
+      );
+      await service.from("subscriptions")
+        .update({ status: "canceled", updated_at: new Date().toISOString() })
+        .eq("stripe_subscription_id", resource.id);
+      console.log(`[Webhook] Subscription cancelled: ${resource.id}`);
+      break;
+    }
+
+    case "BILLING.SUBSCRIPTION.PAYMENT.FAILED": {
+      console.log(`[Webhook] Subscription payment failed: ${resource.id}`);
+      break;
+    }
+
     default:
       console.log(`[Webhook] Unhandled event: ${eventType}`);
   }
