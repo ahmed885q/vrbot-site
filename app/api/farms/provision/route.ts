@@ -1,78 +1,85 @@
-import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
+export const dynamic = "force-dynamic";
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
-export const runtime = 'nodejs'
-
-const HETZNER_IP = process.env.HETZNER_IP || '88.99.64.19'
-const API_KEY    = process.env.VRBOT_API_KEY || ''
-
-/**
- * POST /api/farms/provision
- * Check provisioning status or trigger re-provision for a farm
- * Body: { farm_id: string }  ← farm_id = farm_name in cloud_farms
- */
 export async function POST(req: Request) {
-  const cookieStore = cookies()
-  const supabaseAuth = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cookiesToSet) => {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {}
-        },
-      },
-    }
-  )
-
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { farm_id } = await req.json().catch(() => ({ farm_id: null }))
-  if (!farm_id) return NextResponse.json({ error: 'farm_id required' }, { status: 400 })
-
-  // Service client — البحث بـ farm_name في cloud_farms
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-  )
-
-  const { data: farm } = await supabase
-    .from('cloud_farms')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('farm_name', farm_id)
-    .single()
-
-  if (!farm) return NextResponse.json({ error: 'Farm not found' }, { status: 404 })
-
-  // Check live status from Hetzner
   try {
-    const res = await fetch(`http://${HETZNER_IP}:8888/api/farms/status?user_id=${user.id}`, {
-      headers: { 'X-API-Key': API_KEY },
-      cache: 'no-store',
-    })
-    const data = await res.json()
-    return NextResponse.json({
-      ok: true,
-      farm: { ...farm, farm_id: farm.farm_name },
-      live: data.farms || [],
-      cloud_status: farm.status || 'unknown',
-    })
-  } catch {
-    return NextResponse.json({
-      ok: true,
-      farm: { ...farm, farm_id: farm.farm_name },
-      live: [],
-      cloud_status: farm.status || 'unknown',
-      server_reachable: false,
-    })
+    const service = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_KEY!
+    );
+
+    let userId: string | null = null;
+
+    // Auth: Bearer token first, then cookies
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.replace("Bearer ", "").trim();
+    if (token && token !== "undefined" && token !== "null") {
+      const { data } = await service.auth.getUser(token);
+      userId = data?.user?.id || null;
+    }
+
+    if (!userId) {
+      try {
+        const cookieStore = cookies();
+        const supabase = createServerClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
+        );
+        const { data } = await supabase.auth.getUser();
+        userId = data?.user?.id || null;
+      } catch {}
+    }
+
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const body = await req.json().catch(() => ({}));
+    const { farm_id } = body;
+
+    if (!farm_id) return NextResponse.json({ error: "farm_id required" }, { status: 400 });
+
+    // تحقق من ملكية المزرعة
+    const { data: farm } = await service
+      .from("cloud_farms")
+      .select("id, farm_name, game_account, status")
+      .eq("user_id", userId)
+      .eq("farm_name", farm_id)
+      .single();
+
+    if (!farm) return NextResponse.json({ error: "Farm not found" }, { status: 404 });
+
+    const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
+    const API_KEY = process.env.VRBOT_API_KEY || "";
+
+    // أرسل أمر provision لـ Hetzner
+    const res = await fetch(`http://${HETZNER}:8888/api/farms/provision`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": API_KEY,
+      },
+      body: JSON.stringify({
+        farm_id:      farm.farm_name,
+        game_account: farm.game_account,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    const result = await res.json().catch(() => ({ ok: res.ok }));
+
+    if (res.ok) {
+      // حدّث الـ status في Supabase
+      await service.from("cloud_farms").update({
+        status: "running",
+        last_heartbeat: new Date().toISOString(),
+      }).eq("id", farm.id);
+    }
+
+    return NextResponse.json({ ok: res.ok, result });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message }, { status: 500 });
   }
 }
