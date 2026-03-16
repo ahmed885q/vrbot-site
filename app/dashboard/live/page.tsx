@@ -114,6 +114,34 @@ export default function LivePage() {
     loadFarms()
   }
 
+  async function deleteFarm(farmId: string) {
+    if (!confirm(`هل تريد حذف مزرعة "${farmId}"؟\nهذا الإجراء لا يمكن التراجع عنه.`)) return
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+
+    showMsg(`🗑️ جارٍ حذف ${farmId}...`)
+
+    try {
+      const res = await fetch(`/api/farms/delete?id=${farmId}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+      })
+      const d = await res.json()
+      if (d.ok) {
+        showMsg(`✅ تم حذف مزرعة ${farmId}`)
+        if (selectedFarm === farmId) setSelected(null)
+        loadFarms()
+      } else {
+        showMsg(`❌ فشل الحذف: ${d.error || 'خطأ'}`)
+      }
+    } catch {
+      showMsg('❌ خطأ في الاتصال')
+    }
+  }
+
   async function handleTransfer() {
     if (!transferFarm || !transferTarget.trim()) {
       setTransferMsg('⚠️ أدخل اسم اللاعب المستقبل')
@@ -310,6 +338,26 @@ export default function LivePage() {
                         style={{ background: '#f8514918', border: '1px solid #f8514950', color: '#f85149', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
                       >
                         ■
+                      </button>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation()
+                          deleteFarm(farm.id)
+                        }}
+                        title="حذف المزرعة"
+                        style={{
+                          background: 'rgba(248,81,73,0.1)',
+                          border: '1px solid rgba(248,81,73,0.3)',
+                          color: '#f85149',
+                          padding: '6px 10px',
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          fontSize: 13,
+                          fontWeight: 700,
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        🗑️
                       </button>
                     </div>
                   </div>
