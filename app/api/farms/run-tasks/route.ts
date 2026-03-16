@@ -3,8 +3,18 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
+import { runFarmTasks } from "@/lib/hetzner";
 
-export async function POST(req: Request) {
+async function getUser(req: Request) {
+  const service = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  );
+  const token = req.headers.get("authorization")?.replace("Bearer ", "").trim();
+  if (token && token !== "undefined") {
+    const { data } = await service.auth.getUser(token);
+    if (data?.user) return { user: data.user, service };
+  }
   try {
     const cookieStore = cookies();
     const supabase = createServerClient(
@@ -12,66 +22,60 @@ export async function POST(req: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
     );
+    const { data } = await supabase.auth.getUser();
+    if (data?.user) return { user: data.user, service };
+  } catch {}
+  return null;
+}
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function POST(req: Request) {
+  try {
+    const auth = await getUser(req);
+    if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { user, service } = auth;
 
     const body = await req.json().catch(() => ({}));
     const { farm_id, tasks, action } = body;
 
     if (!farm_id) return NextResponse.json({ error: "farm_id required" }, { status: 400 });
 
-    // تحقق من ملكية المزرعة
-    const service = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
-    );
-
+    // جلب المزرعة مع الـ container_id
     const { data: farm } = await service
       .from("cloud_farms")
       .select("farm_name, container_id, status")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .eq("farm_name", farm_id)
       .single();
 
     if (!farm) return NextResponse.json({ error: "Farm not found" }, { status: 404 });
 
-    const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
-    const API_KEY = process.env.VRBOT_API_KEY || "";
+    // استخدم container_id إذا موجود، وإلا farm_name
+    const target_id = farm.container_id || farm_id;
 
-    // أرسل الأمر لـ Hetzner
-    let endpoint = "";
-    let payload: any = { farm_id: farm.farm_name || farm_id };
-
-    if (action === "stop") {
-      endpoint = "/api/farms/stop";
-    } else if (action === "start" || tasks?.length > 0) {
-      endpoint = "/api/farms/command";
-      payload.command = tasks?.length > 0
-        ? `run_tasks:${tasks.join(",")}`
-        : "start";
-    } else {
-      endpoint = "/api/farms/start";
-    }
-
-    const res = await fetch(`http://${HETZNER}:8888${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": API_KEY,
-      },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(10000),
+    const result = await runFarmTasks({
+      container_id: target_id,
+      tasks:        tasks || [],
+      action,
     });
 
-    const result = await res.json().catch(() => ({ ok: res.ok }));
+    // سجّل الحدث
+    await service.from("farm_events").insert({
+      user_id:    user.id,
+      farm_name:  farm_id,
+      event_type: action === "stop" ? "farm_stopped" : "farm_started",
+      message:    action === "stop"
+        ? `⏹ إيقاف ${farm_id} (container: ${target_id})`
+        : `▶ تشغيل ${tasks?.length || 0} مهمة على ${farm_id} (container: ${target_id})`,
+      tasks: tasks || [],
+    }).catch(() => {});
 
     return NextResponse.json({
-      ok: res.ok,
+      ok:           result.ok,
       farm_id,
-      action: action || "run_tasks",
-      tasks: tasks || [],
-      hetzner: result,
+      container_id: target_id,
+      action:       action || "run_tasks",
+      tasks:        tasks || [],
+      hetzner:      result.result,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message }, { status: 500 });

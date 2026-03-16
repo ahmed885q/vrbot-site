@@ -3,8 +3,18 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
+import { transferResources } from "@/lib/hetzner";
 
-export async function POST(req: Request) {
+async function getUser(req: Request) {
+  const service = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  );
+  const token = req.headers.get("authorization")?.replace("Bearer ", "").trim();
+  if (token && token !== "undefined") {
+    const { data } = await service.auth.getUser(token);
+    if (data?.user) return { user: data.user, service };
+  }
   try {
     const cookieStore = cookies();
     const supabase = createServerClient(
@@ -12,8 +22,17 @@ export async function POST(req: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
     );
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { data } = await supabase.auth.getUser();
+    if (data?.user) return { user: data.user, service };
+  } catch {}
+  return null;
+}
+
+export async function POST(req: Request) {
+  try {
+    const auth = await getUser(req);
+    if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { user, service } = auth;
 
     const body = await req.json().catch(() => ({}));
     const {
@@ -25,29 +44,23 @@ export async function POST(req: Request) {
       method,            // "tribe_hall" | "world_map"
     } = body;
 
-    if (!farm_id)    return NextResponse.json({ error: "farm_id required" }, { status: 400 });
+    if (!farm_id)     return NextResponse.json({ error: "farm_id required" }, { status: 400 });
     if (!target_name) return NextResponse.json({ error: "target_name required" }, { status: 400 });
     if (!resources?.length) return NextResponse.json({ error: "resources required" }, { status: 400 });
 
-    const service = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
-    );
-
-    // تحقق من ملكية المزرعة
+    // تحقق من ملكية المزرعة + جلب container_id
     const { data: farm } = await service
       .from("cloud_farms")
-      .select("farm_name, server_id")
-      .eq("user_id", session.user.id)
+      .select("farm_name, container_id, server_id")
+      .eq("user_id", user.id)
       .eq("farm_name", farm_id)
       .single();
 
     if (!farm) return NextResponse.json({ error: "Farm not found" }, { status: 404 });
 
-    const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
-    const API_KEY = process.env.VRBOT_API_KEY || "";
+    // استخدم container_id إذا موجود
+    const target_container = farm.container_id || farm.farm_name;
 
-    // أرسل config + command لـ Hetzner
     const command = `run_tasks:transfer_resources`;
     const transferConfig = {
       transfer_target_name: target_name,
@@ -57,38 +70,29 @@ export async function POST(req: Request) {
       transfer_method:      method || "tribe_hall",
     };
 
-    const res = await fetch(`http://${HETZNER}:8888/api/farms/command`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": API_KEY,
-      },
-      body: JSON.stringify({
-        farm_id:    farm.farm_name,
-        command,
-        task_config: transferConfig,
-      }),
-      signal: AbortSignal.timeout(10000),
+    const result = await transferResources({
+      container_id: target_container,
+      command,
+      task_config:  transferConfig,
     });
 
-    const result = await res.json().catch(() => ({ ok: res.ok }));
-
-    // سجّل الحدث في farm_alerts
-    await service.from("farm_alerts").insert({
-      user_id:  session.user.id,
-      farm_id:  "00000000-0000-0000-0000-000000000000",
-      type:     "transfer_resources",
-      severity: "info",
-      message:  `نقل ${resources.join("+")} → ${target_name} (${amount || "all"})`,
+    // سجّل الحدث في farm_events
+    await service.from("farm_events").insert({
+      user_id:    user.id,
+      farm_name:  farm_id,
+      event_type: "transfer_resources",
+      message:    `📦 نقل ${resources.join("+")} → ${target_name} (${amount || "all"}) — container: ${target_container}`,
+      tasks:      resources,
     }).catch(() => {});
 
     return NextResponse.json({
-      ok: res.ok,
+      ok:           result.ok,
       farm_id,
+      container_id: target_container,
       target_name,
       resources,
       amount,
-      hetzner: result,
+      hetzner:      result.result,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message }, { status: 500 });
