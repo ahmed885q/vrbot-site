@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
+import { createSupabaseBrowserClient } from '../../lib/supabase/client'
 
 const TASKS_MAP = [
   { group: 'الموارد 🌾',    color: '#10b981', tasks: ['Gather Resources', 'Collect Farms', 'Open Chests', 'Collect Free Items'] },
@@ -17,6 +18,7 @@ type Farm = {
   game_account?: string
   tasks_today?: number
   live_status?: 'online' | 'idle' | 'offline'
+  current_task?: string | null
 }
 
 export default function LivePage() {
@@ -37,6 +39,8 @@ export default function LivePage() {
   const [transferring, setTransferring]     = useState(false)
   const [transferMsg, setTransferMsg]       = useState('')
 
+  const supabase = useMemo(() => createSupabaseBrowserClient(), [])
+
   const showMsg = (m: string, ms = 4000) => {
     setMsg(m)
     setTimeout(() => setMsg(''), ms)
@@ -44,25 +48,34 @@ export default function LivePage() {
 
   const loadFarms = useCallback(async () => {
     try {
-      const res = await fetch('/api/farms/list')
-      const d   = await res.json()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      const res = await fetch('/api/farms/status', {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+      })
+      const d = await res.json()
       const list = (d.farms || []).map((f: any) => ({
-        id:          f.farm_name || f.id,
-        farm_name:   f.farm_name || f.id,
-        status:      f.status,
+        id:           f.farm_name,
+        farm_name:    f.farm_name,
+        status:       f.is_online ? 'running' : f.status || 'offline',
         game_account: f.game_account || '',
-        tasks_today: f.tasks_today || 0,
-        live_status: f.status === 'running' ? 'online' : f.status === 'provisioning' ? 'idle' : 'offline',
+        tasks_today:  f.live_tasks_ok || 0,
+        live_status:  f.is_online ? 'online' : f.status === 'provisioning' ? 'idle' : 'offline',
+        current_task: f.live_task || null,
       }))
       setFarms(list)
       if (list.length > 0 && !selectedFarm) setSelected(list[0].id)
     } catch {}
     setLoading(false)
-  }, [selectedFarm])
+  }, [selectedFarm, supabase])
 
   useEffect(() => {
     loadFarms()
-    const t = setInterval(loadFarms, 30000)
+    const t = setInterval(loadFarms, 15000)
     return () => clearInterval(t)
   }, [loadFarms])
 
@@ -222,20 +235,55 @@ export default function LivePage() {
                     </div>
 
                     {/* Stats */}
-                    <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: 12, color: '#8b949e' }}>
+                    <div style={{ display: 'flex', gap: 12, marginBottom: 4, fontSize: 12, color: '#8b949e' }}>
                       <span>📧 {farm.game_account || '—'}</span>
                       <span>⚡ {farm.tasks_today || 0} مهمة</span>
                     </div>
 
+                    {/* Live info */}
+                    {farm.current_task && (
+                      <div style={{ fontSize: 11, color: '#f0a500', marginBottom: 4 }}>
+                        ⚡ {farm.current_task}
+                      </div>
+                    )}
+                    {farm.live_status === 'idle' && (
+                      <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 4 }}>
+                        ⏳ جاري التجهيز...
+                      </div>
+                    )}
+
                     {/* Actions */}
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button
-                        onClick={e => { e.stopPropagation(); runTasks(farm.id, ['Gather Resources', 'Mail Rewards', 'Tribe Tech'], 'start') }}
-                        disabled={isRunning}
-                        style={{ flex: 1, background: '#3fb95018', border: '1px solid #3fb95050', color: '#3fb950', padding: '6px', borderRadius: 6, cursor: isRunning ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700 }}
-                      >
-                        {isRunning ? '⏳...' : '▶ تشغيل'}
-                      </button>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                      {farm.live_status === 'idle' ? (
+                        <button
+                          onClick={async e => {
+                            e.stopPropagation()
+                            const { data: { session } } = await supabase.auth.getSession()
+                            const tkn = session?.access_token
+                            showMsg(`⏳ جارٍ تفعيل ${farm.id}...`)
+                            await fetch('/api/farms/provision', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                ...(tkn ? { 'Authorization': `Bearer ${tkn}` } : {}),
+                              },
+                              body: JSON.stringify({ farm_id: farm.id }),
+                            })
+                            setTimeout(loadFarms, 3000)
+                          }}
+                          style={{ flex: 1, background: '#f0a50018', border: '1px solid #f0a50050', color: '#f0a500', padding: '6px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                        >
+                          ⚡ تفعيل
+                        </button>
+                      ) : (
+                        <button
+                          onClick={e => { e.stopPropagation(); runTasks(farm.id, ['Gather Resources', 'Mail Rewards', 'Tribe Tech'], 'start') }}
+                          disabled={isRunning}
+                          style={{ flex: 1, background: '#3fb95018', border: '1px solid #3fb95050', color: '#3fb950', padding: '6px', borderRadius: 6, cursor: isRunning ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700 }}
+                        >
+                          {isRunning ? '⏳...' : '▶ تشغيل'}
+                        </button>
+                      )}
                       <button
                         onClick={e => {
                           e.stopPropagation()
