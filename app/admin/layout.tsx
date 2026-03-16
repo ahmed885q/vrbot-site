@@ -8,6 +8,7 @@ type Lang = 'ar' | 'en' | 'ru' | 'zh'
 
 const navItems = [
   { href: '/admin/diagnostics', icon: '🔧', label: { ar: 'لوحة التحكم', en: 'Diagnostics', ru: 'Диагностика', zh: '诊断' } },
+  { href: '/admin/farms', icon: '🏰', label: { ar: 'إدارة المزارع', en: 'Farm Manager', ru: 'Управление фермами', zh: '农场管理' } },
   { href: '/admin/orchestrator', icon: '📦', label: { ar: 'جدولة الدُفعات', en: 'Batch Scheduler', ru: 'Планировщик', zh: '批次调度' } },
   { href: '/admin/nifling', icon: '⚡', label: { ar: 'Nifling', en: 'Nifling Queue', ru: 'Нифлинг', zh: 'Nifling' } },
   { href: '/admin/scaler', icon: '📊', label: { ar: 'التحجيم', en: 'Auto-Scaler', ru: 'Масштабирование', zh: '自动扩缩' } },
