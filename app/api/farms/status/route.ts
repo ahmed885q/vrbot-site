@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+// v2 — live farm status API
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
