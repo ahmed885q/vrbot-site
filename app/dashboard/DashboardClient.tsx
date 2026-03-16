@@ -83,6 +83,7 @@ export default function DashboardClient() {
 
   const s = tx[lang];
   const isRtl = lang === "ar";
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   // Hub connection
   const hubData = useHub({
@@ -218,9 +219,22 @@ export default function DashboardClient() {
     setAddingFarm(true);
     setFarmError("");
     try {
+      // احصل على الـ access token من Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+
+      if (!accessToken) {
+        setFarmError(lang === "ar" ? "الجلسة منتهية — أعد تسجيل الدخول" : "Session expired — please login again");
+        setAddingFarm(false);
+        return;
+      }
+
       const res = await fetch("/api/farms/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({ name: newFarmName, server: newFarmServer || null, notes: newFarmNotes || null, cloud: true })
       });
       const d = await res.json();
@@ -232,7 +246,7 @@ export default function DashboardClient() {
         if (d.cloud?.error) {
           setMsg(lang === "ar" ? "⚠️ تم إنشاء المزرعة لكن فشل الربط بالسحابة" : "⚠️ Farm created but cloud provisioning failed");
           setTimeout(() => setMsg(""), 5000);
-        } else if (d.farm?.cloud_status === "provisioning") {
+        } else if (d.farm?.status === "provisioning") {
           setMsg(lang === "ar" ? "☁️ جاري تجهيز المزرعة على السحابة..." : "☁️ Provisioning farm on cloud...");
           setTimeout(() => setMsg(""), 5000);
         }
