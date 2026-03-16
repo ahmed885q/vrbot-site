@@ -48,30 +48,45 @@ export default function LivePage() {
 
   const loadFarms = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
+      // جرّب /api/farms/status أولاً (يدعم cookies)
+      const res = await fetch('/api/farms/status')
 
-      const res = await fetch('/api/farms/status', {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
-      })
-      const d = await res.json()
-      const list = (d.farms || []).map((f: any) => ({
-        id:           f.farm_name,
-        farm_name:    f.farm_name,
-        status:       f.is_online ? 'running' : f.status || 'offline',
-        game_account: f.game_account || '',
-        tasks_today:  f.live_tasks_ok || 0,
-        live_status:  f.is_online ? 'online' : f.status === 'provisioning' ? 'idle' : 'offline',
-        current_task: f.live_task || null,
-      }))
-      setFarms(list)
-      if (list.length > 0 && !selectedFarm) setSelected(list[0].id)
-    } catch {}
+      if (res.ok) {
+        const d = await res.json()
+        const list = (d.farms || []).map((f: any) => ({
+          id:           f.farm_name || f.id,
+          farm_name:    f.farm_name || f.id,
+          status:       f.status || 'offline',
+          game_account: f.game_account || '',
+          tasks_today:  f.tasks_today || f.live_tasks_ok || 0,
+          live_status:  f.is_online ? 'online' : f.status === 'provisioning' ? 'idle' : 'offline',
+          current_task: f.current_task || f.live_task || null,
+        }))
+        setFarms(list)
+        if (list.length > 0 && !selectedFarm) setSelected(list[0].id)
+      } else {
+        // fallback إلى /api/farms/list
+        const res2 = await fetch('/api/farms/list')
+        if (res2.ok) {
+          const d2 = await res2.json()
+          const list2 = (d2.farms || []).map((f: any) => ({
+            id:           f.farm_name || f.name || f.id,
+            farm_name:    f.farm_name || f.name || f.id,
+            status:       f.status || 'offline',
+            game_account: f.game_account || '',
+            tasks_today:  0,
+            live_status:  f.status === 'running' ? 'online' : f.status === 'provisioning' ? 'idle' : 'offline',
+            current_task: null,
+          }))
+          setFarms(list2)
+          if (list2.length > 0 && !selectedFarm) setSelected(list2[0].id)
+        }
+      }
+    } catch (e) {
+      console.error('loadFarms error:', e)
+    }
     setLoading(false)
-  }, [selectedFarm, supabase])
+  }, [selectedFarm])
 
   useEffect(() => {
     loadFarms()
@@ -282,21 +297,26 @@ export default function LivePage() {
 
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                      {farm.live_status === 'idle' ? (
+                      {(farm.status === 'provisioning' || farm.live_status === 'idle') ? (
                         <button
                           onClick={async e => {
                             e.stopPropagation()
-                            const { data: { session } } = await supabase.auth.getSession()
-                            const tkn = session?.access_token
-                            showMsg(`⏳ جارٍ تفعيل ${farm.id}...`)
-                            await fetch('/api/farms/provision', {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                                ...(tkn ? { 'Authorization': `Bearer ${tkn}` } : {}),
-                              },
-                              body: JSON.stringify({ farm_id: farm.id }),
-                            })
+                            showMsg(`⏳ جارٍ تفعيل ${farm.farm_name}...`)
+                            try {
+                              const res = await fetch('/api/farms/activate', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ farm_name: farm.farm_name }),
+                              })
+                              const d = await res.json()
+                              if (d.ok) {
+                                showMsg(`✅ تم تفعيل ${farm.farm_name}`)
+                              } else {
+                                showMsg(`❌ ${d.error || 'فشل التفعيل'}`)
+                              }
+                            } catch {
+                              showMsg('❌ خطأ في الاتصال')
+                            }
                             setTimeout(loadFarms, 3000)
                           }}
                           style={{ flex: 1, background: '#f0a50018', border: '1px solid #f0a50050', color: '#f0a500', padding: '6px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
