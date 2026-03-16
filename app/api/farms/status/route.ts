@@ -47,7 +47,7 @@ export async function GET(req: Request) {
     // جلب المزارع من Supabase
     const { data: farms, error } = await service
       .from("cloud_farms")
-      .select("farm_name, status, game_account, server_id, last_heartbeat, created_at")
+      .select("farm_name, container_id, status, game_account, server_id, last_heartbeat, created_at")
       .eq("user_id", userId)
       .neq("status", "deleted")
       .order("farm_name", { ascending: true });
@@ -74,20 +74,23 @@ export async function GET(req: Request) {
       }
     } catch {}
 
-    // دمج البيانات
+    // دمج البيانات — ابحث بـ container_id أولاً ثم farm_name
     const merged = (farms || []).map((f: any) => {
-      const live = hetznerFarms[f.farm_name] || null;
+      const live = f.container_id
+        ? (hetznerFarms[f.container_id] || hetznerFarms[f.farm_name] || null)
+        : (hetznerFarms[f.farm_name] || null);
       return {
-        id:           f.farm_name,
-        farm_name:    f.farm_name,
-        name:         f.farm_name,
-        status:       live?.status || f.status || "offline",
-        game_account: f.game_account || "",
-        tasks_today:  live?.tasks_ok || 0,
-        live_status:  live ? (live.status === "running" ? "online" : "idle") : f.status === "provisioning" ? "idle" : "offline",
-        current_task: live?.current_task || null,
-        is_online:    !!(live?.status === "running" || live?.status === "RUNNING"),
-        server_id:    f.server_id,
+        id:             f.farm_name,
+        farm_name:      f.farm_name,
+        name:           f.farm_name,
+        container_id:   f.container_id || null,
+        status:         live?.status || f.status || "offline",
+        game_account:   f.game_account || "",
+        tasks_today:    live?.tasks_ok || 0,
+        live_status:    live ? (live.status === "running" ? "online" : "idle") : f.status === "provisioning" ? "idle" : "offline",
+        current_task:   live?.current_task || null,
+        is_online:      !!(live?.status === "running" || live?.status === "RUNNING"),
+        server_id:      f.server_id,
         last_heartbeat: f.last_heartbeat,
       };
     });
