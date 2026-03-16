@@ -27,6 +27,15 @@ export default function LivePage() {
   const [running, setRunning]       = useState<Record<string, boolean>>({})
   const [msg, setMsg]               = useState('')
   const [cols, setCols]             = useState(2)
+  const [showTransfer, setShowTransfer]     = useState(false)
+  const [transferFarm, setTransferFarm]     = useState<string | null>(null)
+  const [transferTarget, setTransferTarget] = useState('')
+  const [transferRes, setTransferRes]       = useState<Set<string>>(new Set(['food','wood','stone','gold']))
+  const [transferAmount, setTransferAmount] = useState<'all'|'half'>('all')
+  const [transferMarches, setTransferMarches] = useState(1)
+  const [transferMethod, setTransferMethod] = useState<'tribe_hall'|'world_map'>('tribe_hall')
+  const [transferring, setTransferring]     = useState(false)
+  const [transferMsg, setTransferMsg]       = useState('')
 
   const showMsg = (m: string, ms = 4000) => {
     setMsg(m)
@@ -90,6 +99,43 @@ export default function LivePage() {
     showMsg(`⏹ تم إيقاف ${farmId}`)
     setRunning(p => ({ ...p, [farmId]: false }))
     loadFarms()
+  }
+
+  async function handleTransfer() {
+    if (!transferFarm || !transferTarget.trim()) {
+      setTransferMsg('⚠️ أدخل اسم اللاعب المستقبل')
+      return
+    }
+    if (transferRes.size === 0) {
+      setTransferMsg('⚠️ اختر نوع مورد واحد على الأقل')
+      return
+    }
+    setTransferring(true)
+    setTransferMsg('')
+    try {
+      const res = await fetch('/api/farms/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          farm_id:      transferFarm,
+          target_name:  transferTarget.trim(),
+          resources:    Array.from(transferRes),
+          amount:       transferAmount,
+          max_marches:  transferMarches,
+          method:       transferMethod,
+        }),
+      })
+      const d = await res.json()
+      if (d.ok) {
+        setTransferMsg(`✅ تم إرسال أمر النقل إلى ${transferFarm}`)
+        setTimeout(() => { setShowTransfer(false); setTransferMsg('') }, 3000)
+      } else {
+        setTransferMsg(`❌ ${d.error || 'فشل النقل'}`)
+      }
+    } catch {
+      setTransferMsg('❌ خطأ في الاتصال')
+    }
+    setTransferring(false)
   }
 
   function toggleTask(t: string) {
@@ -189,6 +235,26 @@ export default function LivePage() {
                         style={{ flex: 1, background: '#3fb95018', border: '1px solid #3fb95050', color: '#3fb950', padding: '6px', borderRadius: 6, cursor: isRunning ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700 }}
                       >
                         {isRunning ? '⏳...' : '▶ تشغيل'}
+                      </button>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation()
+                          setTransferFarm(farm.id)
+                          setShowTransfer(true)
+                          setTransferMsg('')
+                        }}
+                        style={{
+                          background: '#58a6ff18',
+                          border: '1px solid #58a6ff50',
+                          color: '#58a6ff',
+                          padding: '6px 10px',
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          fontSize: 12,
+                          fontWeight: 700,
+                        }}
+                      >
+                        📦 نقل
                       </button>
                       <button
                         onClick={e => { e.stopPropagation(); stopFarm(farm.id) }}
@@ -304,6 +370,219 @@ export default function LivePage() {
           )}
         </div>
       </div>
+
+      {/* Transfer Modal */}
+      {showTransfer && (
+        <div
+          onClick={() => setShowTransfer(false)}
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999, padding: 20,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#161b22',
+              border: '1px solid #58a6ff30',
+              borderRadius: 16,
+              padding: 28,
+              width: '100%',
+              maxWidth: 460,
+              fontFamily: 'sans-serif',
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ color: '#58a6ff', margin: 0, fontSize: 16, fontWeight: 700 }}>
+                📦 نقل الموارد — {transferFarm}
+              </h3>
+              <button
+                onClick={() => setShowTransfer(false)}
+                style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: 20 }}
+              >✕</button>
+            </div>
+
+            {/* اسم اللاعب المستقبل */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 6 }}>
+                🎯 اسم اللاعب المستقبل
+              </label>
+              <input
+                value={transferTarget}
+                onChange={e => setTransferTarget(e.target.value)}
+                placeholder="مثال: Ahmed"
+                autoFocus
+                style={{
+                  width: '100%', padding: '10px 14px',
+                  background: '#0d1117', border: '1px solid #30363d',
+                  borderRadius: 8, color: '#e6edf3', fontSize: 14,
+                  outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* نوع الموارد */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 8 }}>
+                💰 نوع الموارد (يمكن اختيار أكثر من واحد)
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {[
+                  { key: 'food',  label: '🌾 طعام',  color: '#3fb950' },
+                  { key: 'wood',  label: '🪵 خشب',   color: '#f0a500' },
+                  { key: 'stone', label: '🪨 حجارة', color: '#8b949e' },
+                  { key: 'gold',  label: '🪙 ذهب',   color: '#ffd700' },
+                ].map(r => {
+                  const on = transferRes.has(r.key)
+                  return (
+                    <button
+                      key={r.key}
+                      onClick={() => setTransferRes(p => {
+                        const n = new Set(p)
+                        n.has(r.key) ? n.delete(r.key) : n.add(r.key)
+                        return n
+                      })}
+                      style={{
+                        padding: '10px',
+                        background: on ? r.color + '20' : '#0d1117',
+                        border: `2px solid ${on ? r.color : '#30363d'}`,
+                        borderRadius: 8, color: on ? r.color : '#8b949e',
+                        cursor: 'pointer', fontSize: 13, fontWeight: 700,
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {r.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* الكمية */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 8 }}>
+                📊 الكمية
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[
+                  { key: 'all',  label: '🔴 كل شيء' },
+                  { key: 'half', label: '🟡 النصف'  },
+                ].map(a => (
+                  <button
+                    key={a.key}
+                    onClick={() => setTransferAmount(a.key as 'all'|'half')}
+                    style={{
+                      flex: 1, padding: '10px',
+                      background: transferAmount === a.key ? '#58a6ff20' : '#0d1117',
+                      border: `2px solid ${transferAmount === a.key ? '#58a6ff' : '#30363d'}`,
+                      borderRadius: 8,
+                      color: transferAmount === a.key ? '#58a6ff' : '#8b949e',
+                      cursor: 'pointer', fontSize: 13, fontWeight: 700,
+                    }}
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* عدد الجيوش */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 8 }}>
+                ⚔️ عدد الجيوش: {transferMarches}
+              </label>
+              <input
+                type="range" min={1} max={4} value={transferMarches}
+                onChange={e => setTransferMarches(Number(e.target.value))}
+                style={{ width: '100%', accentColor: '#58a6ff' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8b949e', marginTop: 4 }}>
+                <span>1 جيش</span><span>2</span><span>3</span><span>4 جيوش</span>
+              </div>
+            </div>
+
+            {/* طريقة النقل */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 8 }}>
+                🏛️ طريقة النقل
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[
+                  { key: 'tribe_hall', label: '🏛️ قاعة القبيلة (أفضل)' },
+                  { key: 'world_map',  label: '🗺️ الخريطة العالمية'    },
+                ].map(m => (
+                  <button
+                    key={m.key}
+                    onClick={() => setTransferMethod(m.key as 'tribe_hall'|'world_map')}
+                    style={{
+                      flex: 1, padding: '8px',
+                      background: transferMethod === m.key ? '#8b5cf620' : '#0d1117',
+                      border: `2px solid ${transferMethod === m.key ? '#8b5cf6' : '#30363d'}`,
+                      borderRadius: 8,
+                      color: transferMethod === m.key ? '#8b5cf6' : '#8b949e',
+                      cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ملاحظة الضريبة */}
+            <div style={{ marginBottom: 16, padding: '8px 12px', background: '#f0a50010', border: '1px solid #f0a50030', borderRadius: 8, fontSize: 12, color: '#f0a500' }}>
+              ⚠️ ملاحظة: ضريبة 32% تُطبَّق — إرسال 100k = المستقبل يستلم ~68k
+            </div>
+
+            {/* رسالة النتيجة */}
+            {transferMsg && (
+              <div style={{
+                padding: '8px 12px', borderRadius: 8, marginBottom: 12, fontSize: 13,
+                background: transferMsg.startsWith('✅') ? '#3fb95015' : '#f8514915',
+                border: `1px solid ${transferMsg.startsWith('✅') ? '#3fb95040' : '#f8514940'}`,
+                color: transferMsg.startsWith('✅') ? '#3fb950' : '#f85149',
+              }}>
+                {transferMsg}
+              </div>
+            )}
+
+            {/* أزرار */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setShowTransfer(false)}
+                style={{
+                  flex: 1, padding: '12px',
+                  background: '#21262d', border: '1px solid #30363d',
+                  borderRadius: 8, color: '#8b949e',
+                  cursor: 'pointer', fontSize: 14,
+                }}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleTransfer}
+                disabled={transferring || !transferTarget.trim()}
+                style={{
+                  flex: 2, padding: '12px',
+                  background: transferring || !transferTarget.trim()
+                    ? '#21262d'
+                    : 'linear-gradient(135deg, #58a6ff, #1f6feb)',
+                  border: 'none', borderRadius: 8,
+                  color: transferring || !transferTarget.trim() ? '#8b949e' : '#fff',
+                  cursor: transferring || !transferTarget.trim() ? 'not-allowed' : 'pointer',
+                  fontSize: 14, fontWeight: 700,
+                }}
+              >
+                {transferring ? '⏳ جارٍ الإرسال...' : `📦 نقل ${Array.from(transferRes).join('+')} → ${transferTarget || '...'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
