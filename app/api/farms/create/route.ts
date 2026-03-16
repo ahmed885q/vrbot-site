@@ -143,12 +143,12 @@ export async function POST(req: Request) {
     }
 
     // تسجيل الحدث
-    await service.from("farm_alerts").insert({
-      user_id:  user.id,
-      farm_id:  "00000000-0000-0000-0000-000000000000",
-      type:     "farm_created",
-      severity: "info",
-      message:  `تم إنشاء مزرعة ${name} ✅`,
+    await service.from("farm_events").insert({
+      user_id:    user.id,
+      farm_name:  name,
+      event_type: "farm_created",
+      message:    `تم إنشاء مزرعة ${name} ✅`,
+      tasks:      [],
     }).catch(() => {});
 
     return NextResponse.json({

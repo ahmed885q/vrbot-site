@@ -546,7 +546,7 @@ export default function DashboardClient() {
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             {farms.length > 1 && <button onClick={toggleAllChecked} style={{ padding: "6px 12px", background: checkedFarms.size === filteredFarms.length ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 6, color: "#a78bfa", fontSize: 11, cursor: "pointer" }}>☑ {checkedFarms.size === filteredFarms.length ? s.deselectAll : s.selectAll}</button>}
             <button onClick={() => setView(view === "grid" ? "list" : "grid")} style={{ padding: "6px 10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, color: "rgba(255,255,255,0.4)", fontSize: 11, cursor: "pointer" }}>{view === "grid" ? "☰ List" : "▦ Grid"}</button>
-            <button onClick={() => { if (tokens && tokens.tokens_available > 0) { setShowAddFarm(true); setFarmError(""); } }} style={{ padding: "6px 14px", background: tokens && tokens.tokens_available > 0 ? "linear-gradient(135deg, #10b981, #059669)" : "rgba(255,255,255,0.06)", color: tokens && tokens.tokens_available > 0 ? "#fff" : "rgba(255,255,255,0.3)", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: tokens && tokens.tokens_available > 0 ? "pointer" : "not-allowed" }}>+ {s.addFarm}</button>
+            <button onClick={() => { setShowAddFarm(true); setFarmError(""); }} style={{ padding: "6px 14px", background: "linear-gradient(135deg, #10b981, #059669)", color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+ {s.addFarm}</button>
           </div>
         </div>
 
@@ -581,7 +581,7 @@ export default function DashboardClient() {
                     </td>
                     <td style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.03)", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{st.task || "-"}</td>
                     <td style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.03)", fontSize: 11, color: "rgba(255,255,255,0.25)" }}>{new Date(f.created_at).toLocaleDateString()}</td>
-                    <td style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.03)" }}><button onClick={(e) => { e.stopPropagation(); handleDeleteFarm(f.id); }} style={{ padding: "3px 8px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 4, color: "#f87171", fontSize: 10, cursor: "pointer" }}>✕</button></td>
+                    <td style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.03)" }}><button onClick={(e) => { e.stopPropagation(); handleDeleteFarm(f.farm_name || f.id); }} style={{ padding: "3px 8px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 4, color: "#f87171", fontSize: 10, cursor: "pointer" }}>✕</button></td>
                   </tr>
                 );
               })}</tbody>
@@ -617,7 +617,7 @@ export default function DashboardClient() {
                     </div>
                     <div style={{ display: "flex", gap: 4 }}>
                       {f.cloud_status === "cloud_error" && <button onClick={(e) => { e.stopPropagation(); handleRetryCloud(f.id); }} style={{ padding: "2px 6px", background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.15)", borderRadius: 4, color: "#06b6d4", fontSize: 9, cursor: "pointer" }}>↻</button>}
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteFarm(f.id); }} style={{ padding: "2px 6px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 4, color: "#f87171", fontSize: 10, cursor: "pointer" }}>✕</button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteFarm(f.farm_name || f.id); }} style={{ padding: "2px 6px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 4, color: "#f87171", fontSize: 10, cursor: "pointer" }}>✕</button>
                     </div>
                   </div>
                 </div>
