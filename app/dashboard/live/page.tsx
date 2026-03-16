@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import { createSupabaseBrowserClient } from '../../lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
 const TASKS_MAP = [
   { group: 'الموارد 🌾',    color: '#10b981', tasks: ['Gather Resources', 'Collect Farms', 'Open Chests', 'Collect Free Items'] },
