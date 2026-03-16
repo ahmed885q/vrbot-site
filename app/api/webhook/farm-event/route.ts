@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "vrbot_webhook_2024";
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "vrbot_webhook_secret_2026";
 
 export async function POST(req: Request) {
   try {
