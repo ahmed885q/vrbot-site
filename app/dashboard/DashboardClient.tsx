@@ -258,7 +258,15 @@ export default function DashboardClient() {
   async function handleDeleteFarm(farmId: string) {
     if (!confirm(s.deleteConfirm)) return;
     try {
-      const res = await fetch(`/api/farms/delete?id=${farmId}`, { method: "DELETE" });
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const res = await fetch(`/api/farms/delete?id=${farmId}`, {
+        method: "DELETE",
+        headers: {
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
+      });
       if (res.ok) {
         if (selectedFarmId === farmId) setSelectedFarmId(null);
         checkedFarms.delete(farmId);
