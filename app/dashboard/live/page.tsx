@@ -204,6 +204,26 @@ export default function LivePage() {
     setTransferring(false)
   }
 
+  // جلب screenshot مباشرة من cloud.vrbot.me (أسرع) مع fallback لـ Vercel
+  async function getScreenshot(farmId: string): Promise<Response> {
+    // ابحث عن container_id من بيانات المزرعة
+    const farm = farms.find(f => f.farm_name === farmId || f.id === farmId)
+    // استخرج الرقم من farm_name أو container_id
+    const numMatch = farmId.match(/farm_(\d+)/)
+    const containerId = numMatch ? numMatch[1].padStart(3, '0') : (farm as any)?.container_id?.padStart?.(3, '0')
+
+    if (containerId) {
+      try {
+        const res = await fetch(`https://cloud.vrbot.me/screenshot/${containerId}`, {
+          signal: AbortSignal.timeout(4000),
+        })
+        if (res.ok) return res
+      } catch {}
+    }
+    // fallback: Vercel proxy (أبطأ لكن يدعم auto-start)
+    return fetch(`/api/farms/screenshot?farm_id=${farmId}`)
+  }
+
   function startStream(farmId: string) {
     stopStream()
     setStreamFarm(farmId)
@@ -212,11 +232,17 @@ export default function LivePage() {
 
     showMsg('📺 جارٍ تشغيل اللعبة وبدء البث...', 6000)
 
+    // أول محاولة عبر Vercel (لتشغيل اللعبة تلقائياً)
     let attempts = 0
+    let useDirect = false
+
     async function capture() {
       attempts++
       try {
-        const res = await fetch(`/api/farms/screenshot?farm_id=${farmId}`)
+        // أول 3 محاولات عبر Vercel لتشغيل auto-start، بعدها مباشر
+        const res = useDirect
+          ? await getScreenshot(farmId)
+          : await fetch(`/api/farms/screenshot?farm_id=${farmId}`)
         if (res.ok) {
           const blob = await res.blob()
           if (blob.size > 5000) {
@@ -226,6 +252,8 @@ export default function LivePage() {
               return url
             })
             if (attempts <= 3) showMsg('', 0)
+            // بعد أول صورة ناجحة، انتقل للمباشر
+            useDirect = true
           } else if (attempts < 8) {
             showMsg(`⏳ انتظر... اللعبة تبدأ (${attempts}/8)`, 3000)
           }
