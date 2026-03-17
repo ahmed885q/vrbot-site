@@ -57,6 +57,23 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // جلب عدد المهام اليوم من farm_events
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    let taskCounts: Record<string, number> = {};
+    try {
+      const { data: events } = await service
+        .from("farm_events")
+        .select("farm_name, tasks")
+        .eq("user_id", userId)
+        .eq("event_type", "farm_started")
+        .gte("created_at", todayStart.toISOString());
+      for (const ev of events || []) {
+        const count = Array.isArray(ev.tasks) ? ev.tasks.length : 0;
+        taskCounts[ev.farm_name] = (taskCounts[ev.farm_name] || 0) + count;
+      }
+    } catch {}
+
     // جلب الحالة الحية من Hetzner
     const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
     const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
@@ -99,7 +116,7 @@ export async function GET(req: Request) {
         container_id:   cid || numId || null,
         status:         f.status || "offline",
         game_account:   f.game_account || "",
-        tasks_today:    live?.tasks_ok || live?.tasks_today || 0,
+        tasks_today:    (taskCounts[f.farm_name] || 0) + (live?.tasks_ok || live?.tasks_today || 0),
         live_status:    isOnline ? "online" : f.status === "provisioning" ? "idle" : "offline",
         current_task:   live?.current_task || null,
         is_online:      isOnline,
