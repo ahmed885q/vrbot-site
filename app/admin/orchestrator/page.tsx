@@ -238,9 +238,11 @@ export default function OrchestratorPage() {
   async function handleSchedulerAction(action: 'start' | 'stop') {
     setActionLoading(true)
     try {
-      const res = await fetch(`/api/cloud/status`, { method: 'GET' })
-      // For start/stop we need a dedicated endpoint - use the orchestrator directly via a new route
-      // For now, just refresh the data
+      await fetch('/api/cloud/scheduler', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
       await fetchData()
     } catch {}
     setActionLoading(false)

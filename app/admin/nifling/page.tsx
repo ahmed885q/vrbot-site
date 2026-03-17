@@ -1,9 +1,15 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import {
-  getNiflingQueue, requestNifling, cancelNifling, setNiflingPriority,
-  type NiflingRequest, type NiflingStats
-} from '@/lib/orchestrator'
+
+interface NiflingRequest {
+  request_id: string; farm_id: number; customer_id: string; customer_email: string;
+  priority: number; status: string; requested_at: string;
+  started_at: string | null; completed_at: string | null; error_message: string | null;
+}
+interface NiflingStats {
+  queued: number; running: number; completed_today: number;
+  failed_today: number; avg_wait_seconds: number; avg_duration_seconds: number;
+}
 
 type Lang = 'ar' | 'en' | 'ru' | 'zh'
 const t: Record<string, Record<Lang, string>> = {
@@ -77,9 +83,10 @@ export default function NiflingPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await getNiflingQueue()
-      setRequests(res.requests || [])
-      setStats(res.stats || null)
+      const res = await fetch('/api/cloud/nifling')
+      const data = await res.json()
+      setRequests(data.requests || [])
+      setStats(data.stats || null)
     } catch { }
     setLoading(false)
   }, [])
@@ -89,14 +96,20 @@ export default function NiflingPage() {
 
   const handleNewRequest = async () => {
     if (!newFarmId) return
-    await requestNifling(parseInt(newFarmId), parseInt(newPriority))
+    await fetch('/api/cloud/nifling', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'request', farm_id: parseInt(newFarmId), priority: parseInt(newPriority) }) })
     setShowModal(false); setNewFarmId(''); setNewPriority('5')
     fetchData()
   }
 
-  const handleCancel = async (id: string) => { await cancelNifling(id); fetchData() }
+  const handleCancel = async (id: string) => {
+    await fetch('/api/cloud/nifling', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', request_id: id }) })
+    fetchData()
+  }
 
-  const handlePriority = async (id: string, p: number) => { await setNiflingPriority(id, p); fetchData() }
+  const handlePriority = async (id: string, p: number) => {
+    await fetch('/api/cloud/nifling', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'priority', request_id: id, priority: p }) })
+    fetchData()
+  }
 
   const filtered = filter === 'all' ? requests : requests.filter(r => r.status === filter)
 

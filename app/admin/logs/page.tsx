@@ -1,6 +1,17 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { getLogs, getLogSources, type LogEntry, type LogFilter } from '@/lib/orchestrator'
+
+interface LogEntry {
+  id: string; timestamp: string; level: string; source: string;
+  message: string; details: Record<string, any> | null;
+  farm_id: number | null; customer_id: string | null;
+}
+interface LogFilter {
+  level?: string; source?: string; search?: string;
+  from_date?: string; to_date?: string;
+  farm_id?: number; customer_id?: string;
+  page?: number; per_page?: number;
+}
 
 type Lang = 'ar' | 'en' | 'ru' | 'zh'
 const t: Record<string, Record<Lang, string>> = {
@@ -71,19 +82,26 @@ export default function LogsPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const f: LogFilter = { ...filter }
-      if (levelFilter) f.level = levelFilter
-      if (sourceFilter) f.source = sourceFilter
-      if (searchText) f.search = searchText
-      const res = await getLogs(f)
-      setLogs(res.logs || [])
-      setTotal(res.total || 0)
+      const params = new URLSearchParams()
+      if (filter.page) params.set('page', String(filter.page))
+      if (filter.per_page) params.set('per_page', String(filter.per_page))
+      if (levelFilter) params.set('level', levelFilter)
+      if (sourceFilter) params.set('source', sourceFilter)
+      if (searchText) params.set('search', searchText)
+      const res = await fetch(`/api/cloud/logs?${params}`)
+      const data = await res.json()
+      setLogs(data.logs || [])
+      setTotal(data.total || 0)
     } catch { }
     setLoading(false)
   }, [filter, levelFilter, sourceFilter, searchText])
 
   const fetchSources = useCallback(async () => {
-    try { const s = await getLogSources(); setSources(s || []) } catch { }
+    try {
+      const res = await fetch('/api/cloud/logs?_sources=1')
+      const data = await res.json()
+      setSources(data.sources || [])
+    } catch { }
   }, [])
 
   useEffect(() => { fetchData(); fetchSources() }, [fetchData, fetchSources])

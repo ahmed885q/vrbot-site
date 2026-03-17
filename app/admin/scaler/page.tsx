@@ -1,9 +1,19 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import {
-  getScalerStatus, setScalerMode, getServers, provisionServer, drainServer, setScalerBudget,
-  type ScalerStatus, type Server
-} from '@/lib/orchestrator'
+
+interface ScalerStatus {
+  mode: 'AUTO' | 'NOTIFY' | 'MANUAL'; running: boolean; total_servers: number;
+  total_capacity: number; used_capacity: number; utilization_percent: number;
+  monthly_budget: number; monthly_cost: number; pending_alerts: number;
+  last_scale_action: string | null; last_scale_time: string | null;
+  thresholds: { scale_up_percent: number; scale_down_percent: number; min_servers: number; max_servers: number };
+}
+interface Server {
+  server_id: string; name: string; ip: string; type: string;
+  status: string; total_slots: number; used_slots: number; farms: number[];
+  cpu_percent: number; memory_percent: number; monthly_cost: number;
+  created_at: string; region: string;
+}
 
 type Lang = 'ar' | 'en' | 'ru' | 'zh'
 const t: Record<string, Record<Lang, string>> = {
@@ -79,7 +89,10 @@ export default function ScalerPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [sc, sv] = await Promise.allSettled([getScalerStatus(), getServers()])
+      const [sc, sv] = await Promise.allSettled([
+        fetch('/api/cloud/scaler').then(r => r.json()),
+        fetch('/api/cloud/servers').then(r => r.json()),
+      ])
       if (sc.status === 'fulfilled') { setScaler(sc.value); setBudgetInput(String(sc.value.monthly_budget || 0)) }
       if (sv.status === 'fulfilled') setServers(sv.value.servers || [])
     } catch { }
@@ -89,16 +102,19 @@ export default function ScalerPage() {
   useEffect(() => { fetchData() }, [fetchData])
   useEffect(() => { const iv = setInterval(fetchData, 15000); return () => clearInterval(iv) }, [fetchData])
 
-  const handleMode = async (mode: 'AUTO' | 'NOTIFY' | 'MANUAL') => { await setScalerMode(mode); fetchData() }
-  const handleDrain = async (id: string) => { if (confirm('Drain this server?')) { await drainServer(id); fetchData() } }
-  const handleBudget = async () => { await setScalerBudget(parseFloat(budgetInput)); fetchData() }
+  const postCloud = async (endpoint: string, body: any) => {
+    await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    fetchData()
+  }
+  const handleMode = async (mode: 'AUTO' | 'NOTIFY' | 'MANUAL') => postCloud('/api/cloud/scaler', { action: 'set_mode', mode })
+  const handleDrain = async (id: string) => { if (confirm('Drain this server?')) postCloud('/api/cloud/servers', { action: 'drain', server_id: id }) }
+  const handleBudget = async () => postCloud('/api/cloud/scaler', { action: 'set_budget', budget: parseFloat(budgetInput) })
   const handleProvision = async () => {
     const type = prompt('Server type (ax41/ax42):', 'ax41')
     if (!type) return
     const region = prompt('Region:', 'fsn1')
     if (!region) return
-    await provisionServer(type, region)
-    fetchData()
+    postCloud('/api/cloud/servers', { action: 'provision', server_type: type, region })
   }
 
   if (loading) return <div style={{ ...s.card, textAlign: 'center', margin: '40px' }}>{L('loading')}</div>
