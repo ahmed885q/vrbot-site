@@ -42,6 +42,9 @@ export default function LivePage() {
   const [screenshot, setScreenshot]         = useState<string | null>(null)
   const [streamFarm, setStreamFarm]         = useState<string | null>(null)
   const screenshotTimer                     = useRef<NodeJS.Timeout | null>(null)
+  const [tapMode, setTapMode]               = useState(false)
+  const [tapFeedback, setTapFeedback]       = useState<{x:number,y:number} | null>(null)
+  const dragStart                           = useRef<{x:number,y:number}|null>(null)
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), [])
 
@@ -204,6 +207,42 @@ export default function LivePage() {
     setTransferring(false)
   }
 
+  // ─── التحكم التفاعلي: tap + swipe ─────────────────────────────
+  function onImgMouseDown(e: React.MouseEvent<HTMLImageElement>) {
+    if (!tapMode) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    dragStart.current = {
+      x: Math.round(((e.clientX - rect.left) / rect.width)  * 1280),
+      y: Math.round(((e.clientY - rect.top)  / rect.height) * 720),
+    }
+  }
+
+  async function onImgMouseUp(e: React.MouseEvent<HTMLImageElement>) {
+    if (!tapMode || !streamFarm || !dragStart.current) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const endX = Math.round(((e.clientX - rect.left) / rect.width)  * 1280)
+    const endY = Math.round(((e.clientY - rect.top)  / rect.height) * 720)
+    const { x: startX, y: startY } = dragStart.current
+    dragStart.current = null
+
+    // تأثير بصري
+    setTapFeedback({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+    setTimeout(() => setTapFeedback(null), 600)
+
+    const dist = Math.hypot(endX - startX, endY - startY)
+    const cmd = dist < 10
+      ? `tap:${endX},${endY}`
+      : `swipe:${startX},${startY},${endX},${endY}`
+
+    try {
+      await fetch("/api/farms/command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ farm_id: streamFarm, command: cmd }),
+      })
+    } catch {}
+  }
+
   // جلب screenshot مباشرة من cloud.vrbot.me (أسرع) مع fallback لـ Vercel
   async function getScreenshot(farmId: string): Promise<Response> {
     // ابحث عن container_id من بيانات المزرعة
@@ -293,6 +332,12 @@ export default function LivePage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0d1117', color: '#e6edf3', fontFamily: 'sans-serif' }}>
+      <style>{`
+        @keyframes tapPulse {
+          0%   { transform: scale(0.5); opacity: 1; }
+          100% { transform: scale(2);   opacity: 0; }
+        }
+      `}</style>
 
       {/* Header */}
       <div style={{ padding: '14px 24px', background: '#161b22', borderBottom: '1px solid #21262d', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
@@ -525,11 +570,48 @@ export default function LivePage() {
                 transition: 'border-color 0.3s',
               }}>
                 {screenshot ? (
-                  <img
-                    src={screenshot}
-                    alt="Live Screen"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  />
+                  <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                    <img
+                      src={screenshot}
+                      alt="Live Screen"
+                      onMouseDown={onImgMouseDown}
+                      onMouseUp={onImgMouseUp}
+                      draggable={false}
+                      style={{
+                        width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+                        cursor: tapMode ? 'crosshair' : 'default',
+                        userSelect: 'none',
+                      }}
+                    />
+                    {tapFeedback && (
+                      <div style={{
+                        position: 'absolute',
+                        left: tapFeedback.x - 15,
+                        top: tapFeedback.y - 15,
+                        width: 30, height: 30,
+                        borderRadius: '50%',
+                        border: '2px solid #f59e0b',
+                        background: 'rgba(245,158,11,0.2)',
+                        pointerEvents: 'none',
+                        animation: 'tapPulse 0.6s ease-out',
+                      }} />
+                    )}
+                    {streaming && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setTapMode(p => !p) }}
+                        style={{
+                          position: 'absolute', bottom: 8, right: 8,
+                          background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.6)',
+                          border: tapMode ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.2)',
+                          color: tapMode ? '#000' : '#fff',
+                          borderRadius: 6, padding: '4px 10px',
+                          fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                        }}
+                      >
+                        {tapMode ? '🎮 تحكم' : '🎮'}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div style={{ textAlign: 'center', color: '#8b949e', padding: 16 }}>
                     <div style={{ fontSize: 28, marginBottom: 8 }}>📺</div>
@@ -675,8 +757,28 @@ export default function LivePage() {
             <img
               src={screenshot}
               alt="Live"
-              style={{ width: '100%', display: 'block' }}
+              onMouseDown={onImgMouseDown}
+              onMouseUp={onImgMouseUp}
+              draggable={false}
+              style={{
+                width: '100%', display: 'block',
+                cursor: tapMode ? 'crosshair' : 'default',
+                userSelect: 'none',
+              }}
             />
+            {tapFeedback && (
+              <div style={{
+                position: 'absolute',
+                left: tapFeedback.x - 12,
+                top: tapFeedback.y - 12,
+                width: 24, height: 24,
+                borderRadius: '50%',
+                border: '2px solid #f59e0b',
+                background: 'rgba(245,158,11,0.2)',
+                pointerEvents: 'none',
+                animation: 'tapPulse 0.6s ease-out',
+              }} />
+            )}
             <div style={{
               position: 'absolute', top: 6, left: 8,
               background: '#ef4444', color: '#fff',
@@ -685,17 +787,29 @@ export default function LivePage() {
             }}>
               ● LIVE — {streamFarm}
             </div>
-            <button
-              onClick={stopStream}
-              style={{
-                position: 'absolute', top: 4, right: 6,
-                background: 'rgba(0,0,0,0.7)', border: 'none',
-                color: '#fff', borderRadius: 4,
-                padding: '2px 8px', cursor: 'pointer', fontSize: 12,
-              }}
-            >
-              ✕
-            </button>
+            <div style={{ position: 'absolute', top: 4, right: 6, display: 'flex', gap: 4 }}>
+              <button
+                onClick={e => { e.stopPropagation(); setTapMode(p => !p) }}
+                style={{
+                  background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.7)',
+                  border: 'none', color: tapMode ? '#000' : '#fff',
+                  borderRadius: 4, padding: '2px 8px',
+                  cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                }}
+              >
+                🎮
+              </button>
+              <button
+                onClick={stopStream}
+                style={{
+                  background: 'rgba(0,0,0,0.7)', border: 'none',
+                  color: '#fff', borderRadius: 4,
+                  padding: '2px 8px', cursor: 'pointer', fontSize: 12,
+                }}
+              >
+                ✕
+              </button>
+            </div>
           </div>
         </div>
       )}
