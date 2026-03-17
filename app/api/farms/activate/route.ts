@@ -87,13 +87,15 @@ export async function POST(req: Request) {
     }).eq("farm_name", farm_name).eq("user_id", userId);
 
     // تسجيل الحدث
-    await service.from("farm_events").insert({
-      user_id:    userId,
-      farm_name:  farm_name,
-      event_type: "farm_activated",
-      message:    `تم تفعيل مزرعة ${farm_name} ⚡`,
-      tasks:      [],
-    }).catch(() => {});
+    try {
+      await service.from("farm_events").insert({
+        user_id:    userId,
+        farm_name:  farm_name,
+        event_type: "farm_activated",
+        message:    `Activated farm ${farm_name}`,
+        tasks:      [],
+      });
+    } catch {}
 
     return NextResponse.json({ ok: true, result });
   } catch (e: any) {

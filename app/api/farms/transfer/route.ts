@@ -77,13 +77,15 @@ export async function POST(req: Request) {
     });
 
     // سجّل الحدث في farm_events
-    await service.from("farm_events").insert({
-      user_id:    user.id,
-      farm_name:  farm_id,
-      event_type: "transfer_resources",
-      message:    `📦 نقل ${resources.join("+")} → ${target_name} (${amount || "all"}) — container: ${target_container}`,
-      tasks:      resources,
-    }).catch(() => {});
+    try {
+      await service.from("farm_events").insert({
+        user_id:    user.id,
+        farm_name:  farm_id,
+        event_type: "transfer_resources",
+        message:    `Transfer ${resources.join("+")} to ${target_name} (${amount || "all"}) — container: ${target_container}`,
+        tasks:      resources,
+      });
+    } catch {}
 
     return NextResponse.json({
       ok:           result.ok,

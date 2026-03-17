@@ -111,13 +111,15 @@ export async function POST(req: Request) {
     }
 
     // سجّل الحدث
-    await service.from("farm_events").insert({
-      user_id:    user.id,
-      farm_name:  name,
-      event_type: "farm_created",
-      message:    `تم إنشاء مزرعة ${name} → container ${container_id || "pending"}`,
-      tasks:      [],
-    }).catch(() => {});
+    try {
+      await service.from("farm_events").insert({
+        user_id:    user.id,
+        farm_name:  name,
+        event_type: "farm_created",
+        message:    `Created farm ${name} -> container ${container_id || "pending"}`,
+        tasks:      [],
+      });
+    } catch {}
 
     // تسجيل دخول IGG بشكل async
     if (container_id && igg_email && igg_password) {
@@ -133,24 +135,28 @@ export async function POST(req: Request) {
             status:         "running",
             last_heartbeat: new Date().toISOString(),
           }).eq("id", farm.id);
-          await service.from("farm_events").insert({
-            user_id:    user.id,
-            farm_name:  name,
-            event_type: "farm_started",
-            message:    `✅ تسجيل دخول IGG ناجح — container ${container_id}`,
-            tasks:      [],
-          }).catch(() => {});
+          try {
+            await service.from("farm_events").insert({
+              user_id:    user.id,
+              farm_name:  name,
+              event_type: "farm_started",
+              message:    `IGG login success — container ${container_id}`,
+              tasks:      [],
+            });
+          } catch {}
         } else {
           await service.from("cloud_farms").update({
             status: "error",
           }).eq("id", farm.id);
-          await service.from("farm_events").insert({
-            user_id:    user.id,
-            farm_name:  name,
-            event_type: "error",
-            message:    `❌ فشل تسجيل دخول IGG: ${result.error}`,
-            tasks:      [],
-          }).catch(() => {});
+          try {
+            await service.from("farm_events").insert({
+              user_id:    user.id,
+              farm_name:  name,
+              event_type: "error",
+              message:    `IGG login failed: ${result.error}`,
+              tasks:      [],
+            });
+          } catch {}
         }
       }).catch(console.error);
     }
