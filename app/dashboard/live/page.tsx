@@ -210,16 +210,25 @@ export default function LivePage() {
     setStreaming(true)
     setScreenshot(null)
 
+    showMsg('📺 جارٍ تشغيل اللعبة وبدء البث...', 6000)
+
+    let attempts = 0
     async function capture() {
+      attempts++
       try {
         const res = await fetch(`/api/farms/screenshot?farm_id=${farmId}`)
         if (res.ok) {
           const blob = await res.blob()
-          const url = URL.createObjectURL(blob)
-          setScreenshot(prev => {
-            if (prev) URL.revokeObjectURL(prev)
-            return url
-          })
+          if (blob.size > 5000) {
+            const url = URL.createObjectURL(blob)
+            setScreenshot(prev => {
+              if (prev) URL.revokeObjectURL(prev)
+              return url
+            })
+            if (attempts <= 3) showMsg('', 0)
+          } else if (attempts < 8) {
+            showMsg(`⏳ انتظر... اللعبة تبدأ (${attempts}/8)`, 3000)
+          }
         }
       } catch {}
     }
