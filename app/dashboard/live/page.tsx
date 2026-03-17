@@ -38,6 +38,9 @@ export default function LivePage() {
   const [transferMethod, setTransferMethod] = useState<'tribe_hall'|'world_map'>('tribe_hall')
   const [transferring, setTransferring]     = useState(false)
   const [transferMsg, setTransferMsg]       = useState('')
+  const [streaming, setStreaming]           = useState(false)
+  const [screenshot, setScreenshot]         = useState<string | null>(null)
+  const screenshotTimer                     = useRef<NodeJS.Timeout | null>(null)
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), [])
 
@@ -93,6 +96,12 @@ export default function LivePage() {
     const t = setInterval(loadFarms, 15000)
     return () => clearInterval(t)
   }, [loadFarms])
+
+  useEffect(() => {
+    return () => {
+      if (screenshotTimer.current) clearInterval(screenshotTimer.current)
+    }
+  }, [])
 
   async function runTasks(farmId: string, taskList: string[], action?: string) {
     setRunning(p => ({ ...p, [farmId]: true }))
@@ -192,6 +201,41 @@ export default function LivePage() {
       setTransferMsg('❌ خطأ في الاتصال')
     }
     setTransferring(false)
+  }
+
+  function startStream(farmId: string) {
+    stopStream()
+    setStreaming(true)
+    setScreenshot(null)
+
+    async function capture() {
+      try {
+        const res = await fetch(`/api/farms/screenshot?farm_id=${farmId}`)
+        if (res.ok) {
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          setScreenshot(prev => {
+            if (prev) URL.revokeObjectURL(prev)
+            return url
+          })
+        }
+      } catch {}
+    }
+
+    capture()
+    screenshotTimer.current = setInterval(capture, 2000)
+  }
+
+  function stopStream() {
+    setStreaming(false)
+    if (screenshotTimer.current) {
+      clearInterval(screenshotTimer.current)
+      screenshotTimer.current = null
+    }
+    if (screenshot) {
+      URL.revokeObjectURL(screenshot)
+      setScreenshot(null)
+    }
   }
 
   function toggleTask(t: string) {
@@ -405,6 +449,77 @@ export default function LivePage() {
               <p style={{ color: '#8b949e', fontSize: 12 }}>اختر مزرعة من اليسار</p>
             )}
           </div>
+
+          {/* Live Screen */}
+          {activeFarm && (
+            <div>
+              <div style={{
+                background: '#000',
+                borderRadius: 8,
+                overflow: 'hidden',
+                aspectRatio: '16/9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                minHeight: 180,
+              }}>
+                {screenshot ? (
+                  <img
+                    src={screenshot}
+                    alt="Live Screen"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : (
+                  <div style={{ textAlign: 'center', color: '#8b949e' }}>
+                    <div style={{ fontSize: 32, marginBottom: 8 }}>📺</div>
+                    <div style={{ fontSize: 12 }}>
+                      {streaming ? 'جارٍ التحميل...' : 'اضغط بث للمشاهدة'}
+                    </div>
+                  </div>
+                )}
+                {streaming && (
+                  <div style={{
+                    position: 'absolute', top: 8, right: 8,
+                    background: '#ef4444', color: '#fff',
+                    padding: '2px 8px', borderRadius: 4,
+                    fontSize: 11, fontWeight: 700,
+                  }}>
+                    ● LIVE
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                {!streaming ? (
+                  <button
+                    onClick={() => startStream(activeFarm.farm_name)}
+                    style={{
+                      flex: 1, padding: '8px',
+                      background: 'linear-gradient(135deg,#ef4444,#dc2626)',
+                      color: '#fff', border: 'none',
+                      borderRadius: 6, cursor: 'pointer',
+                      fontSize: 12, fontWeight: 700,
+                    }}
+                  >
+                    📺 بث مباشر
+                  </button>
+                ) : (
+                  <button
+                    onClick={stopStream}
+                    style={{
+                      flex: 1, padding: '8px',
+                      background: '#21262d',
+                      color: '#f85149', border: '1px solid #f8514930',
+                      borderRadius: 6, cursor: 'pointer',
+                      fontSize: 12, fontWeight: 700,
+                    }}
+                  >
+                    ⏹ إيقاف البث
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Tasks Selection */}
           <div>
