@@ -13,7 +13,7 @@ export async function GET(req: Request) {
 
     let userId: string | null = null;
 
-    // طريقة 1: Bearer token
+    // Bearer token
     const authHeader = req.headers.get("authorization") || "";
     const token = authHeader.replace("Bearer ", "").trim();
     if (token && token !== "undefined" && token !== "null") {
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
       userId = data?.user?.id || null;
     }
 
-    // طريقة 2: Cookies (الأهم للمتصفح)
+    // Cookies
     if (!userId) {
       try {
         const cookieStore = cookies();
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // جلب المزارع من Supabase
+    // جلب كل مزارع المستخدم
     const { data: farms, error } = await service
       .from("cloud_farms")
       .select("farm_name, container_id, status, game_account, server_id, last_heartbeat, created_at")
@@ -53,52 +53,67 @@ export async function GET(req: Request) {
       .order("farm_name", { ascending: true });
 
     if (error) {
+      console.error("farms/status DB error:", error.message);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     // جلب الحالة الحية من Hetzner
     const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
-    let hetznerFarms: Record<string, any> = {};
+    const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
+    let hetznerMap: Record<string, any> = {};
 
     try {
       const res = await fetch(`http://${HETZNER}:8888/api/farms/status`, {
-        headers: { "X-API-Key": process.env.VRBOT_API_KEY || "" },
-        signal: AbortSignal.timeout(5000),
+        headers: { "X-API-Key": API_KEY },
+        signal: AbortSignal.timeout(6000),
       });
       if (res.ok) {
         const d = await res.json();
         (d.farms || []).forEach((f: any) => {
-          const id = f.farm_id || f.name || f.id;
-          if (id) hetznerFarms[id] = f;
+          const key = String(f.farm_id || f.name || f.id || "");
+          if (key) hetznerMap[key] = f;
         });
       }
     } catch {}
 
-    // دمج البيانات — ابحث بـ container_id أولاً ثم farm_name
+    // دمج البيانات — ابحث بـ container_id, الرقم, farm_name
     const merged = (farms || []).map((f: any) => {
-      const live = f.container_id
-        ? (hetznerFarms[f.container_id] || hetznerFarms[f.farm_name] || null)
-        : (hetznerFarms[f.farm_name] || null);
+      const cid = f.container_id;
+      const numId = cid?.replace("farm_", "") || f.farm_name?.replace("farm_", "");
+
+      // ابحث بكل الأشكال الممكنة
+      const live = hetznerMap[cid]
+        || hetznerMap[`farm_${cid}`]
+        || hetznerMap[numId]
+        || hetznerMap[f.farm_name]
+        || hetznerMap[f.farm_name?.replace("farm_", "")]
+        || null;
+
+      const isOnline = !!(live?.game_pid) || live?.live_status === "online"
+        || live?.status === "running" || live?.status === "RUNNING";
+
       return {
         id:             f.farm_name,
         farm_name:      f.farm_name,
         name:           f.farm_name,
-        container_id:   f.container_id || null,
-        status:         live?.status || f.status || "offline",
+        container_id:   cid || numId || null,
+        status:         f.status || "offline",
         game_account:   f.game_account || "",
-        tasks_today:    live?.tasks_ok || 0,
-        live_status:    live ? (live.status === "running" ? "online" : "idle") : f.status === "provisioning" ? "idle" : "offline",
+        tasks_today:    live?.tasks_ok || live?.tasks_today || 0,
+        live_status:    isOnline ? "online" : f.status === "provisioning" ? "idle" : "offline",
         current_task:   live?.current_task || null,
-        is_online:      !!(live?.status === "running" || live?.status === "RUNNING"),
+        is_online:      isOnline,
+        game_pid:       live?.game_pid || null,
         server_id:      f.server_id,
         last_heartbeat: f.last_heartbeat,
       };
     });
 
     return NextResponse.json({
-      farms: merged,
-      total: merged.length,
+      farms:        merged,
+      total:        merged.length,
       cloud_online: merged.some((f: any) => f.is_online),
+      debug_userId: userId.substring(0, 8),
     });
   } catch (e: any) {
     console.error("farms/status error:", e?.message);

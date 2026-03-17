@@ -27,27 +27,75 @@ export async function GET(req: Request) {
       ? farm.container_id.replace("farm_", "")
       : farm_id.replace("farm_", "");
 
+    // تحقق من حالة الـ container — إذا idle شغّل اللعبة
+    try {
+      const statusRes = await fetch(`http://${HETZNER}:8888/api/farms/status`, {
+        headers: { "X-API-Key": API_KEY },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (statusRes.ok) {
+        const statusData = await statusRes.json();
+        const containerInfo = (statusData.farms || []).find(
+          (f: any) => String(f.farm_id) === target || f.farm_id === target
+        );
+        // إذا اللعبة مش شغّالة — شغّلها
+        if (!containerInfo || !containerInfo.game_pid) {
+          fetch(`http://${HETZNER}:8888/api/farms/start`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
+            body: JSON.stringify({ farm_id: target }),
+            signal: AbortSignal.timeout(5000),
+          }).catch(() => {});
+        }
+      }
+    } catch {}
+
     // جلب الصورة من Hetzner
     const res = await fetch(
       `http://${HETZNER}:8888/api/screenshot/${target}`,
       {
         headers: { "X-API-Key": API_KEY },
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(10000),
       }
     );
 
     if (!res.ok) {
-      return NextResponse.json({ error: "Screenshot failed" }, { status: 502 });
+      return NextResponse.json(
+        { error: "Screenshot failed", target, farm_id },
+        { status: 502 }
+      );
     }
 
+    // Handle both raw image and base64 JSON response
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const json = await res.json();
+      if (!json.data) {
+        return NextResponse.json({ error: "No screenshot data" }, { status: 502 });
+      }
+      const imageBuffer = Buffer.from(json.data, "base64");
+      return new NextResponse(imageBuffer, {
+        headers: {
+          "Content-Type": "image/png",
+          "Cache-Control": "no-store, no-cache, max-age=0",
+          "X-Container": target,
+          "X-Farm": farm_id,
+        },
+      });
+    }
+
+    // Raw image response
     const imageBuffer = await res.arrayBuffer();
     return new NextResponse(imageBuffer, {
       headers: {
-        "Content-Type": "image/jpeg",
-        "Cache-Control": "no-store, no-cache",
+        "Content-Type": contentType.includes("image") ? contentType : "image/jpeg",
+        "Cache-Control": "no-store, no-cache, max-age=0",
+        "X-Container": target,
+        "X-Farm": farm_id,
       },
     });
   } catch (e: any) {
+    console.error("screenshot error:", e?.message);
     return NextResponse.json({ error: e?.message }, { status: 500 });
   }
 }
