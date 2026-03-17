@@ -59,15 +59,17 @@ export async function POST(req: Request) {
     });
 
     // سجّل الحدث
-    await service.from("farm_events").insert({
-      user_id:    user.id,
-      farm_name:  farm_id,
-      event_type: action === "stop" ? "farm_stopped" : "farm_started",
-      message:    action === "stop"
-        ? `⏹ إيقاف ${farm_id} (container: ${target_id})`
-        : `▶ تشغيل ${tasks?.length || 0} مهمة على ${farm_id} (container: ${target_id})`,
-      tasks: tasks || [],
-    }).catch(() => {});
+    try {
+      await service.from("farm_events").insert({
+        user_id:    user.id,
+        farm_name:  farm_id,
+        event_type: action === "stop" ? "farm_stopped" : "farm_started",
+        message:    action === "stop"
+          ? `Stopped ${farm_id} (container: ${target_id})`
+          : `Running ${tasks?.length || 0} tasks on ${farm_id} (container: ${target_id})`,
+        tasks: tasks || [],
+      });
+    } catch {}
 
     return NextResponse.json({
       ok:           result.ok,

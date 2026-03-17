@@ -62,13 +62,15 @@ export async function DELETE(req: Request) {
     }
 
     // سجّل الحدث في farm_events
-    await service.from("farm_events").insert({
-      user_id:    userData.user.id,
-      farm_name:  farmName,
-      event_type: "farm_deleted",
-      message:    `تم حذف مزرعة ${farmName}`,
-      tasks:      [],
-    }).catch(() => {});
+    try {
+      await service.from("farm_events").insert({
+        user_id:    userData.user.id,
+        farm_name:  farmName,
+        event_type: "farm_deleted",
+        message:    `Deleted farm ${farmName}`,
+        tasks:      [],
+      });
+    } catch {}
 
     return NextResponse.json({ ok: true, deleted: farmName });
   } catch (e: any) {
