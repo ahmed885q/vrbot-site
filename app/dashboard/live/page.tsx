@@ -311,7 +311,12 @@ export default function LivePage() {
                 return (
                   <div
                     key={farm.id}
-                    onClick={() => setSelected(farm.id)}
+                    onClick={() => {
+                      setSelected(farm.id)
+                      if (streaming && streamFarm !== farm.farm_name) {
+                        startStream(farm.farm_name)
+                      }
+                    }}
                     style={{
                       borderRadius: 10,
                       border: `2px solid ${isSelected ? '#f0a500' : '#21262d'}`,
@@ -480,33 +485,37 @@ export default function LivePage() {
                 background: '#000',
                 borderRadius: 8,
                 overflow: 'hidden',
+                width: '100%',
                 aspectRatio: '16/9',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 position: 'relative',
-                minHeight: 180,
+                minHeight: 160,
+                maxHeight: 240,
+                border: streaming ? '2px solid rgba(239,68,68,0.5)' : '2px solid #21262d',
+                transition: 'border-color 0.3s',
               }}>
                 {screenshot ? (
                   <img
                     src={screenshot}
                     alt="Live Screen"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   />
                 ) : (
-                  <div style={{ textAlign: 'center', color: '#8b949e' }}>
-                    <div style={{ fontSize: 32, marginBottom: 8 }}>📺</div>
-                    <div style={{ fontSize: 12 }}>
-                      {streaming ? 'جارٍ التحميل...' : 'اضغط بث للمشاهدة'}
+                  <div style={{ textAlign: 'center', color: '#8b949e', padding: 16 }}>
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>📺</div>
+                    <div style={{ fontSize: 11 }}>
+                      {streaming ? '⏳ جارٍ التحميل...' : 'اضغط بث للمشاهدة'}
                     </div>
                   </div>
                 )}
                 {streaming && (
                   <div style={{
-                    position: 'absolute', top: 8, right: 8,
+                    position: 'absolute', top: 6, right: 6,
                     background: '#ef4444', color: '#fff',
-                    padding: '2px 8px', borderRadius: 4,
-                    fontSize: 11, fontWeight: 700,
+                    padding: '1px 6px', borderRadius: 4,
+                    fontSize: 9, fontWeight: 700,
                   }}>
                     ● LIVE
                   </div>
@@ -629,19 +638,19 @@ export default function LivePage() {
       {streaming && screenshot && (
         <div style={{
           position: 'fixed', bottom: 20, right: 20,
-          width: 340, background: '#161b22',
-          border: '1px solid rgba(239,68,68,0.3)',
-          borderRadius: 12, overflow: 'hidden',
-          zIndex: 9998, boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+          width: 300, background: '#161b22',
+          border: '2px solid rgba(239,68,68,0.4)',
+          borderRadius: 10, overflow: 'hidden',
+          zIndex: 9998, boxShadow: '0 8px 32px rgba(0,0,0,0.7)',
         }}>
           <div style={{ position: 'relative' }}>
             <img
               src={screenshot}
               alt="Live"
-              style={{ width: '100%', display: 'block', objectFit: 'contain' }}
+              style={{ width: '100%', display: 'block' }}
             />
             <div style={{
-              position: 'absolute', top: 8, left: 8,
+              position: 'absolute', top: 6, left: 8,
               background: '#ef4444', color: '#fff',
               padding: '2px 8px', borderRadius: 4,
               fontSize: 10, fontWeight: 700,
@@ -651,10 +660,10 @@ export default function LivePage() {
             <button
               onClick={stopStream}
               style={{
-                position: 'absolute', top: 6, right: 8,
-                background: 'rgba(0,0,0,0.6)', border: 'none',
+                position: 'absolute', top: 4, right: 6,
+                background: 'rgba(0,0,0,0.7)', border: 'none',
                 color: '#fff', borderRadius: 4,
-                padding: '3px 10px', cursor: 'pointer', fontSize: 12,
+                padding: '2px 8px', cursor: 'pointer', fontSize: 12,
               }}
             >
               ✕
