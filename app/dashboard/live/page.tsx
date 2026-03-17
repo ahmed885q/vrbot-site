@@ -40,6 +40,7 @@ export default function LivePage() {
   const [transferMsg, setTransferMsg]       = useState('')
   const [streaming, setStreaming]           = useState(false)
   const [screenshot, setScreenshot]         = useState<string | null>(null)
+  const [streamFarm, setStreamFarm]         = useState<string | null>(null)
   const screenshotTimer                     = useRef<NodeJS.Timeout | null>(null)
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), [])
@@ -205,6 +206,7 @@ export default function LivePage() {
 
   function startStream(farmId: string) {
     stopStream()
+    setStreamFarm(farmId)
     setStreaming(true)
     setScreenshot(null)
 
@@ -228,6 +230,7 @@ export default function LivePage() {
 
   function stopStream() {
     setStreaming(false)
+    setStreamFarm(null)
     if (screenshotTimer.current) {
       clearInterval(screenshotTimer.current)
       screenshotTimer.current = null
@@ -423,6 +426,17 @@ export default function LivePage() {
                       >
                         🗑️
                       </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); streaming && streamFarm === farm.farm_name ? stopStream() : startStream(farm.farm_name) }}
+                        style={{
+                          background: streaming && streamFarm === farm.farm_name ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.1)',
+                          border: streaming && streamFarm === farm.farm_name ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(59,130,246,0.3)',
+                          color: streaming && streamFarm === farm.farm_name ? '#f87171' : '#58a6ff',
+                          padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                        }}
+                      >
+                        {streaming && streamFarm === farm.farm_name ? '⏹' : '📺'}
+                      </button>
                     </div>
                   </div>
                 )
@@ -601,6 +615,44 @@ export default function LivePage() {
           )}
         </div>
       </div>
+
+      {/* Live Stream Overlay */}
+      {streaming && screenshot && (
+        <div style={{
+          position: 'fixed', bottom: 20, right: 20,
+          width: 340, background: '#161b22',
+          border: '1px solid rgba(239,68,68,0.3)',
+          borderRadius: 12, overflow: 'hidden',
+          zIndex: 9998, boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+        }}>
+          <div style={{ position: 'relative' }}>
+            <img
+              src={screenshot}
+              alt="Live"
+              style={{ width: '100%', display: 'block', objectFit: 'contain' }}
+            />
+            <div style={{
+              position: 'absolute', top: 8, left: 8,
+              background: '#ef4444', color: '#fff',
+              padding: '2px 8px', borderRadius: 4,
+              fontSize: 10, fontWeight: 700,
+            }}>
+              ● LIVE — {streamFarm}
+            </div>
+            <button
+              onClick={stopStream}
+              style={{
+                position: 'absolute', top: 6, right: 8,
+                background: 'rgba(0,0,0,0.6)', border: 'none',
+                color: '#fff', borderRadius: 4,
+                padding: '3px 10px', cursor: 'pointer', fontSize: 12,
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Transfer Modal */}
       {showTransfer && (
