@@ -44,7 +44,7 @@ export async function GET() {
 
     // 2. Subscription check — user must have at least one farm
     const { count } = await supabase
-      .from('user_farms')
+      .from('cloud_farms')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
 
@@ -84,4 +84,5 @@ export async function GET() {
     )
   }
 }
+
 
