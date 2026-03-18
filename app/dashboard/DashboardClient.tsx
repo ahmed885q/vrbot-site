@@ -66,6 +66,8 @@ export default function DashboardClient() {
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [farmSearch, setFarmSearch] = useState("");
   const [showAddFarm, setShowAddFarm] = useState(false);
+  const [newFarmEmail, setNewFarmEmail] = useState("");
+  const [newFarmPassword, setNewFarmPassword] = useState("");
   const [newFarmName, setNewFarmName] = useState("");
   const [newFarmServer, setNewFarmServer] = useState("");
   const [newFarmNotes, setNewFarmNotes] = useState("");
@@ -235,12 +237,12 @@ export default function DashboardClient() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ name: newFarmName, server: newFarmServer || null, notes: newFarmNotes || null, cloud: true })
+        body: JSON.stringify({ name: newFarmName, server: newFarmServer || null, notes: newFarmNotes || null, cloud: true, igg_email: newFarmEmail || null, igg_password: newFarmPassword || null })
       });
       const d = await res.json();
       if (!res.ok) setFarmError(d.error || "Error");
       else {
-        setShowAddFarm(false); setNewFarmName(""); setNewFarmServer(""); setNewFarmNotes("");
+        setShowAddFarm(false); setNewFarmName(""); setNewFarmServer(""); setNewFarmNotes(""); setNewFarmEmail(""); setNewFarmPassword("");
         loadFarms(); loadTokens();
         if (d.farm?.id) setSelectedFarmId(d.farm.id);
         if (d.cloud?.error) {
@@ -636,6 +638,8 @@ export default function DashboardClient() {
               <input placeholder={s.farmName} value={newFarmName} onChange={e => setNewFarmName(e.target.value)} autoFocus style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 13, outline: "none" }} />
               <input placeholder={s.farmServer} value={newFarmServer} onChange={e => setNewFarmServer(e.target.value)} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 13, outline: "none" }} />
               <input placeholder={s.farmNotes} value={newFarmNotes} onChange={e => setNewFarmNotes(e.target.value)} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 13, outline: "none" }} />
+              <input placeholder={lang === "ar" ? "????? IGG" : "IGG Email"} value={newFarmEmail} onChange={e => setNewFarmEmail(e.target.value)} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 13, outline: "none" }} />
+              <input placeholder={lang === "ar" ? "???? ???? IGG" : "IGG Password"} type="password" value={newFarmPassword} onChange={e => setNewFarmPassword(e.target.value)} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 13, outline: "none" }} />
               {/* Cloud provisioning note */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 6, background: "rgba(6,182,212,0.06)", border: "1px solid rgba(6,182,212,0.12)" }}>
                 <span style={{ fontSize: 14 }}>☁️</span>
@@ -653,3 +657,4 @@ export default function DashboardClient() {
     </div>
   );
 }
+
