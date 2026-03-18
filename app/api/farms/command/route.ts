@@ -59,8 +59,14 @@ export async function POST(req: Request) {
 
     const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
     const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
-    const target = farm.container_id?.replace("farm_", "") ||
-                   farm_id.replace("farm_", "");
+
+    // Resolve container_id: extract numeric part and pad to 3 digits
+    let target = farm.container_id || "";
+    const num = target.replace(/\D/g, "");
+    target = num ? num.padStart(3, "0") : target;
+    if (!target || !/\d/.test(target)) {
+      return NextResponse.json({ error: "المزرعة لم تُعيّن لها container" }, { status: 400 });
+    }
 
     const res = await fetch(`http://${HETZNER}:8888/api/farms/command`, {
       method: "POST",
