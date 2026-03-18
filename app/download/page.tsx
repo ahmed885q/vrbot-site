@@ -404,7 +404,7 @@ export default function DownloadPage() {
               {t.step2_desc}
             </p>
             <a
-  href="/api/download" onClick={async (e) => { e.preventDefault(); const r = await fetch("/api/download", {credentials: "include"}); if(r.ok){ const b = await r.blob(); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href=u; a.download="vrbot-setup-v5.3.exe"; a.click(); } else { const d = await r.json(); alert(d.error || "Download failed"); } }}
+  href="/api/download" onClick={async (e) => { e.preventDefault(); const r = await fetch("/api/download", {credentials: "include"}); if(r.ok){ const d = await r.json(); window.location.href = d.url; } else { const d = await r.json(); alert(d.error || "Download failed"); } }}
               target="_blank"
               rel="noopener noreferrer"
               download="vrbot-agent-v5.zip"
@@ -590,5 +590,6 @@ export default function DownloadPage() {
     </div>
   );
 }
+
 
 
