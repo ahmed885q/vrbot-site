@@ -42,13 +42,21 @@ export async function GET() {
       )
     }
 
-    // 2. Subscription check — user must have at least one farm
-    const { count } = await supabase
+    // 2. Subscription check — user must have at least one farm (cloud OR local)
+    const { count: cloudCount } = await supabase
       .from('cloud_farms')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
+      .neq('status', 'deleted')
 
-    if (!count || count === 0) {
+    const { count: localCount } = await supabase
+      .from('user_farms')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+
+    const count = (cloudCount || 0) + (localCount || 0)
+
+    if (count === 0) {
       return NextResponse.json(
         { error: 'No active subscription — please subscribe first' },
         { status: 403 }
@@ -58,7 +66,7 @@ export async function GET() {
     // 3. Generate signed URL using admin client (bucket is private)
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.SUPABASE_SERVICE_KEY!
     )
 
     const { data: signedData, error: signError } = await supabaseAdmin
