@@ -50,10 +50,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "farm_name required" }, { status: 400 });
     }
 
-    // جلب بيانات المزرعة
+    // جلب بيانات المزرعة مع container_id
     const { data: farm } = await service
       .from("cloud_farms")
-      .select("farm_name, game_account, status")
+      .select("farm_name, container_id, game_account, status")
       .eq("user_id", userId)
       .eq("farm_name", farm_name)
       .single();
@@ -63,24 +63,54 @@ export async function POST(req: Request) {
     }
 
     const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
+    const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
+
+    // استخدم container_id إذا موجود، وإلا farm_name
+    const target_id = farm.container_id || farm.farm_name;
 
     // أرسل أمر provision لـ Hetzner
-    const res = await fetch(`http://${HETZNER}:8888/api/farms/provision`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": process.env.VRBOT_API_KEY || "",
-      },
-      body: JSON.stringify({
-        farm_id: farm.farm_name,
-        game_account: farm.game_account || "",
-      }),
-      signal: AbortSignal.timeout(30000),
-    });
+    let hetznerOk = false;
+    let hetznerResult: any = {};
+    try {
+      const res = await fetch(`http://${HETZNER}:8888/api/farms/provision`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": API_KEY,
+        },
+        body: JSON.stringify({
+          farm_id: target_id,
+          game_account: farm.game_account || "",
+        }),
+        signal: AbortSignal.timeout(30000),
+      });
+      hetznerResult = await res.json().catch(() => ({ ok: res.ok }));
+      hetznerOk = res.ok;
+    } catch (e: any) {
+      hetznerResult = { error: e?.message || "Hetzner timeout" };
+    }
 
-    const result = await res.json().catch(() => ({ ok: res.ok }));
+    if (!hetznerOk) {
+      // سجّل الخطأ في farm_events
+      try {
+        await service.from("farm_events").insert({
+          user_id: userId,
+          farm_name: farm_name,
+          event_type: "error",
+          message: `Activation failed for ${farm_name} (container: ${target_id}): ${hetznerResult.error || hetznerResult.detail || "unknown error"}`,
+          tasks: [],
+        });
+      } catch {}
 
-    // حدّث الحالة في Supabase
+      return NextResponse.json({
+        ok: false,
+        error: hetznerResult.error || hetznerResult.detail || "Hetzner activation failed",
+        farm_name,
+        container_id: target_id,
+      }, { status: 502 });
+    }
+
+    // نجح — حدّث الحالة في Supabase
     await service.from("cloud_farms").update({
       status: "running",
       last_heartbeat: new Date().toISOString(),
@@ -92,12 +122,12 @@ export async function POST(req: Request) {
         user_id:    userId,
         farm_name:  farm_name,
         event_type: "farm_activated",
-        message:    `Activated farm ${farm_name}`,
+        message:    `Activated farm ${farm_name} (container: ${target_id})`,
         tasks:      [],
       });
     } catch {}
 
-    return NextResponse.json({ ok: true, result });
+    return NextResponse.json({ ok: true, farm_name, container_id: target_id, result: hetznerResult });
   } catch (e: any) {
     console.error("farms/activate error:", e?.message);
     return NextResponse.json({ error: e?.message }, { status: 500 });
