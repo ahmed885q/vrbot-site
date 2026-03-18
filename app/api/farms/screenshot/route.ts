@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     const target = nums ? String(parseInt(nums[0])).padStart(3, "0") : "001";
 
     // ???? ?????? ?????? ?? screenshot server
-    const res = await fetch(`http://${HETZNER}:8890/screenshot/${target}`, {
+    const res = await fetch(`https://cloud.vrbot.me/screenshot/${target}`, {
       signal: AbortSignal.timeout(8000),
     });
 
@@ -40,3 +40,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: e?.message }, { status: 500 });
   }
 }
+
