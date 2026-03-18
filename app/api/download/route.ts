@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 export const fetchCache = 'force-no-store'
 
-const FILE_PATH = 'vrbot-setup-v5.3.exe'
+const FILE_PATH = 'vrbot-agent-v5.zip'
 const BUCKET = 'downloads'
 const SIGNED_URL_EXPIRY = 300 // 5 minutes
 
@@ -92,6 +92,7 @@ export async function GET() {
     )
   }
 }
+
 
 
 
