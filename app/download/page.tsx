@@ -31,7 +31,7 @@ export default function DownloadPage() {
       step2_title: 'الخطوة 2: تحميل VRBOT Agent',
       step2_desc: 'حمّل ملف البوت وفك الضغط في أي مجلد على جهازك.',
       step2_btn: 'تحميل VRBOT Agent v5.3',
-      step2_size: 'حجم الملف: ~19 MB (Installer)',
+      step2_size: 'حجم الملف: ~11 MB (Setup)',
       security_title: '⚠️ ملاحظة أمنية — Windows SmartScreen',
       security_desc: 'قد يمنع Windows تشغيل الملفات المحملة. لحل المشكلة:',
       security_s1: 'كلك يمين على ملف ZIP قبل فك الضغط',
@@ -66,7 +66,7 @@ export default function DownloadPage() {
       step2_title: 'Step 2: Download VRBOT Agent',
       step2_desc: 'Download the bot package and extract it to any folder.',
       step2_btn: 'Download VRBOT Agent v5.3',
-      step2_size: 'File size: ~19 MB (Installer)',
+      step2_size: 'File size: ~11 MB (Setup)',
       security_title: '⚠️ Security Note — Windows SmartScreen',
       security_desc: 'Windows may block downloaded files from running. To fix this:',
       security_s1: 'Right-click the ZIP file before extracting',
@@ -404,7 +404,7 @@ export default function DownloadPage() {
               {t.step2_desc}
             </p>
             <a
-  href="/api/download" onClick={async (e) => { e.preventDefault(); const r = await fetch("/api/download", {credentials: "include"}); if(r.ok){ const b = await r.blob(); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href=u; a.download="vrbot-setup-v5.3.exe"; a.click(); } else { const d = await r.json(); alert(d.error || "Download failed"); } }}
+  href="/api/download" onClick={async (e) => { e.preventDefault(); window.open("/api/download", "_blank") }}
               target="_blank"
               rel="noopener noreferrer"
               download="vrbot-agent-v5.zip"
@@ -590,5 +590,12 @@ export default function DownloadPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
 
 

@@ -6,7 +6,7 @@
 const HETZNER_IP   = process.env.HETZNER_IP    || "88.99.64.19";
 const HETZNER_PORT = process.env.HETZNER_PORT  || "8888";
 const API_KEY      = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
-const BASE_URL     = `http://${HETZNER_IP}:${HETZNER_PORT}`;
+const BASE_URL = `https://${HETZNER_IP}`;
 
 // جلب قائمة الـ containers المتاحة من Hetzner
 export async function getAvailableContainer(): Promise<string | null> {
@@ -132,3 +132,4 @@ export async function getFarmStatus(container_id: string): Promise<any | null> {
     return null;
   }
 }
+

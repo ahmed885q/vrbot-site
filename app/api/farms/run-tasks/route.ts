@@ -52,11 +52,41 @@ export async function POST(req: Request) {
     // استخدم container_id إذا موجود، وإلا farm_name
     const target_id = farm.container_id || farm_id;
 
+    // تحقق أن المزرعة شغّالة قبل إرسال الأوامر
+    if (farm.status !== "running" && action !== "stop") {
+      return NextResponse.json({
+        ok: false,
+        error: `المزرعة ${farm_id} غير مفعّلة (الحالة: ${farm.status}). فعّلها أولاً.`,
+        farm_id,
+        status: farm.status,
+      }, { status: 400 });
+    }
+
     const result = await runFarmTasks({
       container_id: target_id,
       tasks:        tasks || [],
       action,
     });
+
+    if (!result.ok) {
+      // سجّل الخطأ
+      try {
+        await service.from("farm_events").insert({
+          user_id:    user.id,
+          farm_name:  farm_id,
+          event_type: "error",
+          message:    `Task failed on ${farm_id} (container: ${target_id}): ${result.error || "Hetzner error"}`,
+          tasks: tasks || [],
+        });
+      } catch {}
+
+      return NextResponse.json({
+        ok: false,
+        error: result.error || "فشل تشغيل المهام — السيرفر لم يستجب",
+        farm_id,
+        container_id: target_id,
+      });
+    }
 
     // سجّل الحدث
     try {
@@ -69,6 +99,14 @@ export async function POST(req: Request) {
           : `Running ${tasks?.length || 0} tasks on ${farm_id} (container: ${target_id})`,
         tasks: tasks || [],
       });
+    } catch {}
+
+    // Update heartbeat on successful task run
+    try {
+      await service.from("cloud_farms")
+        .update({ last_heartbeat: new Date().toISOString() })
+        .eq("farm_name", farm_id)
+        .eq("user_id", user.id);
     } catch {}
 
     return NextResponse.json({

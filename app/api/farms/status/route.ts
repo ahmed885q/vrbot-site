@@ -87,8 +87,19 @@ export async function GET(req: Request) {
       if (res.ok) {
         const d = await res.json();
         (d.farms || []).forEach((f: any) => {
+          // Map by all possible ID variants for flexible lookup
           const key = String(f.farm_id || f.name || f.id || "");
-          if (key) hetznerMap[key] = f;
+          if (key) {
+            hetznerMap[key] = f;
+            // Also store without "farm_" prefix and with it
+            const numKey = key.replace("farm_", "");
+            if (numKey !== key) hetznerMap[numKey] = f;
+            if (!key.startsWith("farm_")) hetznerMap[`farm_${key}`] = f;
+            // Zero-padded version: "1" → "001"
+            if (/^\d+$/.test(numKey)) {
+              hetznerMap[numKey.padStart(3, "0")] = f;
+            }
+          }
         });
       }
     } catch {}
@@ -117,7 +128,10 @@ export async function GET(req: Request) {
         status:         f.status || "offline",
         game_account:   f.game_account || "",
         tasks_today:    (taskCounts[f.farm_name] || 0) + (live?.tasks_ok || live?.tasks_today || 0),
-        live_status:    isOnline ? "online" : f.status === "provisioning" ? "idle" : "offline",
+        live_status:    isOnline ? "online"
+                        : f.status === "provisioning" ? "idle"
+                        : f.status === "running" && !live ? "starting"
+                        : "offline",
         current_task:   live?.current_task || null,
         is_online:      isOnline,
         game_pid:       live?.game_pid || null,
