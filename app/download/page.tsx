@@ -31,7 +31,7 @@ export default function DownloadPage() {
       step2_title: 'الخطوة 2: تحميل VRBOT Agent',
       step2_desc: 'حمّل ملف البوت وفك الضغط في أي مجلد على جهازك.',
       step2_btn: 'تحميل VRBOT Agent v5.3',
-      step2_size: 'حجم الملف: ~19 MB (Installer)',
+      step2_size: 'حجم الملف: ~24 MB (ZIP)',
       security_title: '⚠️ ملاحظة أمنية — Windows SmartScreen',
       security_desc: 'قد يمنع Windows تشغيل الملفات المحملة. لحل المشكلة:',
       security_s1: 'كلك يمين على ملف ZIP قبل فك الضغط',
@@ -66,7 +66,7 @@ export default function DownloadPage() {
       step2_title: 'Step 2: Download VRBOT Agent',
       step2_desc: 'Download the bot package and extract it to any folder.',
       step2_btn: 'Download VRBOT Agent v5.3',
-      step2_size: 'File size: ~19 MB (Installer)',
+      step2_size: 'File size: ~24 MB (ZIP)',
       security_title: '⚠️ Security Note — Windows SmartScreen',
       security_desc: 'Windows may block downloaded files from running. To fix this:',
       security_s1: 'Right-click the ZIP file before extracting',
@@ -590,6 +590,8 @@ export default function DownloadPage() {
     </div>
   );
 }
+
+
 
 
 
