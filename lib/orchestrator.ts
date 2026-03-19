@@ -1,10 +1,8 @@
 // lib/orchestrator.ts
-// Orchestrator client for farm management
+const ORCHESTRATOR_URL = process.env.ORCHESTRATOR_URL || "https://cloud.vrbot.me";
+const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
 
-const ORCHESTRATOR_URL = process.env.ORCHESTRATOR_URL || "http://65.109.214.187:8080";
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "vrbot_webhook_secret_2026";
-
-// ─── Existing Interfaces ─────────────────────────────────────────────
+// ─── Interfaces ───────────────────────────────────────────────────────────────
 
 export interface SystemStatus {
   total_farms: number;
@@ -48,8 +46,6 @@ export interface ProvisionJob {
   farms_ready: number;
   error_message: string;
 }
-
-// ─── New Interfaces ──────────────────────────────────────────────────
 
 export interface BatchStatus {
   cycle_id: string;
@@ -149,28 +145,59 @@ export interface LogFilter {
   per_page?: number;
 }
 
-// ─── Helper ──────────────────────────────────────────────────────────
+// ─── Helper ───────────────────────────────────────────────────────────────────
 
 async function orchFetch(path: string, options?: RequestInit) {
   const res = await fetch(ORCHESTRATOR_URL + path, {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      "X-Webhook-Secret": WEBHOOK_SECRET,
+      "X-API-Key": API_KEY,
       ...(options?.headers || {}),
     },
   });
+  if (!res.ok) throw new Error(`Orchestrator error: ${res.status}`);
   return res.json();
 }
 
-// ─── Existing Functions ──────────────────────────────────────────────
+// ─── Status: map new API format → SystemStatus ────────────────────────────────
 
 export async function getStatus(): Promise<SystemStatus> {
-  return orchFetch("/api/status");
+  const raw = await orchFetch("/api/status");
+
+  // raw.scheduler = { total_farms, active_tasks, farming_queue, daily_queue, nifling_queue, error_rate }
+  // raw.schedules  = { total_customers, customers: {...} }
+  const s   = raw.scheduler  || {};
+  const sc  = raw.schedules  || {};
+  const nif = raw.nifling    || {};
+
+  // حساب total_tasks_today من master_scheduler log عبر endpoint مخصص
+  let tasks_today = 0;
+  try {
+    const tr = await orchFetch("/api/tasks/today");
+    tasks_today = tr.total ?? 0;
+  } catch { /* endpoint قد يكون غير موجود */ }
+
+  return {
+    total_farms:       s.total_farms        ?? 0,
+    enabled_farms:     s.total_farms        ?? 0,
+    idle_farms:        (s.total_farms ?? 0) - (s.active_tasks ?? 0),
+    running_farms:     s.active_tasks       ?? 0,
+    error_farms:       0,
+    farming_due:       s.farming_queue      ?? 0,
+    daily_due:         s.daily_queue        ?? 0,
+    nifling_queued:    nif.queue_length     ?? s.nifling_queue ?? 0,
+    total_tasks_today: tasks_today,
+    running:           (s.active_tasks ?? 0) > 0,
+    total_customers:   sc.total_customers   ?? 1,
+    active_customers:  sc.total_customers   ?? 1,
+  };
 }
 
+// ─── Other Functions ──────────────────────────────────────────────────────────
+
 export async function getFarms(): Promise<{ farms: Farm[]; count: number }> {
-  return orchFetch("/api/farms");
+  return orchFetch("/api/batch/farms");
 }
 
 export async function getCustomers(): Promise<{ customers: Customer[]; count: number }> {
@@ -184,7 +211,6 @@ export async function provisionFarms(params: {
   farmCount: number;
   nifling?: boolean;
   orderId: string;
-  // Agent credentials to inject into cloud container env
   agentUserId?: string;
   agentToken?: string;
   agentId?: string;
@@ -199,7 +225,6 @@ export async function provisionFarms(params: {
       farm_count: params.farmCount,
       nifling: params.nifling || false,
       order_id: params.orderId,
-      // Pass agent credentials for container env injection
       ...(params.agentUserId ? {
         agent_user_id: params.agentUserId,
         agent_token: params.agentToken,
@@ -228,8 +253,6 @@ export async function stopScheduler(): Promise<any> {
   return orchFetch("/api/scheduler/stop", { method: "POST" });
 }
 
-// ─── New Functions: Batch ────────────────────────────────────────────
-
 export async function getBatchStatus(): Promise<BatchStatus> {
   return orchFetch("/api/batch/current");
 }
@@ -237,8 +260,6 @@ export async function getBatchStatus(): Promise<BatchStatus> {
 export async function getBatchHistory(limit: number = 20): Promise<BatchStatus[]> {
   return orchFetch(`/api/batch/history?limit=${limit}`);
 }
-
-// ─── New Functions: Nifling ──────────────────────────────────────────
 
 export async function getNiflingQueue(): Promise<{ requests: NiflingRequest[]; stats: NiflingStats }> {
   return orchFetch("/api/nifling/queue");
@@ -254,8 +275,6 @@ export async function setNiflingPriority(requestId: string, priority: number): P
     body: JSON.stringify({ priority }),
   });
 }
-
-// ─── New Functions: Scaler ───────────────────────────────────────────
 
 export async function getScalerStatus(): Promise<ScalerStatus> {
   return orchFetch("/api/scaler/status");
@@ -289,8 +308,6 @@ export async function setScalerBudget(budget: number): Promise<any> {
     body: JSON.stringify({ monthly_budget: budget }),
   });
 }
-
-// ─── New Functions: Logs ─────────────────────────────────────────────
 
 export async function getLogs(filter?: LogFilter): Promise<{ logs: LogEntry[]; total: number; page: number; per_page: number }> {
   const params = new URLSearchParams();
