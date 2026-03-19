@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
@@ -9,7 +9,7 @@ const HETZNER_URL = process.env.ORCHESTRATOR_URL || "https://cloud.vrbot.me";
 const API_KEY     = process.env.VRBOT_API_KEY    || "vrbot_admin_2026";
 const MAX_FARMS   = 40; // max_farms in cloud_servers
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function getUser(req: Request) {
   const service = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,10 +43,10 @@ async function getUser(req: Request) {
   return null;
 }
 
-// ─── Get truly available container ────────────────────────────────────────────
+// â”€â”€â”€ Get truly available container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function getAvailableContainer(service: any): Promise<string | null> {
   try {
-    // 1. جلب كل المزارع من Hetzner
+    // 1. Ø¬Ù„Ø¨ ÙƒÙ„ Ø§Ù„Ù…Ø²Ø§Ø±Ø¹ Ù…Ù† Hetzner
     const res = await fetch(`${HETZNER_URL}/api/farms/status`, {
       headers: { "X-API-Key": API_KEY },
       signal: AbortSignal.timeout(8000),
@@ -55,7 +55,7 @@ async function getAvailableContainer(service: any): Promise<string | null> {
     const d = await res.json();
     const hetznerFarms: any[] = d.farms || [];
 
-    // 2. جلب الـ containers المحجوزة في Supabase
+    // 2. Ø¬Ù„Ø¨ Ø§Ù„Ù€ containers Ø§Ù„Ù…Ø­Ø¬ÙˆØ²Ø© ÙÙŠ Supabase
     const { data: assignedFarms } = await service
       .from("cloud_farms")
       .select("container_id")
@@ -66,12 +66,12 @@ async function getAvailableContainer(service: any): Promise<string | null> {
       (assignedFarms || []).map((f: any) => f.container_id?.toString().trim())
     );
 
-    // 3. ابحث عن container idle وغير محجوز
+    // 3. Ø§Ø¨Ø­Ø« Ø¹Ù† container idle ÙˆØºÙŠØ± Ù…Ø­Ø¬ÙˆØ²
     for (const farm of hetznerFarms) {
       if (farm.live_status !== "idle") continue;
       if (farm.game_pid) continue;
 
-      // normalize farm_id: "1" أو "001" → "farm_001"
+      // normalize farm_id: "1" Ø£Ùˆ "001" â†’ "farm_001"
       const rawId  = farm.farm_id?.toString() || "";
       const numPad = rawId.replace(/\D/g, "").padStart(3, "0");
       const farmId = rawId.startsWith("farm_") ? rawId : `farm_${numPad}`;
@@ -81,14 +81,14 @@ async function getAvailableContainer(service: any): Promise<string | null> {
       }
     }
 
-    return null; // كل الـ containers محجوزة
+    return null; // ÙƒÙ„ Ø§Ù„Ù€ containers Ù…Ø­Ø¬ÙˆØ²Ø©
   } catch (e) {
     console.error("getAvailableContainer error:", e);
     return null;
   }
 }
 
-// ─── POST /api/farms/create ───────────────────────────────────────────────────
+// â”€â”€â”€ POST /api/farms/create â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function POST(req: Request) {
   try {
     const auth = await getUser(req);
@@ -101,10 +101,10 @@ export async function POST(req: Request) {
     const igg_password= String(body?.igg_password ?? "").trim() || null;
 
     if (!name) {
-      return NextResponse.json({ error: "اسم المزرعة مطلوب" }, { status: 400 });
+      return NextResponse.json({ error: "Ø§Ø³Ù… Ø§Ù„Ù…Ø²Ø±Ø¹Ø© Ù…Ø·Ù„ÙˆØ¨" }, { status: 400 });
     }
 
-    // تحقق من تكرار الاسم
+    // ØªØ­Ù‚Ù‚ Ù…Ù† ØªÙƒØ±Ø§Ø± Ø§Ù„Ø§Ø³Ù…
     const { data: existing } = await service
       .from("cloud_farms")
       .select("id")
@@ -113,10 +113,10 @@ export async function POST(req: Request) {
       .single();
 
     if (existing) {
-      return NextResponse.json({ error: "اسم المزرعة مستخدم مسبقاً" }, { status: 409 });
+      return NextResponse.json({ error: "Ø§Ø³Ù… Ø§Ù„Ù…Ø²Ø±Ø¹Ø© Ù…Ø³ØªØ®Ø¯Ù… Ù…Ø³Ø¨Ù‚Ø§Ù‹" }, { status: 409 });
     }
 
-    // تحقق من الحد الأقصى للمستخدم
+    // ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù…
     const { count: userCount } = await service
       .from("cloud_farms")
       .select("*", { count: "exact", head: true })
@@ -124,10 +124,10 @@ export async function POST(req: Request) {
       .neq("status", "deleted");
 
     if ((userCount || 0) >= 50) {
-      return NextResponse.json({ error: "وصلت للحد الأقصى (50 مزرعة)" }, { status: 403 });
+      return NextResponse.json({ error: "ÙˆØµÙ„Øª Ù„Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ (50 Ù…Ø²Ø±Ø¹Ø©)" }, { status: 403 });
     }
 
-    // تحقق من سعة السيرفر
+    // ØªØ­Ù‚Ù‚ Ù…Ù† Ø³Ø¹Ø© Ø§Ù„Ø³ÙŠØ±ÙØ±
     const { data: serverData } = await service
       .from("cloud_servers")
       .select("current_farms, max_farms")
@@ -139,31 +139,31 @@ export async function POST(req: Request) {
 
     if (current >= max) {
       return NextResponse.json({
-        error: `السيرفر ممتلئ — ${current}/${max} مزرعة. تواصل مع الدعم.`,
+        error: `Ø§Ù„Ø³ÙŠØ±ÙØ± Ù…Ù…ØªÙ„Ø¦ â€” ${current}/${max} Ù…Ø²Ø±Ø¹Ø©. ØªÙˆØ§ØµÙ„ Ù…Ø¹ Ø§Ù„Ø¯Ø¹Ù….`,
         code:  "SERVER_FULL",
       }, { status: 503 });
     }
 
-    // احصل على container فارغ وغير محجوز
+    // Ø§Ø­ØµÙ„ Ø¹Ù„Ù‰ container ÙØ§Ø±Øº ÙˆØºÙŠØ± Ù…Ø­Ø¬ÙˆØ²
     let container_id: string | null = null;
     let adb_port: number | null = null;
 
     if (igg_email && igg_password) {
-      container_id = await getAvailableContainer(service);
+      const { data: assignedData } = await service.from("cloud_farms").select("container_id").neq("status","deleted").not("container_id","is",null); const assignedList = (assignedData||[]).map((f:any)=>f.container_id||""); container_id = await getAvailableContainer(assignedList);
 
       if (!container_id) {
         return NextResponse.json({
-          error: `لا يوجد containers متاحة (${current}/${max} مستخدم) — حاول لاحقاً`,
+          error: `Ù„Ø§ ÙŠÙˆØ¬Ø¯ containers Ù…ØªØ§Ø­Ø© (${current}/${max} Ù…Ø³ØªØ®Ø¯Ù…) â€” Ø­Ø§ÙˆÙ„ Ù„Ø§Ø­Ù‚Ø§Ù‹`,
           code:  "NO_CONTAINER",
         }, { status: 503 });
       }
 
-      // احسب الـ port
+      // Ø§Ø­Ø³Ø¨ Ø§Ù„Ù€ port
       const num = parseInt(container_id.replace(/\D/g, ""));
       if (!isNaN(num)) adb_port = 5554 + num;
     }
 
-    // أنشئ المزرعة في Supabase
+    // Ø£Ù†Ø´Ø¦ Ø§Ù„Ù…Ø²Ø±Ø¹Ø© ÙÙŠ Supabase
     const { data: farm, error } = await service
       .from("cloud_farms")
       .insert({
@@ -183,7 +183,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // سجّل الحدث
+    // Ø³Ø¬Ù‘Ù„ Ø§Ù„Ø­Ø¯Ø«
     try {
       await service.from("farm_events").insert({
         user_id:    user.id,
@@ -194,7 +194,7 @@ export async function POST(req: Request) {
       });
     } catch {}
 
-    // تسجيل دخول IGG بشكل async
+    // ØªØ³Ø¬ÙŠÙ„ Ø¯Ø®ÙˆÙ„ IGG Ø¨Ø´ÙƒÙ„ async
     if (container_id && igg_email && igg_password) {
       loginFarm({
         container_id,
@@ -213,7 +213,7 @@ export async function POST(req: Request) {
             farm_name:  name,
             event_type: result.ok ? "farm_started" : "error",
             message:    result.ok
-              ? `IGG login success — container ${container_id}`
+              ? `IGG login success â€” container ${container_id}`
               : `IGG login failed: ${result.error}`,
             tasks: [],
           });
@@ -226,8 +226,8 @@ export async function POST(req: Request) {
       farm,
       container: container_id,
       message: container_id
-        ? `جارٍ تسجيل الدخول على container ${container_id}...`
-        : "المزرعة منشأة — أضف IGG credentials لتفعيلها",
+        ? `Ø¬Ø§Ø±Ù ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¹Ù„Ù‰ container ${container_id}...`
+        : "Ø§Ù„Ù…Ø²Ø±Ø¹Ø© Ù…Ù†Ø´Ø£Ø© â€” Ø£Ø¶Ù IGG credentials Ù„ØªÙØ¹ÙŠÙ„Ù‡Ø§",
     });
 
   } catch (e: any) {
@@ -235,3 +235,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || "Internal error" }, { status: 500 });
   }
 }
+

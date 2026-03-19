@@ -1,15 +1,7 @@
-﻿/**
- * Hetzner Farm Controller Helper
- * ÙŠÙØ±Ø³Ù„ Ø§Ù„Ø£ÙˆØ§Ù…Ø± Ù„Ù€ Hetzner Ø¨Ù€ container_id Ø§Ù„ØµØ­ÙŠØ­
- */
+﻿const BASE_URL = process.env.ORCHESTRATOR_URL || "https://cloud.vrbot.me";
+const API_KEY  = process.env.VRBOT_API_KEY    || "vrbot_admin_2026";
 
-const HETZNER_IP   = process.env.HETZNER_IP    || "88.99.64.19";
-const HETZNER_PORT = process.env.HETZNER_PORT  || "8888";
-const API_KEY      = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
-const BASE_URL = `https://${HETZNER_IP}`;
-
-// Ø¬Ù„Ø¨ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù€ containers Ø§Ù„Ù…ØªØ§Ø­Ø© Ù…Ù† Hetzner
-export async function getAvailableContainer(): Promise<string | null> {
+export async function getAvailableContainer(assignedContainers?: string[]): Promise<string | null> {
   try {
     const res = await fetch(`${BASE_URL}/api/farms/status`, {
       headers: { "X-API-Key": API_KEY },
@@ -18,121 +10,37 @@ export async function getAvailableContainer(): Promise<string | null> {
     if (!res.ok) return null;
     const d = await res.json();
     const farms: any[] = d.farms || [];
-
-    // Ø§Ø¨Ø­Ø« Ø¹Ù† container ÙØ§Ø±Øº (idle + Ø¨Ø¯ÙˆÙ† game_pid)
-    const idle = farms.find(
-      (f: any) => f.live_status === "idle" && !f.game_pid
-    );
-    if (!idle) return null;
-    const fid = idle.farm_id?.toString() || "";
-    return fid.startsWith("farm_") ? fid : `farm_${fid.padStart(3, "0")}`;
-  } catch {
+    const normalize = (id: string) => id?.replace(/\D/g, "").padStart(3, "0") || "";
+    const assignedSet = new Set((assignedContainers || []).map(normalize));
+    const sorted = [...farms].sort((a, b) => parseInt(normalize(a.farm_id?.toString()||"0")) - parseInt(normalize(b.farm_id?.toString()||"0")));
+    for (const farm of sorted) {
+      if (farm.live_status !== "idle" || farm.game_pid) continue;
+      const normId = normalize(farm.farm_id?.toString() || "");
+      if (!assignedSet.has(normId)) return `farm_${normId}`;
+    }
     return null;
-  }
+  } catch (e) { console.error("[getAvailableContainer]", e); return null; }
 }
 
-// ØªØ³Ø¬ÙŠÙ„ Ø¯Ø®ÙˆÙ„ IGG Ø¹Ù„Ù‰ container Ù…Ø­Ø¯Ø¯
-export async function loginFarm(params: {
-  container_id: string;
-  nickname:     string;
-  igg_email:    string;
-  igg_password: string;
-  user_id:      string;
-}): Promise<{ ok: boolean; error?: string; android_id?: string }> {
+export async function loginFarm(params: { container_id: string; nickname: string; igg_email: string; igg_password: string; user_id: string; }): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetch(`${BASE_URL}/api/farms/login`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": API_KEY,
-      },
-      body: JSON.stringify({
-        farm_id:      params.container_id,
-        nickname:     params.nickname,
-        igg_email:    params.igg_email,
-        igg_password: params.igg_password,
-        user_id:      params.user_id,
-      }),
-      signal: AbortSignal.timeout(60000), // 60 Ø«Ø§Ù†ÙŠØ© Ù„Ù„Ù€ login
+      headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
+      body: JSON.stringify({ farm_id: params.container_id, nickname: params.nickname, igg_email: params.igg_email, igg_password: params.igg_password, user_id: params.user_id }),
+      signal: AbortSignal.timeout(30000),
     });
-    const d = await res.json().catch(() => ({}));
-    return { ok: res.ok, error: d.detail || d.error, android_id: d.android_id };
-  } catch (e: any) {
-    return { ok: false, error: e?.message };
-  }
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    const data = await res.json();
+    return { ok: data.ok || data.success, error: data.error };
+  } catch (e: any) { return { ok: false, error: e?.message }; }
 }
 
-// Ø¥Ø±Ø³Ø§Ù„ Ø£Ù…Ø± ØªØ´ØºÙŠÙ„ Ù…Ù‡Ø§Ù…
-export async function runFarmTasks(params: {
-  container_id: string;
-  tasks:        string[];
-  action?:      string;
-}): Promise<{ ok: boolean; result?: any; error?: string }> {
+export async function getFarmStatus(container_id: string): Promise<any> {
   try {
-    const endpoint = params.action === "stop"
-      ? "/api/farms/stop"
-      : "/api/farms/command";
-
-    const body = params.action === "stop"
-      ? { farm_id: params.container_id }
-      : { farm_id: params.container_id, command: `run_tasks:${params.tasks.join(",")}` };
-
-    const res = await fetch(`${BASE_URL}${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": API_KEY,
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(15000),
-    });
-    const result = await res.json().catch(() => ({ ok: res.ok }));
-    return { ok: res.ok, result };
-  } catch (e: any) {
-    return { ok: false, error: e?.message };
-  }
-}
-
-// Ø¥Ø±Ø³Ø§Ù„ Ø£Ù…Ø± Ù†Ù‚Ù„ Ù…ÙˆØ§Ø±Ø¯
-export async function transferResources(params: {
-  container_id: string;
-  command:      string;
-  task_config:  any;
-}): Promise<{ ok: boolean; result?: any; error?: string }> {
-  try {
-    const res = await fetch(`${BASE_URL}/api/farms/command`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": API_KEY,
-      },
-      body: JSON.stringify({
-        farm_id:     params.container_id,
-        command:     params.command,
-        task_config: params.task_config,
-      }),
-      signal: AbortSignal.timeout(10000),
-    });
-    const result = await res.json().catch(() => ({ ok: res.ok }));
-    return { ok: res.ok, result };
-  } catch (e: any) {
-    return { ok: false, error: e?.message };
-  }
-}
-
-// Ø¬Ù„Ø¨ Ø­Ø§Ù„Ø© container Ù…Ø­Ø¯Ø¯
-export async function getFarmStatus(container_id: string): Promise<any | null> {
-  try {
-    const res = await fetch(`${BASE_URL}/api/farms/status`, {
-      headers: { "X-API-Key": API_KEY },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return null;
+    const res = await fetch(`${BASE_URL}/api/farms/status`, { headers: { "X-API-Key": API_KEY }, signal: AbortSignal.timeout(5000) });
     const d = await res.json();
-    return (d.farms || []).find((f: any) => f.farm_id === container_id) || null;
-  } catch {
-    return null;
-  }
+    const normalize = (id: string) => id?.replace(/\D/g, "").padStart(3, "0") || "";
+    return (d.farms || []).find((f: any) => normalize(f.farm_id?.toString()||"") === normalize(container_id)) || null;
+  } catch { return null; }
 }
-
-
