@@ -1,6 +1,6 @@
-/**
+﻿/**
  * Hetzner Farm Controller Helper
- * يُرسل الأوامر لـ Hetzner بـ container_id الصحيح
+ * ÙŠÙØ±Ø³Ù„ Ø§Ù„Ø£ÙˆØ§Ù…Ø± Ù„Ù€ Hetzner Ø¨Ù€ container_id Ø§Ù„ØµØ­ÙŠØ­
  */
 
 const HETZNER_IP   = process.env.HETZNER_IP    || "88.99.64.19";
@@ -8,7 +8,7 @@ const HETZNER_PORT = process.env.HETZNER_PORT  || "8888";
 const API_KEY      = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
 const BASE_URL = `https://${HETZNER_IP}`;
 
-// جلب قائمة الـ containers المتاحة من Hetzner
+// Ø¬Ù„Ø¨ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù€ containers Ø§Ù„Ù…ØªØ§Ø­Ø© Ù…Ù† Hetzner
 export async function getAvailableContainer(): Promise<string | null> {
   try {
     const res = await fetch(`${BASE_URL}/api/farms/status`, {
@@ -19,17 +19,19 @@ export async function getAvailableContainer(): Promise<string | null> {
     const d = await res.json();
     const farms: any[] = d.farms || [];
 
-    // ابحث عن container فارغ (idle + بدون game_pid)
+    // Ø§Ø¨Ø­Ø« Ø¹Ù† container ÙØ§Ø±Øº (idle + Ø¨Ø¯ÙˆÙ† game_pid)
     const idle = farms.find(
       (f: any) => f.live_status === "idle" && !f.game_pid
     );
-    return idle?.farm_id || null;
+    if (!idle) return null;
+    const fid = idle.farm_id?.toString() || "";
+    return fid.startsWith("farm_") ? fid : `farm_${fid.padStart(3, "0")}`;
   } catch {
     return null;
   }
 }
 
-// تسجيل دخول IGG على container محدد
+// ØªØ³Ø¬ÙŠÙ„ Ø¯Ø®ÙˆÙ„ IGG Ø¹Ù„Ù‰ container Ù…Ø­Ø¯Ø¯
 export async function loginFarm(params: {
   container_id: string;
   nickname:     string;
@@ -51,7 +53,7 @@ export async function loginFarm(params: {
         igg_password: params.igg_password,
         user_id:      params.user_id,
       }),
-      signal: AbortSignal.timeout(60000), // 60 ثانية للـ login
+      signal: AbortSignal.timeout(60000), // 60 Ø«Ø§Ù†ÙŠØ© Ù„Ù„Ù€ login
     });
     const d = await res.json().catch(() => ({}));
     return { ok: res.ok, error: d.detail || d.error, android_id: d.android_id };
@@ -60,7 +62,7 @@ export async function loginFarm(params: {
   }
 }
 
-// إرسال أمر تشغيل مهام
+// Ø¥Ø±Ø³Ø§Ù„ Ø£Ù…Ø± ØªØ´ØºÙŠÙ„ Ù…Ù‡Ø§Ù…
 export async function runFarmTasks(params: {
   container_id: string;
   tasks:        string[];
@@ -91,7 +93,7 @@ export async function runFarmTasks(params: {
   }
 }
 
-// إرسال أمر نقل موارد
+// Ø¥Ø±Ø³Ø§Ù„ Ø£Ù…Ø± Ù†Ù‚Ù„ Ù…ÙˆØ§Ø±Ø¯
 export async function transferResources(params: {
   container_id: string;
   command:      string;
@@ -118,7 +120,7 @@ export async function transferResources(params: {
   }
 }
 
-// جلب حالة container محدد
+// Ø¬Ù„Ø¨ Ø­Ø§Ù„Ø© container Ù…Ø­Ø¯Ø¯
 export async function getFarmStatus(container_id: string): Promise<any | null> {
   try {
     const res = await fetch(`${BASE_URL}/api/farms/status`, {
@@ -132,4 +134,5 @@ export async function getFarmStatus(container_id: string): Promise<any | null> {
     return null;
   }
 }
+
 
