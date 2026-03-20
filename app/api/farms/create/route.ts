@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
-import { getAvailableContainer, loginFarm } from "@/lib/hetzner";
 
 async function getUser(req: Request) {
   const service = createClient(
@@ -56,66 +55,44 @@ export async function POST(req: Request) {
       .select("id").eq("user_id", user.id).eq("farm_name", name).single();
     if (existing) return NextResponse.json({ error: "اسم المزرعة مستخدم مسبقاً" }, { status: 409 });
 
-    // تحقق من حد المستخدم
+    // تحقق من حد المستخدم (50 مزرعة)
     const { count: userCount } = await service.from("cloud_farms")
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id).neq("status", "deleted");
     if ((userCount || 0) >= 50)
       return NextResponse.json({ error: "وصلت للحد الأقصى (50 مزرعة)" }, { status: 403 });
 
-    // تحقق من سعة السيرفر
+    // تحقق من سعة السيرفر الكلية (200 مزرعة)
     const { data: serverData } = await service.from("cloud_servers")
       .select("current_farms, max_farms").eq("server_id", "server-01").single();
     const current = serverData?.current_farms ?? 0;
-    const max     = serverData?.max_farms     ?? 20;
+    const max     = serverData?.max_farms     ?? 200;
     if (current >= max)
       return NextResponse.json({
-        error: `السيرفر ممتلئ (${current}/${max}) — تواصل مع الدعم لإضافة سعة`,
+        error: `السيرفر ممتلئ (${current}/${max}) — تواصل مع الدعم`,
         code: "SERVER_FULL",
       }, { status: 503 });
 
-    // جلب الـ containers المحجوزة من Supabase
-    let container_id: string | null = null;
-    let adb_port: number | null = null;
+    // احسب موقع في الطابور
+    const { count: queuePos } = await service.from("cloud_farms")
+      .select("*", { count: "exact", head: true })
+      .neq("status", "deleted");
+    const position = (queuePos || 0) + 1;
 
-    if (igg_email && igg_password) {
-      const { data: assignedRows } = await service.from("cloud_farms")
-        .select("container_id")
-        .neq("status", "deleted")
-        .not("container_id", "is", null);
-
-      const assignedList = (assignedRows || [])
-        .map((f: any) => f.container_id || "")
-        .filter(Boolean);
-
-      // اختر container ذكي (idle + غير محجوز)
-      container_id = await getAvailableContainer(assignedList);
-
-      if (!container_id)
-        return NextResponse.json({
-          error: `لا يوجد containers متاحة (${current}/${max} مستخدم) — حاول لاحقاً`,
-          code: "NO_CONTAINER",
-        }, { status: 503 });
-
-      const num = parseInt(container_id.replace(/\D/g, ""));
-      if (!isNaN(num)) adb_port = 5554 + num;
-    }
-
-    // normalize للتخزين: "farm_003" → "003"
-    const stored_container = container_id
-      ? container_id.replace(/\D/g, "").padStart(3, "0")
-      : null;
-
-    // أنشئ المزرعة — status دائماً "running"
+    // أنشئ المزرعة بدون container — الـ scheduler يخصص لاحقاً
     const { data: farm, error: insertError } = await service.from("cloud_farms").insert({
-      user_id:      user.id,
-      farm_name:    name,
-      server_id:    "server-01",
-      container_id: stored_container,
-      adb_port:     adb_port || null,
-      game_account: igg_email || "",
-      status:       "running",
-    }).select("id, farm_name, container_id, status, created_at").single();
+      user_id:       user.id,
+      farm_name:     name,
+      server_id:     "server-01",
+      container_id:  null,
+      adb_port:      null,
+      game_account:  igg_email    || "",
+      igg_password:  igg_password || "",
+      status:        "running",
+      queue_position: position,
+      cycle_count:   0,
+      tasks_config:  {},
+    }).select("id, farm_name, status, created_at, queue_position").single();
 
     if (insertError) {
       console.error("INSERT ERROR:", JSON.stringify(insertError));
@@ -127,33 +104,21 @@ export async function POST(req: Request) {
       await service.from("farm_events").insert({
         user_id: user.id, farm_name: name,
         event_type: "farm_created",
-        message: `Farm ${name} → container ${stored_container || "none"}`,
+        message: `Farm ${name} added to queue at position #${position}`,
         tasks: [],
       });
     } catch {}
 
-    // IGG login async
-    if (container_id && igg_email && igg_password) {
-      loginFarm({ container_id, nickname: name, igg_email, igg_password, user_id: user.id })
-        .then(async (result) => {
-          await service.from("cloud_farms").update({
-            status: result.ok ? "running" : "error",
-            last_heartbeat: new Date().toISOString(),
-          }).eq("id", farm.id);
-        }).catch(console.error);
-    }
-
     return NextResponse.json({
       ok: true,
       farm,
-      container: container_id,
-      message: container_id
-        ? `جارٍ تسجيل الدخول على container ${stored_container}...`
-        : "المزرعة منشأة — أضف IGG credentials لتفعيلها",
+      message: `تمت إضافة المزرعة في الطابور (#${position}) — ستبدأ خلال دورتها القادمة`,
+      queue_position: position,
+      estimated_wait_hours: Math.ceil(position / 20),
     });
 
   } catch (e: any) {
-    console.error("FARMS CREATE EXCEPTION:", e?.message);
+    console.error("FARMS CREATE:", e?.message);
     return NextResponse.json({ error: e?.message || "Internal error" }, { status: 500 });
   }
-    }
+      }
