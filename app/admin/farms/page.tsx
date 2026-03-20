@@ -230,10 +230,26 @@ export default function AdminFarmsPage() {
                   </div>
 
                   {/* Actions */}
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => openEdit(f)} style={btnStyle('#58a6ff20', '#58a6ff')}>✏️</button>
-                    <button onClick={() => handleDelete(f.id, f.farm_name)} style={btnStyle('#f8514920', '#f85149')}>🗑️</button>
-                  </div>
+<div style={{ display: 'flex', gap: 6 }}>
+  <button onClick={() => openEdit(f)} style={btnStyle('#58a6ff20', '#58a6ff')}>✏️</button>
+  {f.status === 'error' && (
+    <button
+      onClick={() => apiCall({ action: 'update', farm_id: f.id, status: 'stopped' })}
+      disabled={actionLoading}
+      title="إعادة تعيين الخطأ"
+      style={{
+        ...btnStyle('#f59e0b20', '#f59e0b'),
+        fontSize: 13,
+        padding: '6px 12px',
+        fontWeight: 700,
+        opacity: actionLoading ? 0.5 : 1,
+      }}
+    >
+      🔄 Reset
+    </button>
+  )}
+  <button onClick={() => handleDelete(f.id, f.farm_name)} style={btnStyle('#f8514920', '#f85149')}>🗑️</button>
+</div>
                 </div>
               ))}
             </div>
