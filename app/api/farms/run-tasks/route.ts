@@ -49,7 +49,28 @@ export async function POST(req: Request) {
 
     if (!farm) return NextResponse.json({ error: "Farm not found" }, { status: 404 });
 
-    // استخدم container_id إذا موجود، وإلا farm_name
+    // ── Reset: إعادة تعيين حالة error → stopped ──
+    if (action === "reset") {
+      await service
+        .from("cloud_farms")
+        .update({ status: "stopped", updated_at: new Date().toISOString() })
+        .eq("farm_name", farm_id)
+        .eq("user_id", user.id);
+
+      // سجّل الحدث
+      try {
+        await service.from("farm_events").insert({
+          user_id:    user.id,
+          farm_name:  farm_id,
+          event_type: "farm_reset",
+          message:    `Reset ${farm_id} from error → stopped`,
+          tasks:      [],
+        });
+      } catch {}
+
+      return NextResponse.json({ ok: true, message: `تم إعادة تعيين ${farm_id} إلى stopped` });
+    }
+
     const target_id = farm.container_id || farm_id;
 
     // تحقق أن المزرعة شغّالة قبل إرسال الأوامر
@@ -69,7 +90,6 @@ export async function POST(req: Request) {
     });
 
     if (!result.ok) {
-      // سجّل الخطأ
       try {
         await service.from("farm_events").insert({
           user_id:    user.id,
@@ -101,7 +121,7 @@ export async function POST(req: Request) {
       });
     } catch {}
 
-    // Update heartbeat on successful task run
+    // Update heartbeat
     try {
       await service.from("cloud_farms")
         .update({ last_heartbeat: new Date().toISOString() })
@@ -117,6 +137,7 @@ export async function POST(req: Request) {
       tasks:        tasks || [],
       hetzner:      result.result,
     });
+
   } catch (e: any) {
     return NextResponse.json({ error: e?.message }, { status: 500 });
   }
