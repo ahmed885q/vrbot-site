@@ -13,6 +13,7 @@ const navItems = [
   { href: '/admin/nifling', icon: '⚡', label: { ar: 'Nifling', en: 'Nifling Queue', ru: 'Нифлинг', zh: 'Nifling' } },
   { href: '/admin/scaler', icon: '📊', label: { ar: 'التحجيم', en: 'Auto-Scaler', ru: 'Масштабирование', zh: '自动扩缩' } },
   { href: '/admin/logs', icon: '📋', label: { ar: 'السجلات', en: 'Logs', ru: 'Логи', zh: '日志' } },
+  { href: '/admin/monitor', icon: '📡', label: { ar: 'المراقبة', en: 'Monitor', ru: 'Мониторинг', zh: '监控' } },
 ]
 
 const titles: Record<Lang, Record<string, string>> = {
