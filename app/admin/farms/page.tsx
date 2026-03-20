@@ -119,6 +119,12 @@ export default function AdminFarmsPage() {
     setAL(false)
   }
 
+  async function handleReset(farmId: string, farmName: string) {
+    if (!confirm(`إعادة تعيين خطأ المزرعة ${farmName} إلى stopped؟`)) return
+    await apiCall({ action: 'update', farm_id: farmId, status: 'stopped' })
+    setAL(false)
+  }
+
   function openEdit(f: Farm) {
     setEditFarm(f)
     setEditName(f.farm_name)
@@ -133,7 +139,7 @@ export default function AdminFarmsPage() {
   )
 
   const sc = (s: string) =>
-    s === 'running' ? '#3fb950' : s === 'provisioning' ? '#f59e0b' : s === 'stopped' ? '#f85149' : '#8b949e'
+    s === 'running' ? '#3fb950' : s === 'provisioning' ? '#f59e0b' : s === 'stopped' ? '#f85149' : s === 'error' ? '#ff6b6b' : '#8b949e'
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '10px 14px',
@@ -157,7 +163,7 @@ export default function AdminFarmsPage() {
         <div>
           <h1 style={{ color: '#f0a500', fontSize: 22, fontWeight: 700, margin: 0 }}>🏰 إدارة المزارع</h1>
           <p style={{ color: '#8b949e', fontSize: 13, margin: '4px 0 0' }}>
-            إجمالي: {farms.length} · شغّالة: {farms.filter(f => f.status === 'running').length} · متوقفة: {farms.filter(f => f.status === 'stopped').length}
+            إجمالي: {farms.length} · شغّالة: {farms.filter(f => f.status === 'running').length} · متوقفة: {farms.filter(f => f.status === 'stopped').length} · خطأ: <span style={{ color: '#ff6b6b' }}>{farms.filter(f => f.status === 'error').length}</span>
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -209,7 +215,8 @@ export default function AdminFarmsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {filtered.map(f => (
                 <div key={f.id} style={{
-                  background: '#161b22', border: '1px solid #21262d',
+                  background: '#161b22',
+                  border: `1px solid ${f.status === 'error' ? '#ff6b6b40' : '#21262d'}`,
                   borderRadius: 10, padding: 16,
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   flexWrap: 'wrap', gap: 12,
@@ -230,8 +237,28 @@ export default function AdminFarmsPage() {
                   </div>
 
                   {/* Actions */}
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     <button onClick={() => openEdit(f)} style={btnStyle('#58a6ff20', '#58a6ff')}>✏️</button>
+                    {f.status === 'error' && (
+                      <button
+                        onClick={() => handleReset(f.id, f.farm_name)}
+                        disabled={actionLoading}
+                        title="إعادة تعيين الخطأ"
+                        style={{
+                          padding: '8px 14px',
+                          background: '#f59e0b20',
+                          color: '#f59e0b',
+                          border: '1px solid #f59e0b40',
+                          borderRadius: 8,
+                          cursor: actionLoading ? 'not-allowed' : 'pointer',
+                          fontSize: 13,
+                          fontWeight: 700,
+                          opacity: actionLoading ? 0.5 : 1,
+                        }}
+                      >
+                        🔄 Reset
+                      </button>
+                    )}
                     <button onClick={() => handleDelete(f.id, f.farm_name)} style={btnStyle('#f8514920', '#f85149')}>🗑️</button>
                   </div>
                 </div>
@@ -247,7 +274,7 @@ export default function AdminFarmsPage() {
           <h3 style={{ color: '#3fb950', margin: '0 0 20px', fontSize: 16 }}>➕ إنشاء مزرعة جديدة (بدون دفع)</h3>
 
           <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 4 }}>
-            📧 بريد المستخدم (اختياري — الافتراضي: أنت)
+            📧 بريد المستخدم (اختياري – الافتراضي: أنت)
           </label>
           <input value={cEmail} onChange={e => setCEmail(e.target.value)} placeholder="user@email.com" style={inputStyle} />
 
@@ -370,7 +397,7 @@ export default function AdminFarmsPage() {
             <input value={editGame} onChange={e => setEditGame(e.target.value)} style={inputStyle} />
 
             <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 4 }}>الحالة</label>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
               {['provisioning', 'running', 'stopped', 'error', 'deleted'].map(s => (
                 <button
                   key={s}
