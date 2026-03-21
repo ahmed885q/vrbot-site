@@ -8,20 +8,23 @@ export async function GET(req: Request) {
     if (!farm_id)
       return NextResponse.json({ error: "farm_id required" }, { status: 400 });
 
-    const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
+    const HETZNER = process.env.HETZNER_IP || "cloud.vrbot.me";
+    const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
 
-    // ?????? ????? ?? farm_id
     const nums = farm_id.match(/\d+/);
-    const target = nums ? String(parseInt(nums[0])).padStart(3, "0") : "001";
+    const num = nums ? parseInt(nums[0]) : 1;
 
-    // ???? ?????? ?????? ?? screenshot server
-    const res = await fetch(`https://cloud.vrbot.me/screenshot/${target}`, {
-      signal: AbortSignal.timeout(8000),
-    });
+    const res = await fetch(
+      `https://${HETZNER}/api/screenshot/${num}?t=${Date.now()}`,
+      {
+        headers: { "X-API-Key": API_KEY },
+        signal: AbortSignal.timeout(8000),
+      }
+    );
 
     if (!res.ok) {
       return NextResponse.json(
-        { error: "Screenshot failed", target },
+        { error: "Screenshot failed", num },
         { status: res.status }
       );
     }
@@ -29,10 +32,10 @@ export async function GET(req: Request) {
     const imageBuffer = await res.arrayBuffer();
     return new NextResponse(imageBuffer, {
       headers: {
-        "Content-Type": "image/jpeg",
+        "Content-Type": "image/png",
         "Cache-Control": "no-store, no-cache, max-age=0",
         "X-Farm": farm_id,
-        "X-Container": target,
+        "X-Num": String(num),
       },
     });
   } catch (e: any) {
@@ -40,4 +43,3 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: e?.message }, { status: 500 });
   }
 }
-
