@@ -10,7 +10,7 @@ export async function getAvailableContainer(
   assignedContainerIds: string[] = []
 ): Promise<string | null> {
   try {
-    const res = await fetch(`${BASE_URL}/api/farms/status`, {
+    const res = await fetch(`${BASE_URL}/api/farms/status/live`, {
       headers: { "X-API-Key": API_KEY },
       signal: AbortSignal.timeout(10000),
     });
@@ -151,7 +151,7 @@ export async function transferResources(params: {
 // ── Get Farm Status ────────────────────────────────────────────────────────
 export async function getFarmStatus(container_id: string): Promise<any> {
   try {
-    const res = await fetch(`${BASE_URL}/api/farms/status`, {
+    const res = await fetch(`${BASE_URL}/api/farms/status/live`, {
       headers: { "X-API-Key": API_KEY },
       signal: AbortSignal.timeout(5000),
     });
