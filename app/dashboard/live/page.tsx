@@ -128,6 +128,25 @@ export default function LivePage() {
       return d.ok
     } catch {
       setAdbFeedback('❌ خطأ في الاتصال')
+
+  async function launchGame(farmId: string) {
+    showMsg(`?? ???? ????? ?????? ??? ${farmId}...`, 8000)
+    try {
+      const authHeaders = await getAuthHeaders()
+      const res = await fetch('/api/farms/launch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ farm_id: farmId }),
+      })
+      const d = await res.json()
+      if (d.ok) {
+        showMsg(`? ?? ????? ?????? � ???? ???? 5 ????...`, 6000)
+        setTimeout(() => startStream(farmId), 5000)
+      } else {
+        showMsg(`? ${d.error || '??? ????? ??????'}`)
+      }
+    } catch { showMsg('? ??? ?? ???????') }
+  }
       setTimeout(() => setAdbFeedback(''), 2000)
       return false
     }
@@ -370,6 +389,7 @@ export default function LivePage() {
                       <button onClick={e => { e.stopPropagation(); setTransferFarm(farm.id); setShowTransfer(true); setTransferMsg('') }} style={{ background: '#58a6ff18', border: '1px solid #58a6ff50', color: '#58a6ff', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📦</button>
                       <button onClick={e => { e.stopPropagation(); stopFarm(farm.id) }} disabled={isRunning} style={{ background: '#f8514918', border: '1px solid #f8514950', color: '#f85149', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>■</button>
                       <button onClick={e => { e.stopPropagation(); deleteFarm(farm.id) }} style={{ background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', color: '#f85149', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>🗑️</button>
+                      <button onClick={e => { e.stopPropagation(); launchGame(farm.farm_name) }} title="????? ??????" style={{ background: "#8b5cf618", border: "1px solid #8b5cf650", color: "#8b5cf6", padding: "6px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>??</button>
                       <button onClick={e => { e.stopPropagation(); streaming && streamFarm === farm.farm_name ? stopStream() : startStream(farm.farm_name) }}
                         style={{ background: streaming && streamFarm === farm.farm_name ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.1)', border: streaming && streamFarm === farm.farm_name ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(59,130,246,0.3)', color: streaming && streamFarm === farm.farm_name ? '#f87171' : '#58a6ff', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
                       >{streaming && streamFarm === farm.farm_name ? '⏹' : '📺'}</button>
