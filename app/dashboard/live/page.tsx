@@ -70,7 +70,7 @@ export default function LivePage() {
     try {
       const authHeaders = await getAuthHeaders()
 
-      const res = await fetch('/api/farms/status', {
+      const res = await fetch('/api/farms/list', {
         headers: authHeaders,
         signal: AbortSignal.timeout(8000),
       })
