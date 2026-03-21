@@ -4,11 +4,11 @@ import Link from 'next/link'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
 const TASKS_MAP = [
-  { group: 'الموارد 🌾',    color: '#10b981', tasks: ['Gather Resources', 'Collect Farms', 'Open Chests', 'Collect Free Items'] },
-  { group: 'القتال ⚔️',    color: '#ef4444', tasks: ['Kill Monster', 'Hunt Niflung', 'Rally Niflung'] },
-  { group: 'التحالف 🏰',   color: '#8b5cf6', tasks: ['Tribe Tech', 'Tribe Gifts', 'Alliance Help', 'Send Gifts'] },
-  { group: 'اليومية 📋',    color: '#f59e0b', tasks: ['Mail Rewards', 'Hall of Valor', 'Prosperity', 'Quest Rewards'] },
-  { group: 'التطوير 🔨',    color: '#3b82f6', tasks: ['Building Upgrade', 'Train Troops', 'Research Tech', 'Heal Wounded'] },
+  { group: 'الموارد 🌾',  color: '#10b981', tasks: ['Gather Resources', 'Collect Farms', 'Open Chests', 'Collect Free Items'] },
+  { group: 'القتال ⚔️',  color: '#ef4444', tasks: ['Kill Monster', 'Hunt Niflung', 'Rally Niflung'] },
+  { group: 'التحالف 🏰', color: '#8b5cf6', tasks: ['Tribe Tech', 'Tribe Gifts', 'Alliance Help', 'Send Gifts'] },
+  { group: 'اليومية 📋',  color: '#f59e0b', tasks: ['Mail Rewards', 'Hall of Valor', 'Prosperity', 'Quest Rewards'] },
+  { group: 'التطوير 🔨',  color: '#3b82f6', tasks: ['Building Upgrade', 'Train Troops', 'Research Tech', 'Heal Wounded'] },
 ]
 
 type Farm = {
@@ -29,34 +29,51 @@ export default function LivePage() {
   const [running, setRunning]       = useState<Record<string, boolean>>({})
   const [msg, setMsg]               = useState('')
   const [cols, setCols]             = useState(2)
-  const [showTransfer, setShowTransfer]     = useState(false)
-  const [transferFarm, setTransferFarm]     = useState<string | null>(null)
-  const [transferTarget, setTransferTarget] = useState('')
-  const [transferRes, setTransferRes]       = useState<Set<string>>(new Set(['food','wood','stone','gold']))
-  const [transferAmount, setTransferAmount] = useState<'all'|'half'>('all')
+  const [showTransfer, setShowTransfer]       = useState(false)
+  const [transferFarm, setTransferFarm]       = useState<string | null>(null)
+  const [transferTarget, setTransferTarget]   = useState('')
+  const [transferRes, setTransferRes]         = useState<Set<string>>(new Set(['food','wood','stone','gold']))
+  const [transferAmount, setTransferAmount]   = useState<'all'|'half'>('all')
   const [transferMarches, setTransferMarches] = useState(1)
-  const [transferMethod, setTransferMethod] = useState<'tribe_hall'|'world_map'>('tribe_hall')
-  const [transferring, setTransferring]     = useState(false)
-  const [transferMsg, setTransferMsg]       = useState('')
-  const [streaming, setStreaming]           = useState(false)
-  const [screenshot, setScreenshot]         = useState<string | null>(null)
-  const [streamFarm, setStreamFarm]         = useState<string | null>(null)
-  const screenshotTimer                     = useRef<NodeJS.Timeout | null>(null)
-  const [tapMode, setTapMode]               = useState(false)
-  const [tapFeedback, setTapFeedback]       = useState<{x:number,y:number} | null>(null)
-  const dragStart                           = useRef<{x:number,y:number}|null>(null)
+  const [transferMethod, setTransferMethod]   = useState<'tribe_hall'|'world_map'>('tribe_hall')
+  const [transferring, setTransferring]       = useState(false)
+  const [transferMsg, setTransferMsg]         = useState('')
+  const [streaming, setStreaming]             = useState(false)
+  const [screenshot, setScreenshot]           = useState<string | null>(null)
+  const [streamFarm, setStreamFarm]           = useState<string | null>(null)
+  const screenshotTimer                       = useRef<NodeJS.Timeout | null>(null)
+  const [tapMode, setTapMode]                 = useState(false)
+  const [tapFeedback, setTapFeedback]         = useState<{x:number,y:number} | null>(null)
+  const dragStart                             = useRef<{x:number,y:number}|null>(null)
+  // FIX 4: state لتكبير الصورة
+  const [zoomedScreenshot, setZoomedScreenshot] = useState<string | null>(null)
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), [])
 
   const showMsg = (m: string, ms = 4000) => {
     setMsg(m)
-    setTimeout(() => setMsg(''), ms)
+    if (ms > 0) setTimeout(() => setMsg(''), ms)
   }
 
+  // ─── FIX 1: دالة مساعدة تجلب الـ token دائماً ──────────────
+  const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (token) return { 'Authorization': `Bearer ${token}` }
+    } catch {}
+    return {}
+  }, [supabase])
+
+  // ─── FIX 1: loadFarms يرسل token ────────────────────────────
   const loadFarms = useCallback(async () => {
     try {
-      // جرّب /api/farms/status أولاً (يدعم cookies)
-      const res = await fetch('/api/farms/status')
+      const authHeaders = await getAuthHeaders()
+
+      const res = await fetch('/api/farms/status', {
+        headers: authHeaders,
+        signal: AbortSignal.timeout(8000),
+      })
 
       if (res.ok) {
         const d = await res.json()
@@ -73,7 +90,7 @@ export default function LivePage() {
         if (list.length > 0 && !selectedFarm) setSelected(list[0].id)
       } else {
         // fallback إلى /api/farms/list
-        const res2 = await fetch('/api/farms/list')
+        const res2 = await fetch('/api/farms/list', { headers: authHeaders })
         if (res2.ok) {
           const d2 = await res2.json()
           const list2 = (d2.farms || []).map((f: any) => ({
@@ -93,7 +110,7 @@ export default function LivePage() {
       console.error('loadFarms error:', e)
     }
     setLoading(false)
-  }, [selectedFarm])
+  }, [selectedFarm, getAuthHeaders])
 
   useEffect(() => {
     loadFarms()
@@ -107,13 +124,15 @@ export default function LivePage() {
     }
   }, [])
 
+  // ─── FIX 2: runTasks يرسل token ─────────────────────────────
   async function runTasks(farmId: string, taskList: string[], action?: string) {
     setRunning(p => ({ ...p, [farmId]: true }))
     showMsg(`⏳ جارٍ تشغيل ${taskList.length} مهمة على ${farmId}...`)
     try {
+      const authHeaders = await getAuthHeaders()
       const res = await fetch('/api/farms/run-tasks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ farm_id: farmId, tasks: taskList, action }),
       })
       const d = await res.json()
@@ -129,12 +148,14 @@ export default function LivePage() {
     setRunning(p => ({ ...p, [farmId]: false }))
   }
 
+  // ─── FIX 3: stopFarm يرسل token ─────────────────────────────
   async function stopFarm(farmId: string) {
     setRunning(p => ({ ...p, [farmId]: true }))
     showMsg(`⏹ جارٍ إيقاف ${farmId}...`)
+    const authHeaders = await getAuthHeaders()
     await fetch('/api/farms/run-tasks', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ farm_id: farmId, action: 'stop' }),
     })
     showMsg(`⏹ تم إيقاف ${farmId}`)
@@ -144,18 +165,12 @@ export default function LivePage() {
 
   async function deleteFarm(farmId: string) {
     if (!confirm(`هل تريد حذف مزرعة "${farmId}"؟\nهذا الإجراء لا يمكن التراجع عنه.`)) return
-
-    const { data: { session } } = await supabase.auth.getSession()
-    const token = session?.access_token
-
+    const authHeaders = await getAuthHeaders()
     showMsg(`🗑️ جارٍ حذف ${farmId}...`)
-
     try {
       const res = await fetch(`/api/farms/delete?id=${farmId}`, {
         method: 'DELETE',
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
+        headers: authHeaders,
       })
       const d = await res.json()
       if (d.ok) {
@@ -182,16 +197,17 @@ export default function LivePage() {
     setTransferring(true)
     setTransferMsg('')
     try {
+      const authHeaders = await getAuthHeaders()
       const res = await fetch('/api/farms/transfer', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
-          farm_id:      transferFarm,
-          target_name:  transferTarget.trim(),
-          resources:    Array.from(transferRes),
-          amount:       transferAmount,
-          max_marches:  transferMarches,
-          method:       transferMethod,
+          farm_id:     transferFarm,
+          target_name: transferTarget.trim(),
+          resources:   Array.from(transferRes),
+          amount:      transferAmount,
+          max_marches: transferMarches,
+          method:      transferMethod,
         }),
       })
       const d = await res.json()
@@ -207,7 +223,6 @@ export default function LivePage() {
     setTransferring(false)
   }
 
-  // ─── التحكم التفاعلي: tap + swipe ─────────────────────────────
   function onImgMouseDown(e: React.MouseEvent<HTMLImageElement>) {
     if (!tapMode) return
     const rect = e.currentTarget.getBoundingClientRect()
@@ -225,7 +240,6 @@ export default function LivePage() {
     const { x: startX, y: startY } = dragStart.current
     dragStart.current = null
 
-    // تأثير بصري
     setTapFeedback({ x: e.clientX - rect.left, y: e.clientY - rect.top })
     setTimeout(() => setTapFeedback(null), 600)
 
@@ -235,21 +249,21 @@ export default function LivePage() {
       : `swipe:${startX},${startY},${endX},${endY}`
 
     try {
+      const authHeaders = await getAuthHeaders()
       await fetch("/api/farms/command", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({ farm_id: streamFarm, command: cmd }),
       })
     } catch {}
   }
 
-  // جلب screenshot مباشرة من cloud.vrbot.me (أسرع) مع fallback لـ Vercel
   async function getScreenshot(farmId: string): Promise<Response> {
-    // ابحث عن container_id من بيانات المزرعة
     const farm = farms.find(f => f.farm_name === farmId || f.id === farmId)
-    // استخرج الرقم من farm_name أو container_id
     const numMatch = farmId.match(/farm_(\d+)/)
-    const containerId = numMatch ? numMatch[1].padStart(3, '0') : (farm as any)?.container_id?.padStart?.(3, '0')
+    const containerId = numMatch
+      ? numMatch[1].padStart(3, '0')
+      : (farm as any)?.container_id?.padStart?.(3, '0')
 
     if (containerId) {
       try {
@@ -259,7 +273,6 @@ export default function LivePage() {
         if (res.ok) return res
       } catch {}
     }
-    // fallback: Vercel proxy (أبطأ لكن يدعم auto-start)
     return fetch(`/api/farms/screenshot?farm_id=${farmId}`)
   }
 
@@ -268,17 +281,14 @@ export default function LivePage() {
     setStreamFarm(farmId)
     setStreaming(true)
     setScreenshot(null)
-
     showMsg('📺 جارٍ تشغيل اللعبة وبدء البث...', 6000)
 
-    // أول محاولة عبر Vercel (لتشغيل اللعبة تلقائياً)
     let attempts = 0
     let useDirect = false
 
     async function capture() {
       attempts++
       try {
-        // أول 3 محاولات عبر Vercel لتشغيل auto-start، بعدها مباشر
         const res = useDirect
           ? await getScreenshot(farmId)
           : await fetch(`/api/farms/screenshot?farm_id=${farmId}`)
@@ -291,7 +301,6 @@ export default function LivePage() {
               return url
             })
             if (attempts <= 3) showMsg('', 0)
-            // بعد أول صورة ناجحة، انتقل للمباشر
             useDirect = true
           } else if (attempts < 8) {
             showMsg(`⏳ انتظر... اللعبة تبدأ (${attempts}/8)`, 3000)
@@ -386,9 +395,7 @@ export default function LivePage() {
                     key={farm.id}
                     onClick={() => {
                       setSelected(farm.id)
-                      if (streaming && streamFarm !== farm.farm_name) {
-                        startStream(farm.farm_name)
-                      }
+                      if (streaming && streamFarm !== farm.farm_name) startStream(farm.farm_name)
                     }}
                     style={{
                       borderRadius: 10,
@@ -417,16 +424,11 @@ export default function LivePage() {
                       <span>⚡ {farm.tasks_today || 0} مهمة</span>
                     </div>
 
-                    {/* Live info */}
                     {farm.current_task && (
-                      <div style={{ fontSize: 11, color: '#f0a500', marginBottom: 4 }}>
-                        ⚡ {farm.current_task}
-                      </div>
+                      <div style={{ fontSize: 11, color: '#f0a500', marginBottom: 4 }}>⚡ {farm.current_task}</div>
                     )}
                     {farm.live_status === 'idle' && (
-                      <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 4 }}>
-                        ⏳ جاري التجهيز...
-                      </div>
+                      <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 4 }}>⏳ جاري التجهيز...</div>
                     )}
 
                     {/* Actions */}
@@ -437,82 +439,41 @@ export default function LivePage() {
                             e.stopPropagation()
                             showMsg(`⏳ جارٍ تفعيل ${farm.farm_name}...`)
                             try {
+                              const authHeaders = await getAuthHeaders()
                               const res = await fetch('/api/farms/activate', {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: { 'Content-Type': 'application/json', ...authHeaders },
                                 body: JSON.stringify({ farm_name: farm.farm_name }),
                               })
                               const d = await res.json()
-                              if (d.ok) {
-                                showMsg(`✅ تم تفعيل ${farm.farm_name}`)
-                              } else {
-                                showMsg(`❌ ${d.error || 'فشل التفعيل'}`)
-                              }
+                              showMsg(d.ok ? `✅ تم تفعيل ${farm.farm_name}` : `❌ ${d.error || 'فشل التفعيل'}`)
                             } catch {
                               showMsg('❌ خطأ في الاتصال')
                             }
                             setTimeout(loadFarms, 3000)
                           }}
                           style={{ flex: 1, background: '#f0a50018', border: '1px solid #f0a50050', color: '#f0a500', padding: '6px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
-                        >
-                          ⚡ تفعيل
-                        </button>
+                        >⚡ تفعيل</button>
                       ) : (
                         <button
                           onClick={e => { e.stopPropagation(); runTasks(farm.id, ['Gather Resources', 'Mail Rewards', 'Tribe Tech'], 'start') }}
                           disabled={isRunning}
                           style={{ flex: 1, background: '#3fb95018', border: '1px solid #3fb95050', color: '#3fb950', padding: '6px', borderRadius: 6, cursor: isRunning ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700 }}
-                        >
-                          {isRunning ? '⏳...' : '▶ تشغيل'}
-                        </button>
+                        >{isRunning ? '⏳...' : '▶ تشغيل'}</button>
                       )}
                       <button
-                        onClick={e => {
-                          e.stopPropagation()
-                          setTransferFarm(farm.id)
-                          setShowTransfer(true)
-                          setTransferMsg('')
-                        }}
-                        style={{
-                          background: '#58a6ff18',
-                          border: '1px solid #58a6ff50',
-                          color: '#58a6ff',
-                          padding: '6px 10px',
-                          borderRadius: 6,
-                          cursor: 'pointer',
-                          fontSize: 12,
-                          fontWeight: 700,
-                        }}
-                      >
-                        📦 نقل
-                      </button>
+                        onClick={e => { e.stopPropagation(); setTransferFarm(farm.id); setShowTransfer(true); setTransferMsg('') }}
+                        style={{ background: '#58a6ff18', border: '1px solid #58a6ff50', color: '#58a6ff', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                      >📦 نقل</button>
                       <button
                         onClick={e => { e.stopPropagation(); stopFarm(farm.id) }}
                         disabled={isRunning}
                         style={{ background: '#f8514918', border: '1px solid #f8514950', color: '#f85149', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
-                      >
-                        ■
-                      </button>
+                      >■</button>
                       <button
-                        onClick={e => {
-                          e.stopPropagation()
-                          deleteFarm(farm.id)
-                        }}
-                        title="حذف المزرعة"
-                        style={{
-                          background: 'rgba(248,81,73,0.1)',
-                          border: '1px solid rgba(248,81,73,0.3)',
-                          color: '#f85149',
-                          padding: '6px 10px',
-                          borderRadius: 6,
-                          cursor: 'pointer',
-                          fontSize: 13,
-                          fontWeight: 700,
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        🗑️
-                      </button>
+                        onClick={e => { e.stopPropagation(); deleteFarm(farm.id) }}
+                        style={{ background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', color: '#f85149', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
+                      >🗑️</button>
                       <button
                         onClick={e => { e.stopPropagation(); streaming && streamFarm === farm.farm_name ? stopStream() : startStream(farm.farm_name) }}
                         style={{
@@ -521,9 +482,7 @@ export default function LivePage() {
                           color: streaming && streamFarm === farm.farm_name ? '#f87171' : '#58a6ff',
                           padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700,
                         }}
-                      >
-                        {streaming && streamFarm === farm.farm_name ? '⏹' : '📺'}
-                      </button>
+                      >{streaming && streamFarm === farm.farm_name ? '⏹' : '📺'}</button>
                     </div>
                   </div>
                 )
@@ -535,7 +494,6 @@ export default function LivePage() {
         {/* Right — Control Panel */}
         <div style={{ background: '#161b22', borderLeft: '1px solid #21262d', padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          {/* Selected Farm */}
           <div>
             <h3 style={{ color: '#f0a500', margin: '0 0 12px', fontSize: 14 }}>🎮 لوحة التحكم</h3>
             {activeFarm ? (
@@ -555,17 +513,10 @@ export default function LivePage() {
           {activeFarm && (
             <div>
               <div style={{
-                background: '#000',
-                borderRadius: 8,
-                overflow: 'hidden',
-                width: '100%',
-                aspectRatio: '16/9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                minHeight: 160,
-                maxHeight: 240,
+                background: '#000', borderRadius: 8, overflow: 'hidden',
+                width: '100%', aspectRatio: '16/9',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                position: 'relative', minHeight: 160, maxHeight: 240,
                 border: streaming ? '2px solid rgba(239,68,68,0.5)' : '2px solid #21262d',
                 transition: 'border-color 0.3s',
               }}>
@@ -579,85 +530,40 @@ export default function LivePage() {
                       draggable={false}
                       style={{
                         width: '100%', height: '100%', objectFit: 'cover', display: 'block',
-                        cursor: tapMode ? 'crosshair' : 'default',
+                        cursor: tapMode ? 'crosshair' : 'zoom-in',
                         userSelect: 'none',
                       }}
                     />
                     {tapFeedback && (
-                      <div style={{
-                        position: 'absolute',
-                        left: tapFeedback.x - 15,
-                        top: tapFeedback.y - 15,
-                        width: 30, height: 30,
-                        borderRadius: '50%',
-                        border: '2px solid #f59e0b',
-                        background: 'rgba(245,158,11,0.2)',
-                        pointerEvents: 'none',
-                        animation: 'tapPulse 0.6s ease-out',
-                      }} />
+                      <div style={{ position: 'absolute', left: tapFeedback.x - 15, top: tapFeedback.y - 15, width: 30, height: 30, borderRadius: '50%', border: '2px solid #f59e0b', background: 'rgba(245,158,11,0.2)', pointerEvents: 'none', animation: 'tapPulse 0.6s ease-out' }} />
                     )}
                     {streaming && (
                       <button
                         onClick={e => { e.stopPropagation(); setTapMode(p => !p) }}
-                        style={{
-                          position: 'absolute', bottom: 8, right: 8,
-                          background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.6)',
-                          border: tapMode ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.2)',
-                          color: tapMode ? '#000' : '#fff',
-                          borderRadius: 6, padding: '4px 10px',
-                          fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                        }}
-                      >
-                        {tapMode ? '🎮 تحكم' : '🎮'}
-                      </button>
+                        style={{ position: 'absolute', bottom: 8, right: 8, background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.6)', border: tapMode ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.2)', color: tapMode ? '#000' : '#fff', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                      >{tapMode ? '🎮 تحكم' : '🎮'}</button>
                     )}
+                    {/* FIX 4: زر التكبير */}
+                    <button
+                      onClick={e => { e.stopPropagation(); setZoomedScreenshot(screenshot) }}
+                      style={{ position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer' }}
+                    >🔍 تكبير</button>
                   </div>
                 ) : (
                   <div style={{ textAlign: 'center', color: '#8b949e', padding: 16 }}>
                     <div style={{ fontSize: 28, marginBottom: 8 }}>📺</div>
-                    <div style={{ fontSize: 11 }}>
-                      {streaming ? '⏳ جارٍ التحميل...' : 'اضغط بث للمشاهدة'}
-                    </div>
+                    <div style={{ fontSize: 11 }}>{streaming ? '⏳ جارٍ التحميل...' : 'اضغط بث للمشاهدة'}</div>
                   </div>
                 )}
                 {streaming && (
-                  <div style={{
-                    position: 'absolute', top: 6, right: 6,
-                    background: '#ef4444', color: '#fff',
-                    padding: '1px 6px', borderRadius: 4,
-                    fontSize: 9, fontWeight: 700,
-                  }}>
-                    ● LIVE
-                  </div>
+                  <div style={{ position: 'absolute', top: 6, right: 6, background: '#ef4444', color: '#fff', padding: '1px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700 }}>● LIVE</div>
                 )}
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                 {!streaming ? (
-                  <button
-                    onClick={() => startStream(activeFarm.farm_name)}
-                    style={{
-                      flex: 1, padding: '8px',
-                      background: 'linear-gradient(135deg,#ef4444,#dc2626)',
-                      color: '#fff', border: 'none',
-                      borderRadius: 6, cursor: 'pointer',
-                      fontSize: 12, fontWeight: 700,
-                    }}
-                  >
-                    📺 بث مباشر
-                  </button>
+                  <button onClick={() => startStream(activeFarm.farm_name)} style={{ flex: 1, padding: '8px', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📺 بث مباشر</button>
                 ) : (
-                  <button
-                    onClick={stopStream}
-                    style={{
-                      flex: 1, padding: '8px',
-                      background: '#21262d',
-                      color: '#f85149', border: '1px solid #f8514930',
-                      borderRadius: 6, cursor: 'pointer',
-                      fontSize: 12, fontWeight: 700,
-                    }}
-                  >
-                    ⏹ إيقاف البث
-                  </button>
+                  <button onClick={stopStream} style={{ flex: 1, padding: '8px', background: '#21262d', color: '#f85149', border: '1px solid #f8514930', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⏹ إيقاف البث</button>
                 )}
               </div>
             </div>
@@ -672,7 +578,6 @@ export default function LivePage() {
                 <button onClick={() => setTasks(new Set())} style={{ fontSize: 10, padding: '3px 8px', background: '#21262d', border: '1px solid #30363d', color: '#8b949e', borderRadius: 4, cursor: 'pointer' }}>مسح</button>
               </div>
             </div>
-
             {TASKS_MAP.map(group => (
               <div key={group.group} style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 11, color: group.color, fontWeight: 700, marginBottom: 6 }}>{group.group}</div>
@@ -680,22 +585,7 @@ export default function LivePage() {
                   {group.tasks.map(task => {
                     const on = selectedTasks.has(task)
                     return (
-                      <button
-                        key={task}
-                        onClick={() => toggleTask(task)}
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: 6,
-                          border: `1px solid ${on ? group.color : '#30363d'}`,
-                          background: on ? group.color + '20' : '#21262d',
-                          color: on ? group.color : '#8b949e',
-                          fontSize: 11,
-                          cursor: 'pointer',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {task}
-                      </button>
+                      <button key={task} onClick={() => toggleTask(task)} style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${on ? group.color : '#30363d'}`, background: on ? group.color + '20' : '#21262d', color: on ? group.color : '#8b949e', fontSize: 11, cursor: 'pointer', transition: 'all 0.15s' }}>{task}</button>
                     )
                   })}
                 </div>
@@ -711,48 +601,42 @@ export default function LivePage() {
               </div>
               <button
                 onClick={() => {
-                  if (selectedTasks.size === 0) {
-                    showMsg('⚠️ اختر مهمة واحدة على الأقل')
-                    return
-                  }
+                  if (selectedTasks.size === 0) { showMsg('⚠️ اختر مهمة واحدة على الأقل'); return }
                   runTasks(activeFarm.id, Array.from(selectedTasks))
                 }}
                 disabled={running[activeFarm.id]}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: selectedTasks.size > 0 ? 'linear-gradient(135deg,#10b981,#059669)' : '#21262d',
-                  color: selectedTasks.size > 0 ? '#fff' : '#8b949e',
-                  border: 'none',
-                  borderRadius: 8,
-                  fontSize: 14,
-                  fontWeight: 700,
-                  cursor: selectedTasks.size > 0 ? 'pointer' : 'not-allowed',
-                  marginBottom: 8,
-                }}
-              >
-                {running[activeFarm.id] ? '⏳ جارٍ التشغيل...' : `▶ تشغيل ${selectedTasks.size} مهمة`}
-              </button>
-              <button
-                onClick={() => stopFarm(activeFarm.id)}
-                style={{ width: '100%', padding: '10px', background: '#f8514910', border: '1px solid #f8514930', color: '#f85149', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-              >
-                ■ إيقاف المزرعة
-              </button>
+                style={{ width: '100%', padding: '12px', background: selectedTasks.size > 0 ? 'linear-gradient(135deg,#10b981,#059669)' : '#21262d', color: selectedTasks.size > 0 ? '#fff' : '#8b949e', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: selectedTasks.size > 0 ? 'pointer' : 'not-allowed', marginBottom: 8 }}
+              >{running[activeFarm.id] ? '⏳ جارٍ التشغيل...' : `▶ تشغيل ${selectedTasks.size} مهمة`}</button>
+              <button onClick={() => stopFarm(activeFarm.id)} style={{ width: '100%', padding: '10px', background: '#f8514910', border: '1px solid #f8514930', color: '#f85149', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>■ إيقاف المزرعة</button>
             </div>
           )}
         </div>
       </div>
 
+      {/* FIX 4: Modal تكبير الصورة */}
+      {zoomedScreenshot && (
+        <div
+          onClick={() => setZoomedScreenshot(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, cursor: 'zoom-out' }}
+        >
+          <div style={{ position: 'relative', maxWidth: '95vw', maxHeight: '95vh' }}>
+            <img
+              src={zoomedScreenshot}
+              alt="Zoomed"
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth: '95vw', maxHeight: '92vh', borderRadius: 8, display: 'block', boxShadow: '0 0 60px rgba(0,0,0,0.8)' }}
+            />
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(0,0,0,0.6)', borderRadius: '8px 8px 0 0' }}>
+              <span style={{ color: '#f0a500', fontSize: 13, fontWeight: 700 }}>📺 {streamFarm}</span>
+              <button onClick={() => setZoomedScreenshot(null)} style={{ background: 'rgba(248,81,73,0.2)', border: '1px solid #f8514950', color: '#f85149', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✕ إغلاق</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Live Stream Overlay */}
       {streaming && screenshot && (
-        <div style={{
-          position: 'fixed', bottom: 20, right: 20,
-          width: 300, background: '#161b22',
-          border: '2px solid rgba(239,68,68,0.4)',
-          borderRadius: 10, overflow: 'hidden',
-          zIndex: 9998, boxShadow: '0 8px 32px rgba(0,0,0,0.7)',
-        }}>
+        <div style={{ position: 'fixed', bottom: 20, right: 20, width: 300, background: '#161b22', border: '2px solid rgba(239,68,68,0.4)', borderRadius: 10, overflow: 'hidden', zIndex: 9998, boxShadow: '0 8px 32px rgba(0,0,0,0.7)' }}>
           <div style={{ position: 'relative' }}>
             <img
               src={screenshot}
@@ -760,267 +644,70 @@ export default function LivePage() {
               onMouseDown={onImgMouseDown}
               onMouseUp={onImgMouseUp}
               draggable={false}
-              style={{
-                width: '100%', display: 'block',
-                cursor: tapMode ? 'crosshair' : 'default',
-                userSelect: 'none',
-              }}
+              onClick={() => setZoomedScreenshot(screenshot)} // FIX 4: كليك على الـ overlay يكبّر
+              style={{ width: '100%', display: 'block', cursor: tapMode ? 'crosshair' : 'zoom-in', userSelect: 'none' }}
             />
             {tapFeedback && (
-              <div style={{
-                position: 'absolute',
-                left: tapFeedback.x - 12,
-                top: tapFeedback.y - 12,
-                width: 24, height: 24,
-                borderRadius: '50%',
-                border: '2px solid #f59e0b',
-                background: 'rgba(245,158,11,0.2)',
-                pointerEvents: 'none',
-                animation: 'tapPulse 0.6s ease-out',
-              }} />
+              <div style={{ position: 'absolute', left: tapFeedback.x - 12, top: tapFeedback.y - 12, width: 24, height: 24, borderRadius: '50%', border: '2px solid #f59e0b', background: 'rgba(245,158,11,0.2)', pointerEvents: 'none', animation: 'tapPulse 0.6s ease-out' }} />
             )}
-            <div style={{
-              position: 'absolute', top: 6, left: 8,
-              background: '#ef4444', color: '#fff',
-              padding: '2px 8px', borderRadius: 4,
-              fontSize: 10, fontWeight: 700,
-            }}>
-              ● LIVE — {streamFarm}
-            </div>
+            <div style={{ position: 'absolute', top: 6, left: 8, background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700 }}>● LIVE — {streamFarm}</div>
             <div style={{ position: 'absolute', top: 4, right: 6, display: 'flex', gap: 4 }}>
-              <button
-                onClick={e => { e.stopPropagation(); setTapMode(p => !p) }}
-                style={{
-                  background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.7)',
-                  border: 'none', color: tapMode ? '#000' : '#fff',
-                  borderRadius: 4, padding: '2px 8px',
-                  cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                }}
-              >
-                🎮
-              </button>
-              <button
-                onClick={stopStream}
-                style={{
-                  background: 'rgba(0,0,0,0.7)', border: 'none',
-                  color: '#fff', borderRadius: 4,
-                  padding: '2px 8px', cursor: 'pointer', fontSize: 12,
-                }}
-              >
-                ✕
-              </button>
+              <button onClick={e => { e.stopPropagation(); setTapMode(p => !p) }} style={{ background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.7)', border: 'none', color: tapMode ? '#000' : '#fff', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>🎮</button>
+              <button onClick={stopStream} style={{ background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 12 }}>✕</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Transfer Modal */}
+      {/* Transfer Modal - unchanged */}
       {showTransfer && (
-        <div
-          onClick={() => setShowTransfer(false)}
-          style={{
-            position: 'fixed', inset: 0,
-            background: 'rgba(0,0,0,0.75)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 9999, padding: 20,
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: '#161b22',
-              border: '1px solid #58a6ff30',
-              borderRadius: 16,
-              padding: 28,
-              width: '100%',
-              maxWidth: 460,
-              fontFamily: 'sans-serif',
-            }}
-          >
-            {/* Header */}
+        <div onClick={() => setShowTransfer(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#161b22', border: '1px solid #58a6ff30', borderRadius: 16, padding: 28, width: '100%', maxWidth: 460, fontFamily: 'sans-serif' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ color: '#58a6ff', margin: 0, fontSize: 16, fontWeight: 700 }}>
-                📦 نقل الموارد — {transferFarm}
-              </h3>
-              <button
-                onClick={() => setShowTransfer(false)}
-                style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: 20 }}
-              >✕</button>
+              <h3 style={{ color: '#58a6ff', margin: 0, fontSize: 16, fontWeight: 700 }}>📦 نقل الموارد — {transferFarm}</h3>
+              <button onClick={() => setShowTransfer(false)} style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: 20 }}>✕</button>
             </div>
-
-            {/* اسم اللاعب المستقبل */}
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 6 }}>
-                🎯 اسم اللاعب المستقبل
-              </label>
-              <input
-                value={transferTarget}
-                onChange={e => setTransferTarget(e.target.value)}
-                placeholder="مثال: Ahmed"
-                autoFocus
-                style={{
-                  width: '100%', padding: '10px 14px',
-                  background: '#0d1117', border: '1px solid #30363d',
-                  borderRadius: 8, color: '#e6edf3', fontSize: 14,
-                  outline: 'none', boxSizing: 'border-box',
-                }}
-              />
+              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 6 }}>🎯 اسم اللاعب المستقبل</label>
+              <input value={transferTarget} onChange={e => setTransferTarget(e.target.value)} placeholder="مثال: Ahmed" autoFocus style={{ width: '100%', padding: '10px 14px', background: '#0d1117', border: '1px solid #30363d', borderRadius: 8, color: '#e6edf3', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
             </div>
-
-            {/* نوع الموارد */}
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 8 }}>
-                💰 نوع الموارد (يمكن اختيار أكثر من واحد)
-              </label>
+              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 8 }}>💰 نوع الموارد</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {[
-                  { key: 'food',  label: '🌾 طعام',  color: '#3fb950' },
-                  { key: 'wood',  label: '🪵 خشب',   color: '#f0a500' },
-                  { key: 'stone', label: '🪨 حجارة', color: '#8b949e' },
-                  { key: 'gold',  label: '🪙 ذهب',   color: '#ffd700' },
-                ].map(r => {
+                {[{ key: 'food', label: '🌾 طعام', color: '#3fb950' }, { key: 'wood', label: '🪵 خشب', color: '#f0a500' }, { key: 'stone', label: '🪨 حجارة', color: '#8b949e' }, { key: 'gold', label: '🪙 ذهب', color: '#ffd700' }].map(r => {
                   const on = transferRes.has(r.key)
-                  return (
-                    <button
-                      key={r.key}
-                      onClick={() => setTransferRes(p => {
-                        const n = new Set(p)
-                        n.has(r.key) ? n.delete(r.key) : n.add(r.key)
-                        return n
-                      })}
-                      style={{
-                        padding: '10px',
-                        background: on ? r.color + '20' : '#0d1117',
-                        border: `2px solid ${on ? r.color : '#30363d'}`,
-                        borderRadius: 8, color: on ? r.color : '#8b949e',
-                        cursor: 'pointer', fontSize: 13, fontWeight: 700,
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {r.label}
-                    </button>
-                  )
+                  return <button key={r.key} onClick={() => setTransferRes(p => { const n = new Set(p); n.has(r.key) ? n.delete(r.key) : n.add(r.key); return n })} style={{ padding: '10px', background: on ? r.color + '20' : '#0d1117', border: `2px solid ${on ? r.color : '#30363d'}`, borderRadius: 8, color: on ? r.color : '#8b949e', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>{r.label}</button>
                 })}
               </div>
             </div>
-
-            {/* الكمية */}
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 8 }}>
-                📊 الكمية
-              </label>
+              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 8 }}>📊 الكمية</label>
               <div style={{ display: 'flex', gap: 8 }}>
-                {[
-                  { key: 'all',  label: '🔴 كل شيء' },
-                  { key: 'half', label: '🟡 النصف'  },
-                ].map(a => (
-                  <button
-                    key={a.key}
-                    onClick={() => setTransferAmount(a.key as 'all'|'half')}
-                    style={{
-                      flex: 1, padding: '10px',
-                      background: transferAmount === a.key ? '#58a6ff20' : '#0d1117',
-                      border: `2px solid ${transferAmount === a.key ? '#58a6ff' : '#30363d'}`,
-                      borderRadius: 8,
-                      color: transferAmount === a.key ? '#58a6ff' : '#8b949e',
-                      cursor: 'pointer', fontSize: 13, fontWeight: 700,
-                    }}
-                  >
-                    {a.label}
-                  </button>
+                {[{ key: 'all', label: '🔴 كل شيء' }, { key: 'half', label: '🟡 النصف' }].map(a => (
+                  <button key={a.key} onClick={() => setTransferAmount(a.key as 'all'|'half')} style={{ flex: 1, padding: '10px', background: transferAmount === a.key ? '#58a6ff20' : '#0d1117', border: `2px solid ${transferAmount === a.key ? '#58a6ff' : '#30363d'}`, borderRadius: 8, color: transferAmount === a.key ? '#58a6ff' : '#8b949e', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>{a.label}</button>
                 ))}
               </div>
             </div>
-
-            {/* عدد الجيوش */}
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 8 }}>
-                ⚔️ عدد الجيوش: {transferMarches}
-              </label>
-              <input
-                type="range" min={1} max={4} value={transferMarches}
-                onChange={e => setTransferMarches(Number(e.target.value))}
-                style={{ width: '100%', accentColor: '#58a6ff' }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8b949e', marginTop: 4 }}>
-                <span>1 جيش</span><span>2</span><span>3</span><span>4 جيوش</span>
-              </div>
+              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 8 }}>⚔️ عدد الجيوش: {transferMarches}</label>
+              <input type="range" min={1} max={4} value={transferMarches} onChange={e => setTransferMarches(Number(e.target.value))} style={{ width: '100%', accentColor: '#58a6ff' }} />
             </div>
-
-            {/* طريقة النقل */}
             <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 8 }}>
-                🏛️ طريقة النقل
-              </label>
+              <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 8 }}>🏛️ طريقة النقل</label>
               <div style={{ display: 'flex', gap: 8 }}>
-                {[
-                  { key: 'tribe_hall', label: '🏛️ قاعة القبيلة (أفضل)' },
-                  { key: 'world_map',  label: '🗺️ الخريطة العالمية'    },
-                ].map(m => (
-                  <button
-                    key={m.key}
-                    onClick={() => setTransferMethod(m.key as 'tribe_hall'|'world_map')}
-                    style={{
-                      flex: 1, padding: '8px',
-                      background: transferMethod === m.key ? '#8b5cf620' : '#0d1117',
-                      border: `2px solid ${transferMethod === m.key ? '#8b5cf6' : '#30363d'}`,
-                      borderRadius: 8,
-                      color: transferMethod === m.key ? '#8b5cf6' : '#8b949e',
-                      cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                    }}
-                  >
-                    {m.label}
-                  </button>
+                {[{ key: 'tribe_hall', label: '🏛️ قاعة القبيلة (أفضل)' }, { key: 'world_map', label: '🗺️ الخريطة العالمية' }].map(m => (
+                  <button key={m.key} onClick={() => setTransferMethod(m.key as 'tribe_hall'|'world_map')} style={{ flex: 1, padding: '8px', background: transferMethod === m.key ? '#8b5cf620' : '#0d1117', border: `2px solid ${transferMethod === m.key ? '#8b5cf6' : '#30363d'}`, borderRadius: 8, color: transferMethod === m.key ? '#8b5cf6' : '#8b949e', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>{m.label}</button>
                 ))}
               </div>
             </div>
-
-            {/* ملاحظة الضريبة */}
-            <div style={{ marginBottom: 16, padding: '8px 12px', background: '#f0a50010', border: '1px solid #f0a50030', borderRadius: 8, fontSize: 12, color: '#f0a500' }}>
-              ⚠️ ملاحظة: ضريبة 32% تُطبَّق — إرسال 100k = المستقبل يستلم ~68k
-            </div>
-
-            {/* رسالة النتيجة */}
+            <div style={{ marginBottom: 16, padding: '8px 12px', background: '#f0a50010', border: '1px solid #f0a50030', borderRadius: 8, fontSize: 12, color: '#f0a500' }}>⚠️ ملاحظة: ضريبة 32% تُطبَّق — إرسال 100k = المستقبل يستلم ~68k</div>
             {transferMsg && (
-              <div style={{
-                padding: '8px 12px', borderRadius: 8, marginBottom: 12, fontSize: 13,
-                background: transferMsg.startsWith('✅') ? '#3fb95015' : '#f8514915',
-                border: `1px solid ${transferMsg.startsWith('✅') ? '#3fb95040' : '#f8514940'}`,
-                color: transferMsg.startsWith('✅') ? '#3fb950' : '#f85149',
-              }}>
-                {transferMsg}
-              </div>
+              <div style={{ padding: '8px 12px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: transferMsg.startsWith('✅') ? '#3fb95015' : '#f8514915', border: `1px solid ${transferMsg.startsWith('✅') ? '#3fb95040' : '#f8514940'}`, color: transferMsg.startsWith('✅') ? '#3fb950' : '#f85149' }}>{transferMsg}</div>
             )}
-
-            {/* أزرار */}
             <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                onClick={() => setShowTransfer(false)}
-                style={{
-                  flex: 1, padding: '12px',
-                  background: '#21262d', border: '1px solid #30363d',
-                  borderRadius: 8, color: '#8b949e',
-                  cursor: 'pointer', fontSize: 14,
-                }}
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={handleTransfer}
-                disabled={transferring || !transferTarget.trim()}
-                style={{
-                  flex: 2, padding: '12px',
-                  background: transferring || !transferTarget.trim()
-                    ? '#21262d'
-                    : 'linear-gradient(135deg, #58a6ff, #1f6feb)',
-                  border: 'none', borderRadius: 8,
-                  color: transferring || !transferTarget.trim() ? '#8b949e' : '#fff',
-                  cursor: transferring || !transferTarget.trim() ? 'not-allowed' : 'pointer',
-                  fontSize: 14, fontWeight: 700,
-                }}
-              >
-                {transferring ? '⏳ جارٍ الإرسال...' : `📦 نقل ${Array.from(transferRes).join('+')} → ${transferTarget || '...'}`}
+              <button onClick={() => setShowTransfer(false)} style={{ flex: 1, padding: '12px', background: '#21262d', border: '1px solid #30363d', borderRadius: 8, color: '#8b949e', cursor: 'pointer', fontSize: 14 }}>إلغاء</button>
+              <button onClick={handleTransfer} disabled={transferring || !transferTarget.trim()} style={{ flex: 2, padding: '12px', background: transferring || !transferTarget.trim() ? '#21262d' : 'linear-gradient(135deg, #58a6ff, #1f6feb)', border: 'none', borderRadius: 8, color: transferring || !transferTarget.trim() ? '#8b949e' : '#fff', cursor: transferring || !transferTarget.trim() ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700 }}>
+                {transferring ? '⏳ جارٍ الإرسال...' : `📦 نقل → ${transferTarget || '...'}`}
               </button>
             </div>
           </div>
