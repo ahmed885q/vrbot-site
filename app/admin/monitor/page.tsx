@@ -16,7 +16,10 @@ interface Event {
   time: string
 }
 
-const ORCH = '/api/hetzner'
+const API  = 'https://cloud.vrbot.me'
+const ORCH = 'https://cloud.vrbot.me'
+const KEY  = 'vrbot_admin_2026'
+const H    = { 'X-API-Key': KEY }
 
 // ══ Live Monitor Page ══════════════════════════════════
 export default function MonitorPage() {
@@ -45,9 +48,9 @@ export default function MonitorPage() {
   const fetchAll = useCallback(async () => {
     try {
       const [farmsRes, batchRes, tasksRes] = await Promise.allSettled([
-        fetch(`${ORCH}/api/farms/status`,  ),
-        fetch(`${ORCH}/api/batch/status`,  ),
-        fetch(`${ORCH}/api/tasks/today`,   ),
+        fetch(`${ORCH}/api/farms/status`,  { headers: H }),
+        fetch(`${ORCH}/api/batch/status`,  { headers: H }),
+        fetch(`${ORCH}/api/tasks/today`,   { headers: H }),
       ])
 
       if (farmsRes.status === 'fulfilled' && farmsRes.value.ok) {
@@ -109,7 +112,7 @@ export default function MonitorPage() {
     try {
       const res = await fetch(`${ORCH}/api/farms/command`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...H, 'Content-Type': 'application/json' },
         body: JSON.stringify({ farm_id: farmId, command: cmd })
       })
       const d = await res.json()
