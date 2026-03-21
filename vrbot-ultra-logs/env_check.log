@@ -1,0 +1,60 @@
+{
+  "timestamp": "2026-03-20T12:32:32.053302",
+  "system": "Linux",
+  "python": "3.10.12 (main, Mar  3 2026, 11:56:32) [GCC 11.4.0]",
+  "checks": {
+    "Python 3.10+": {
+      "ok": true,
+      "detail": "3.10"
+    },
+    "pip": {
+      "ok": true,
+      "detail": "متاح"
+    },
+    "anthropic": {
+      "ok": true,
+      "detail": "مثبّت"
+    },
+    "requests": {
+      "ok": true,
+      "detail": "مثبّت"
+    },
+    "beautifulsoup4": {
+      "ok": true,
+      "detail": "مثبّت"
+    },
+    "python-dotenv": {
+      "ok": true,
+      "detail": "مثبّت"
+    },
+    "PyGithub": {
+      "ok": true,
+      "detail": "مثبّت"
+    },
+    "schedule": {
+      "ok": true,
+      "detail": "مثبّت"
+    },
+    ".env file": {
+      "ok": false,
+      "detail": "غير موجود - يجب إنشاؤه"
+    },
+    "vrbot-ultra-agent/": {
+      "ok": true,
+      "detail": "موجود"
+    },
+    "main.py": {
+      "ok": true,
+      "detail": "موجود"
+    },
+    "Internet (Anthropic API)": {
+      "ok": false,
+      "detail": "لا يوجد اتصال"
+    }
+  },
+  "ready": false,
+  "issues": [
+    ".env file",
+    "Internet (Anthropic API)"
+  ]
+}

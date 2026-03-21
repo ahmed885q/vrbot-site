@@ -1,0 +1,83 @@
+=== First Run Log ===
+Start: 2026-03-20T12:38:35.467725
+Duration: 11s
+Success: False
+Return Code: 1
+
+--- STDOUT ---
+
+╔══════════════════════════════════════════════════════╗
+║    🤖  VRBOT ULTRA AGENT  v3.0.0                    ║
+║                                                      ║
+║  Phase 1 ✅  Core Analysis + PRs                    ║
+║  Phase 2 ✅  Self-Eval + Strategy + Fine-tuning     ║
+║  Phase 3 ✅  Multi-Agent + Goals + Replication      ║
+╚══════════════════════════════════════════════════════╝
+
+⚙️  تهيئة Phase 1 (Core)...
+⚙️  تهيئة Phase 2 (Learning)...
+⚙️  تهيئة Phase 3 (Autonomous)...
+   📂 تم تحميل 0 agent محفوظ
+✅ Ultra Agent جاهز!
+
+
+════════════════════════════════════════════════════════════
+  🔄 الدورة #1 | 2026-03-20 12:38
+  المراحل: [1, 2, 3]
+════════════════════════════════════════════════════════════
+
+┌── PHASE 1: Core Analysis & Fix ──────────────────┐
+  📡 جلب logs...
+└──────────────────────────────────────────────────┘
+
+┌── PHASE 2: Self-Evaluation & Learning ───────────┐
+
+📚 جلسة تعلم: 2 موضوع
+   🔍 بحث عن: computer vision button detection opencv
+   ✅ وجدت 5 نتيجة
+   🔍 بحث عن: YOLO object detection mobile games
+   ✅ وجدت 2 نتيجة
+   ✅ حفظت 7 مصدر جديد
+
+═══ تقرير التقييم الذاتي ═══
+إجمالي التقييمات: 0
+متوسط الأداء: 0%
+الاتجاه: 📉 تراجع
+نقاط الضعف الرئيسية:
+  لا توجد بعد
+معايرة الثقة: +0.000
+
+└──────────────────────────────────────────────────┘
+
+┌── PHASE 3: Autonomous & Multi-Agent ─────────────┐
+
+
+--- STDERR ---
+Traceback (most recent call last):
+  File "/sessions/jolly-modest-planck/vrbot-ultra-agent/main.py", line 486, in <module>
+    main()
+  File "/sessions/jolly-modest-planck/vrbot-ultra-agent/main.py", line 482, in main
+    agent.run_cycle()
+  File "/sessions/jolly-modest-planck/vrbot-ultra-agent/main.py", line 135, in run_cycle
+    p3_result = self._run_phase3(cycle_result)
+  File "/sessions/jolly-modest-planck/vrbot-ultra-agent/main.py", line 256, in _run_phase3
+    goals = self.goal_manager.generate_goals(system_state)
+  File "/sessions/jolly-modest-planck/vrbot-ultra-agent/agents/autonomous_goals.py", line 98, in generate_goals
+    raw = self.brain.think(prompt, max_tokens=1000)
+  File "/sessions/jolly-modest-planck/vrbot-ultra-agent/core/brain.py", line 49, in think
+    response = self.client.messages.create(
+  File "/sessions/jolly-modest-planck/.local/lib/python3.10/site-packages/anthropic/_utils/_utils.py", line 282, in wrapper
+    return func(*args, **kwargs)
+  File "/sessions/jolly-modest-planck/.local/lib/python3.10/site-packages/anthropic/resources/messages/messages.py", line 996, in create
+    return self._post(
+  File "/sessions/jolly-modest-planck/.local/lib/python3.10/site-packages/anthropic/_base_client.py", line 1364, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+  File "/sessions/jolly-modest-planck/.local/lib/python3.10/site-packages/anthropic/_base_client.py", line 1058, in request
+    request = self._build_request(options, retries_taken=retries_taken)
+  File "/sessions/jolly-modest-planck/.local/lib/python3.10/site-packages/anthropic/_base_client.py", line 521, in _build_request
+    headers = self._build_headers(options, retries_taken=retries_taken)
+  File "/sessions/jolly-modest-planck/.local/lib/python3.10/site-packages/anthropic/_base_client.py", line 451, in _build_headers
+    self._validate_headers(headers_dict, custom_headers)
+  File "/sessions/jolly-modest-planck/.local/lib/python3.10/site-packages/anthropic/_client.py", line 196, in _validate_headers
+    raise TypeError(
+TypeError: "Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted"

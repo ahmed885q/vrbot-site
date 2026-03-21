@@ -1,0 +1,11 @@
+{
+  "run_date": "2026-03-20",
+  "run_time": "12:38:35",
+  "duration_sec": 11.378504,
+  "success": false,
+  "return_code": 1,
+  "prs_created": 0,
+  "errors_found": 0,
+  "tasks_improved": 0,
+  "summary": "───────────────┘\n\n┌── PHASE 2: Self-Evaluation & Learning ───────────┐\n\n📚 جلسة تعلم: 2 موضوع\n   🔍 بحث عن: computer vision button detection opencv\n   ✅ وجدت 5 نتيجة\n   🔍 بحث عن: YOLO object detection mobile games\n   ✅ وجدت 2 نتيجة\n   ✅ حفظت 7 مصدر جديد\n\n═══ تقرير التقييم الذاتي ═══\nإجمالي التقييمات: 0\nمتوسط الأداء: 0%\nالاتجاه: 📉 تراجع\nنقاط الضعف الرئيسية:\n  لا توجد بعد\nمعايرة الثقة: +0.000\n\n└──────────────────────────────────────────────────┘\n\n┌── PHASE 3: Autonomous & Multi-Agent ─────────────┐\n"
+}
