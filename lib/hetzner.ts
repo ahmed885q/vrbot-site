@@ -83,21 +83,37 @@ export async function runFarmTasks(params: {
   container_id: string;
   tasks: string[];
   user_id: string;
-}): Promise<{ ok: boolean; error?: string }> {
+  action?: string; // FIX: أضف action — يدعم "stop" | "status" | "start"
+}): Promise<{ ok: boolean; result?: any; error?: string }> {
   try {
+    // FIX: بناء الـ command بناءً على action
+    let command: string;
+    if (params.action === "stop") {
+      command = "stop";
+    } else if (params.action === "status") {
+      command = "status";
+    } else if (params.tasks && params.tasks.length > 0) {
+      command = `run_tasks:${params.tasks.join(",")}`;
+    } else {
+      command = "status";
+    }
+
+    // FIX: تأكد أن farm_id دائماً بصيغة "farm_001"
+    const raw = (params.container_id || "").replace(/\D/g, "").padStart(3, "0");
+    const farm_id = params.container_id.startsWith("farm_")
+      ? params.container_id
+      : `farm_${raw}`;
+
     const res = await fetch(`${BASE_URL}/api/farms/command`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
-      body: JSON.stringify({
-        farm_id: params.container_id,
-        command: `run_tasks:${params.tasks.join(",")}`,
-        user_id: params.user_id,
-      }),
+      body: JSON.stringify({ farm_id, command, user_id: params.user_id }),
       signal: AbortSignal.timeout(30000),
     });
+
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
     const data = await res.json();
-    return { ok: !!(data.ok || data.success), error: data.error };
+    return { ok: !!(data.ok || data.success), result: data, error: data.error };
   } catch (e: any) {
     return { ok: false, error: e?.message };
   }
