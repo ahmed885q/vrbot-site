@@ -19,3 +19,9 @@ Thumbs.db
 npm-debug.log*
 *.zip
 *.tar.gz
+
+__pycache__/
+*.pyc
+*.pyo
+vrbot-ultra-agent/data/
+vrbot-ultra-logs/
