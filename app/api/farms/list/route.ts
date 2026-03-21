@@ -8,6 +8,8 @@ export const runtime = 'nodejs'
 const HETZNER_IP = process.env.HETZNER_IP || '88.99.64.19'
 const API_KEY    = process.env.VRBOT_API_KEY || ''
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     // Auth check
