@@ -47,6 +47,7 @@ export default function LivePage() {
   const [tapFeedback, setTapFeedback]         = useState<{x:number,y:number} | null>(null)
   const dragStart                             = useRef<{x:number,y:number}|null>(null)
   const [zoomedScreenshot, setZoomedScreenshot] = useState<string | null>(null)
+  const [adbFeedback, setAdbFeedback]         = useState<string>('')
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), [])
 
@@ -91,9 +92,7 @@ export default function LivePage() {
   }, [getAuthHeaders])
 
   useEffect(() => {
-    if (farms.length > 0 && !selectedFarm) {
-      setSelected(farms[0].id)
-    }
+    if (farms.length > 0 && !selectedFarm) setSelected(farms[0].id)
   }, [farms, selectedFarm])
 
   useEffect(() => {
@@ -108,6 +107,31 @@ export default function LivePage() {
       if (screenshotTimer.current) clearInterval(screenshotTimer.current)
     }
   }, [])
+
+  // ── FIX: دالة ADB مباشرة عبر /api/farms/adb ─────────────
+  async function sendAdb(farmId: string, command: string) {
+    try {
+      const authHeaders = await getAuthHeaders()
+      const res = await fetch('/api/farms/adb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ farm_id: farmId, command }),
+      })
+      const d = await res.json()
+      if (d.ok) {
+        setAdbFeedback(`✅ ${command}`)
+        setTimeout(() => setAdbFeedback(''), 1500)
+      } else {
+        setAdbFeedback(`❌ ${d.error || 'فشل'}`)
+        setTimeout(() => setAdbFeedback(''), 2000)
+      }
+      return d.ok
+    } catch {
+      setAdbFeedback('❌ خطأ في الاتصال')
+      setTimeout(() => setAdbFeedback(''), 2000)
+      return false
+    }
+  }
 
   async function runTasks(farmId: string, taskList: string[], action?: string) {
     setRunning(p => ({ ...p, [farmId]: true }))
@@ -126,9 +150,7 @@ export default function LivePage() {
       } else {
         showMsg(`❌ خطأ: ${d.error || 'فشل التشغيل'}`)
       }
-    } catch {
-      showMsg('❌ لا يمكن الاتصال بالسيرفر')
-    }
+    } catch { showMsg('❌ لا يمكن الاتصال بالسيرفر') }
     setRunning(p => ({ ...p, [farmId]: false }))
   }
 
@@ -151,46 +173,30 @@ export default function LivePage() {
     const authHeaders = await getAuthHeaders()
     showMsg(`🗑️ جارٍ حذف ${farmId}...`)
     try {
-      const res = await fetch(`/api/farms/delete?id=${farmId}`, {
-        method: 'DELETE',
-        headers: authHeaders,
-      })
+      const res = await fetch(`/api/farms/delete?id=${farmId}`, { method: 'DELETE', headers: authHeaders })
       const d = await res.json()
       if (d.ok) {
         showMsg(`✅ تم حذف مزرعة ${farmId}`)
         if (selectedFarm === farmId) setSelected(null)
         loadFarms()
-      } else {
-        showMsg(`❌ فشل الحذف: ${d.error || 'خطأ'}`)
-      }
-    } catch {
-      showMsg('❌ خطأ في الاتصال')
-    }
+      } else { showMsg(`❌ فشل الحذف: ${d.error || 'خطأ'}`) }
+    } catch { showMsg('❌ خطأ في الاتصال') }
   }
 
   async function handleTransfer() {
     if (!transferFarm || !transferTarget.trim()) { setTransferMsg('⚠️ أدخل اسم اللاعب المستقبل'); return }
     if (transferRes.size === 0) { setTransferMsg('⚠️ اختر نوع مورد واحد على الأقل'); return }
-    setTransferring(true)
-    setTransferMsg('')
+    setTransferring(true); setTransferMsg('')
     try {
       const authHeaders = await getAuthHeaders()
       const res = await fetch('/api/farms/transfer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({
-          farm_id: transferFarm, target_name: transferTarget.trim(),
-          resources: Array.from(transferRes), amount: transferAmount,
-          max_marches: transferMarches, method: transferMethod,
-        }),
+        body: JSON.stringify({ farm_id: transferFarm, target_name: transferTarget.trim(), resources: Array.from(transferRes), amount: transferAmount, max_marches: transferMarches, method: transferMethod }),
       })
       const d = await res.json()
-      if (d.ok) {
-        setTransferMsg(`✅ تم إرسال أمر النقل إلى ${transferFarm}`)
-        setTimeout(() => { setShowTransfer(false); setTransferMsg('') }, 3000)
-      } else {
-        setTransferMsg(`❌ ${d.error || 'فشل النقل'}`)
-      }
+      if (d.ok) { setTransferMsg(`✅ تم إرسال أمر النقل إلى ${transferFarm}`); setTimeout(() => { setShowTransfer(false); setTransferMsg('') }, 3000) }
+      else { setTransferMsg(`❌ ${d.error || 'فشل النقل'}`) }
     } catch { setTransferMsg('❌ خطأ في الاتصال') }
     setTransferring(false)
   }
@@ -204,6 +210,7 @@ export default function LivePage() {
     }
   }
 
+  // FIX: يرسل لـ /api/farms/adb بدل /api/farms/command
   async function onImgMouseUp(e: React.MouseEvent<HTMLImageElement>) {
     if (!tapMode || !streamFarm || !dragStart.current) return
     const rect = e.currentTarget.getBoundingClientRect()
@@ -214,32 +221,22 @@ export default function LivePage() {
     setTapFeedback({ x: e.clientX - rect.left, y: e.clientY - rect.top })
     setTimeout(() => setTapFeedback(null), 600)
     const dist = Math.hypot(endX - startX, endY - startY)
-    const cmd = dist < 10 ? `tap:${endX},${endY}` : `swipe:${startX},${startY},${endX},${endY}`
-    try {
-      const authHeaders = await getAuthHeaders()
-      await fetch("/api/farms/command", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders },
-        body: JSON.stringify({ farm_id: streamFarm, command: cmd }),
-      })
-    } catch {}
+    const cmd = dist < 15
+      ? `tap:${endX},${endY}`
+      : `swipe:${startX},${startY},${endX},${endY}`
+    await sendAdb(streamFarm, cmd)
   }
 
-  // FIX: الـ endpoint الصحيح /api/screenshot/{num} + cache-busting
   async function getScreenshot(farmId: string): Promise<Response> {
     const numMatch = farmId.match(/farm_(\d+)/)
     const num = numMatch ? parseInt(numMatch[1]) : null
     const t = Date.now()
-
     if (num !== null) {
       try {
-        const res = await fetch(
-          `https://cloud.vrbot.me/api/screenshot/${num}?t=${t}`,
-          {
-            headers: { 'X-API-Key': 'vrbot_admin_2026' },
-            signal: AbortSignal.timeout(4000),
-          }
-        )
+        const res = await fetch(`https://cloud.vrbot.me/api/screenshot/${num}?t=${t}`, {
+          headers: { 'X-API-Key': 'vrbot_admin_2026' },
+          signal: AbortSignal.timeout(4000),
+        })
         if (res.ok) return res
       } catch {}
     }
@@ -250,37 +247,21 @@ export default function LivePage() {
     streamActive.current = null
     setStreaming(false)
     setStreamFarm(null)
-    if (screenshotTimer.current) {
-      clearInterval(screenshotTimer.current)
-      screenshotTimer.current = null
-    }
-    setScreenshot(prev => {
-      if (prev) URL.revokeObjectURL(prev)
-      return null
-    })
+    if (screenshotTimer.current) { clearInterval(screenshotTimer.current); screenshotTimer.current = null }
+    setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
   }
 
   function startStream(farmId: string) {
-    if (screenshotTimer.current) {
-      clearInterval(screenshotTimer.current)
-      screenshotTimer.current = null
-    }
-    setScreenshot(prev => {
-      if (prev) URL.revokeObjectURL(prev)
-      return null
-    })
-
+    if (screenshotTimer.current) { clearInterval(screenshotTimer.current); screenshotTimer.current = null }
+    setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
     const token = `${farmId}_${Date.now()}`
     streamActive.current = token
-
     setStreamFarm(farmId)
     setStreaming(true)
     showMsg('📺 جارٍ بدء البث...', 4000)
-
     async function capture() {
       if (streamActive.current !== token) return
       try {
-        // FIX: استخدم getScreenshot دائماً (يحمل cache-busting)
         const res = await getScreenshot(farmId)
         if (streamActive.current !== token) return
         if (res.ok) {
@@ -288,16 +269,12 @@ export default function LivePage() {
           if (streamActive.current !== token) return
           if (blob.size > 5000) {
             const url = URL.createObjectURL(blob)
-            setScreenshot(prev => {
-              if (prev) URL.revokeObjectURL(prev)
-              return url
-            })
+            setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return url })
             showMsg('', 0)
           }
         }
       } catch {}
     }
-
     capture()
     screenshotTimer.current = setInterval(capture, 2000)
   }
@@ -306,18 +283,15 @@ export default function LivePage() {
     setTasks(p => { const n = new Set(p); n.has(t) ? n.delete(t) : n.add(t); return n })
   }
 
-  const sc = (s: string) =>
-    s === 'running' ? '#10b981' : s === 'provisioning' ? '#f59e0b' : '#64748b'
-
+  const sc = (s: string) => s === 'running' ? '#10b981' : s === 'provisioning' ? '#f59e0b' : '#64748b'
   const activeFarm = farms.find(f => f.id === selectedFarm)
 
   return (
     <div style={{ minHeight: '100vh', background: '#0d1117', color: '#e6edf3', fontFamily: 'sans-serif' }}>
       <style>{`
-        @keyframes tapPulse {
-          0%   { transform: scale(0.5); opacity: 1; }
-          100% { transform: scale(2);   opacity: 0; }
-        }
+        @keyframes tapPulse { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+        .ctrl-btn:hover { background: #30363d !important; transform: scale(1.05); }
+        .ctrl-btn:active { transform: scale(0.95); }
       `}</style>
 
       {/* Header */}
@@ -337,11 +311,9 @@ export default function LivePage() {
         </div>
       </div>
 
-      {msg && (
-        <div style={{ background: '#58a6ff15', borderBottom: '1px solid #58a6ff30', color: '#58a6ff', padding: '8px 24px', fontSize: 13, fontFamily: 'monospace' }}>{msg}</div>
-      )}
+      {msg && <div style={{ background: '#58a6ff15', borderBottom: '1px solid #58a6ff30', color: '#58a6ff', padding: '8px 24px', fontSize: 13, fontFamily: 'monospace' }}>{msg}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 0, height: 'calc(100vh - 90px)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 0, height: 'calc(100vh - 90px)' }}>
 
         {/* Left — Farms Grid */}
         <div style={{ padding: 20, overflowY: 'auto' }}>
@@ -362,19 +334,8 @@ export default function LivePage() {
                 const isSelected = farm.id === selectedFarm
                 const isRunning  = running[farm.id]
                 return (
-                  <div
-                    key={farm.id}
-                    onClick={() => {
-                      setSelected(farm.id)
-                      if (streaming && streamFarm !== farm.farm_name) startStream(farm.farm_name)
-                    }}
-                    style={{
-                      borderRadius: 10,
-                      border: `2px solid ${isSelected ? '#f0a500' : '#21262d'}`,
-                      background: isSelected ? '#f0a50010' : '#161b22',
-                      cursor: 'pointer', transition: 'all 0.2s', padding: 16,
-                      boxShadow: isSelected ? '0 0 20px #f0a50025' : 'none',
-                    }}
+                  <div key={farm.id} onClick={() => { setSelected(farm.id); if (streaming && streamFarm !== farm.farm_name) startStream(farm.farm_name) }}
+                    style={{ borderRadius: 10, border: `2px solid ${isSelected ? '#f0a500' : '#21262d'}`, background: isSelected ? '#f0a50010' : '#161b22', cursor: 'pointer', transition: 'all 0.2s', padding: 16, boxShadow: isSelected ? '0 0 20px #f0a50025' : 'none' }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -389,45 +350,28 @@ export default function LivePage() {
                     </div>
                     {farm.current_task && <div style={{ fontSize: 11, color: '#f0a500', marginBottom: 4 }}>⚡ {farm.current_task}</div>}
                     {farm.live_status === 'idle' && <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 4 }}>⏳ جاري التجهيز...</div>}
-
                     <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                       {(farm.status === 'provisioning' || farm.live_status === 'idle') ? (
-                        <button
-                          onClick={async e => {
-                            e.stopPropagation()
-                            showMsg(`⏳ جارٍ تفعيل ${farm.farm_name}...`)
-                            try {
-                              const authHeaders = await getAuthHeaders()
-                              const res = await fetch('/api/farms/activate', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', ...authHeaders },
-                                body: JSON.stringify({ farm_name: farm.farm_name }),
-                              })
-                              const d = await res.json()
-                              showMsg(d.ok ? `✅ تم تفعيل ${farm.farm_name}` : `❌ ${d.error || 'فشل التفعيل'}`)
-                            } catch { showMsg('❌ خطأ في الاتصال') }
-                            setTimeout(loadFarms, 3000)
-                          }}
-                          style={{ flex: 1, background: '#f0a50018', border: '1px solid #f0a50050', color: '#f0a500', padding: '6px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
-                        >⚡ تفعيل</button>
+                        <button onClick={async e => {
+                          e.stopPropagation(); showMsg(`⏳ جارٍ تفعيل ${farm.farm_name}...`)
+                          try {
+                            const authHeaders = await getAuthHeaders()
+                            const res = await fetch('/api/farms/activate', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders }, body: JSON.stringify({ farm_name: farm.farm_name }) })
+                            const d = await res.json()
+                            showMsg(d.ok ? `✅ تم تفعيل ${farm.farm_name}` : `❌ ${d.error || 'فشل التفعيل'}`)
+                          } catch { showMsg('❌ خطأ في الاتصال') }
+                          setTimeout(loadFarms, 3000)
+                        }} style={{ flex: 1, background: '#f0a50018', border: '1px solid #f0a50050', color: '#f0a500', padding: '6px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⚡ تفعيل</button>
                       ) : (
-                        <button
-                          onClick={e => { e.stopPropagation(); runTasks(farm.id, ['Gather Resources', 'Mail Rewards', 'Tribe Tech'], 'start') }}
-                          disabled={isRunning}
+                        <button onClick={e => { e.stopPropagation(); runTasks(farm.id, ['Gather Resources', 'Mail Rewards', 'Tribe Tech'], 'start') }} disabled={isRunning}
                           style={{ flex: 1, background: '#3fb95018', border: '1px solid #3fb95050', color: '#3fb950', padding: '6px', borderRadius: 6, cursor: isRunning ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700 }}
                         >{isRunning ? '⏳...' : '▶ تشغيل'}</button>
                       )}
-                      <button onClick={e => { e.stopPropagation(); setTransferFarm(farm.id); setShowTransfer(true); setTransferMsg('') }} style={{ background: '#58a6ff18', border: '1px solid #58a6ff50', color: '#58a6ff', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📦 نقل</button>
+                      <button onClick={e => { e.stopPropagation(); setTransferFarm(farm.id); setShowTransfer(true); setTransferMsg('') }} style={{ background: '#58a6ff18', border: '1px solid #58a6ff50', color: '#58a6ff', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📦</button>
                       <button onClick={e => { e.stopPropagation(); stopFarm(farm.id) }} disabled={isRunning} style={{ background: '#f8514918', border: '1px solid #f8514950', color: '#f85149', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>■</button>
-                      <button onClick={e => { e.stopPropagation(); deleteFarm(farm.id) }} style={{ background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', color: '#f85149', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>🗑️</button>
-                      <button
-                        onClick={e => { e.stopPropagation(); streaming && streamFarm === farm.farm_name ? stopStream() : startStream(farm.farm_name) }}
-                        style={{
-                          background: streaming && streamFarm === farm.farm_name ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.1)',
-                          border: streaming && streamFarm === farm.farm_name ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(59,130,246,0.3)',
-                          color: streaming && streamFarm === farm.farm_name ? '#f87171' : '#58a6ff',
-                          padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700,
-                        }}
+                      <button onClick={e => { e.stopPropagation(); deleteFarm(farm.id) }} style={{ background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', color: '#f85149', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>🗑️</button>
+                      <button onClick={e => { e.stopPropagation(); streaming && streamFarm === farm.farm_name ? stopStream() : startStream(farm.farm_name) }}
+                        style={{ background: streaming && streamFarm === farm.farm_name ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.1)', border: streaming && streamFarm === farm.farm_name ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(59,130,246,0.3)', color: streaming && streamFarm === farm.farm_name ? '#f87171' : '#58a6ff', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
                       >{streaming && streamFarm === farm.farm_name ? '⏹' : '📺'}</button>
                     </div>
                   </div>
@@ -438,35 +382,41 @@ export default function LivePage() {
         </div>
 
         {/* Right — Control Panel */}
-        <div style={{ background: '#161b22', borderLeft: '1px solid #21262d', padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ background: '#161b22', borderLeft: '1px solid #21262d', padding: 16, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+          {/* Farm Info */}
           <div>
-            <h3 style={{ color: '#f0a500', margin: '0 0 12px', fontSize: 14 }}>🎮 لوحة التحكم</h3>
+            <h3 style={{ color: '#f0a500', margin: '0 0 8px', fontSize: 13 }}>🎮 لوحة التحكم</h3>
             {activeFarm ? (
-              <div style={{ background: '#0d1117', borderRadius: 8, padding: 12, border: '1px solid #f0a50030' }}>
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{activeFarm.farm_name}</div>
-                <div style={{ fontSize: 12, color: '#8b949e' }}>📧 {activeFarm.game_account || '—'}</div>
-                <div style={{ fontSize: 12, marginTop: 4 }}><span style={{ color: sc(activeFarm.status) }}>● {activeFarm.status}</span></div>
+              <div style={{ background: '#0d1117', borderRadius: 8, padding: 10, border: '1px solid #f0a50030' }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{activeFarm.farm_name}</div>
+                <div style={{ fontSize: 11, color: '#8b949e' }}>📧 {activeFarm.game_account || '—'}</div>
+                <div style={{ fontSize: 11, marginTop: 2 }}><span style={{ color: sc(activeFarm.status) }}>● {activeFarm.status}</span></div>
               </div>
-            ) : (
-              <p style={{ color: '#8b949e', fontSize: 12 }}>اختر مزرعة من اليسار</p>
-            )}
+            ) : <p style={{ color: '#8b949e', fontSize: 12 }}>اختر مزرعة من اليسار</p>}
           </div>
 
           {/* Live Screen */}
           {activeFarm && (
             <div>
-              <div style={{ background: '#000', borderRadius: 8, overflow: 'hidden', width: '100%', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', minHeight: 160, maxHeight: 240, border: streaming ? '2px solid rgba(239,68,68,0.5)' : '2px solid #21262d', transition: 'border-color 0.3s' }}>
+              <div style={{ background: '#000', borderRadius: 8, overflow: 'hidden', width: '100%', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', minHeight: 150, maxHeight: 220, border: streaming ? '2px solid rgba(239,68,68,0.5)' : '2px solid #21262d', transition: 'border-color 0.3s' }}>
                 {screenshot ? (
                   <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                    <img
-                      src={screenshot} alt="Live Screen"
-                      onMouseDown={onImgMouseDown} onMouseUp={onImgMouseUp}
-                      draggable={false}
+                    <img src={screenshot} alt="Live Screen" onMouseDown={onImgMouseDown} onMouseUp={onImgMouseUp} draggable={false}
                       style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: tapMode ? 'crosshair' : 'zoom-in', userSelect: 'none' }}
                     />
                     {tapFeedback && <div style={{ position: 'absolute', left: tapFeedback.x - 15, top: tapFeedback.y - 15, width: 30, height: 30, borderRadius: '50%', border: '2px solid #f59e0b', background: 'rgba(245,158,11,0.2)', pointerEvents: 'none', animation: 'tapPulse 0.6s ease-out' }} />}
-                    {streaming && <button onClick={e => { e.stopPropagation(); setTapMode(p => !p) }} style={{ position: 'absolute', bottom: 8, right: 8, background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.6)', border: tapMode ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.2)', color: tapMode ? '#000' : '#fff', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{tapMode ? '🎮 تحكم' : '🎮'}</button>}
-                    <button onClick={e => { e.stopPropagation(); setZoomedScreenshot(screenshot) }} style={{ position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer' }}>🔍 تكبير</button>
+                    {/* ADB feedback */}
+                    {adbFeedback && (
+                      <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.8)', color: adbFeedback.startsWith('✅') ? '#3fb950' : '#f85149', padding: '4px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{adbFeedback}</div>
+                    )}
+                    {streaming && (
+                      <button onClick={e => { e.stopPropagation(); setTapMode(p => !p) }}
+                        style={{ position: 'absolute', bottom: 8, right: 8, background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.7)', border: tapMode ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.2)', color: tapMode ? '#000' : '#fff', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                      >{tapMode ? '🎮 تحكم' : '🎮'}</button>
+                    )}
+                    <button onClick={e => { e.stopPropagation(); setZoomedScreenshot(screenshot) }}
+                      style={{ position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: 6, padding: '4px 8px', fontSize: 10, cursor: 'pointer' }}>🔍</button>
                   </div>
                 ) : (
                   <div style={{ textAlign: 'center', color: '#8b949e', padding: 16 }}>
@@ -476,47 +426,122 @@ export default function LivePage() {
                 )}
                 {streaming && <div style={{ position: 'absolute', top: 6, right: 6, background: '#ef4444', color: '#fff', padding: '1px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700 }}>● LIVE</div>}
               </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                 {!streaming ? (
-                  <button onClick={() => startStream(activeFarm.farm_name)} style={{ flex: 1, padding: '8px', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📺 بث مباشر</button>
+                  <button onClick={() => startStream(activeFarm.farm_name)} style={{ flex: 1, padding: '7px', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📺 بث مباشر</button>
                 ) : (
-                  <button onClick={stopStream} style={{ flex: 1, padding: '8px', background: '#21262d', color: '#f85149', border: '1px solid #f8514930', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⏹ إيقاف البث</button>
+                  <button onClick={stopStream} style={{ flex: 1, padding: '7px', background: '#21262d', color: '#f85149', border: '1px solid #f8514930', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⏹ إيقاف البث</button>
                 )}
               </div>
             </div>
           )}
 
-          {/* Tasks */}
+          {/* ══ لوحة التحكم بالألعاب ══ */}
+          {activeFarm && streaming && (
+            <div style={{ background: '#0d1117', borderRadius: 8, padding: 12, border: '1px solid #f0a50030' }}>
+              <div style={{ fontSize: 11, color: '#f0a500', marginBottom: 10, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>🕹️ تحكم مباشر</span>
+                <span style={{ color: '#8b949e', fontSize: 10 }}>{streamFarm}</span>
+              </div>
+
+              {/* أزرار النظام */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 5 }}>نظام</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[
+                    { label: '◀ رجوع',    cmd: 'key:BACK',  color: '#58a6ff' },
+                    { label: '⌂ الرئيسية', cmd: 'key:HOME',  color: '#3fb950' },
+                    { label: '☰ قائمة',   cmd: 'key:MENU',  color: '#f59e0b' },
+                  ].map(btn => (
+                    <button key={btn.cmd} className="ctrl-btn"
+                      onClick={() => streamFarm && sendAdb(streamFarm, btn.cmd)}
+                      style={{ flex: 1, padding: '7px 4px', background: btn.color + '15', border: `1px solid ${btn.color}40`, color: btn.color, borderRadius: 6, cursor: 'pointer', fontSize: 10, fontWeight: 700, transition: 'all 0.15s' }}
+                    >{btn.label}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* أزرار اللعبة */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 5 }}>Viking Rise</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5 }}>
+                  {[
+                    { label: '🗺️ خريطة',   cmd: 'tap:71,647'   },
+                    { label: '🏰 قلعة',    cmd: 'tap:640,360'  },
+                    { label: '✉️ بريد',    cmd: 'tap:1210,647' },
+                    { label: '🎁 مكافآت', cmd: 'tap:1140,647' },
+                    { label: '⚔️ هجوم',   cmd: 'tap:949,467'  },
+                    { label: '🛡️ دفاع',   cmd: 'tap:850,467'  },
+                    { label: '⚗️ بحث',    cmd: 'tap:640,467'  },
+                    { label: '🏗️ بناء',   cmd: 'tap:640,550'  },
+                    { label: '👥 تحالف',  cmd: 'tap:71,467'   },
+                  ].map(btn => (
+                    <button key={btn.cmd} className="ctrl-btn"
+                      onClick={() => streamFarm && sendAdb(streamFarm, btn.cmd)}
+                      style={{ padding: '7px 4px', background: '#21262d', border: '1px solid #30363d', color: '#e6edf3', borderRadius: 6, cursor: 'pointer', fontSize: 10, transition: 'all 0.15s' }}
+                    >{btn.label}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* D-Pad للتمرير */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 5 }}>تمرير الشاشة</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, maxWidth: 120, margin: '0 auto' }}>
+                  <div />
+                  <button className="ctrl-btn" onClick={() => streamFarm && sendAdb(streamFarm, 'swipe:640,500,640,200')}
+                    style={{ padding: '8px', background: '#21262d', border: '1px solid #30363d', color: '#e6edf3', borderRadius: 6, cursor: 'pointer', fontSize: 14, transition: 'all 0.15s' }}>↑</button>
+                  <div />
+                  <button className="ctrl-btn" onClick={() => streamFarm && sendAdb(streamFarm, 'swipe:800,360,200,360')}
+                    style={{ padding: '8px', background: '#21262d', border: '1px solid #30363d', color: '#e6edf3', borderRadius: 6, cursor: 'pointer', fontSize: 14, transition: 'all 0.15s' }}>←</button>
+                  <button className="ctrl-btn" onClick={() => streamFarm && sendAdb(streamFarm, 'tap:640,360')}
+                    style={{ padding: '8px', background: '#f0a50018', border: '1px solid #f0a50050', color: '#f0a500', borderRadius: 6, cursor: 'pointer', fontSize: 12, transition: 'all 0.15s' }}>OK</button>
+                  <button className="ctrl-btn" onClick={() => streamFarm && sendAdb(streamFarm, 'swipe:200,360,800,360')}
+                    style={{ padding: '8px', background: '#21262d', border: '1px solid #30363d', color: '#e6edf3', borderRadius: 6, cursor: 'pointer', fontSize: 14, transition: 'all 0.15s' }}>→</button>
+                  <div />
+                  <button className="ctrl-btn" onClick={() => streamFarm && sendAdb(streamFarm, 'swipe:640,200,640,500')}
+                    style={{ padding: '8px', background: '#21262d', border: '1px solid #30363d', color: '#e6edf3', borderRadius: 6, cursor: 'pointer', fontSize: 14, transition: 'all 0.15s' }}>↓</button>
+                  <div />
+                </div>
+              </div>
+
+              {/* زر تحكم tap mode */}
+              <button onClick={() => setTapMode(p => !p)}
+                style={{ width: '100%', padding: '8px', background: tapMode ? 'rgba(245,158,11,0.2)' : '#21262d', border: `1px solid ${tapMode ? '#f59e0b' : '#30363d'}`, color: tapMode ? '#f59e0b' : '#8b949e', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
+              >{tapMode ? '🎮 وضع التحكم: شغّال — انقر على الشاشة' : '🎮 تفعيل النقر على الشاشة'}</button>
+            </div>
+          )}
+
+          {/* Tasks Selection */}
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <h4 style={{ color: '#e6edf3', margin: 0, fontSize: 13 }}>📋 اختر المهام</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h4 style={{ color: '#e6edf3', margin: 0, fontSize: 12 }}>📋 المهام</h4>
               <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={() => setTasks(new Set(TASKS_MAP.flatMap(g => g.tasks)))} style={{ fontSize: 10, padding: '3px 8px', background: '#21262d', border: '1px solid #30363d', color: '#8b949e', borderRadius: 4, cursor: 'pointer' }}>الكل</button>
-                <button onClick={() => setTasks(new Set())} style={{ fontSize: 10, padding: '3px 8px', background: '#21262d', border: '1px solid #30363d', color: '#8b949e', borderRadius: 4, cursor: 'pointer' }}>مسح</button>
+                <button onClick={() => setTasks(new Set(TASKS_MAP.flatMap(g => g.tasks)))} style={{ fontSize: 10, padding: '2px 7px', background: '#21262d', border: '1px solid #30363d', color: '#8b949e', borderRadius: 4, cursor: 'pointer' }}>الكل</button>
+                <button onClick={() => setTasks(new Set())} style={{ fontSize: 10, padding: '2px 7px', background: '#21262d', border: '1px solid #30363d', color: '#8b949e', borderRadius: 4, cursor: 'pointer' }}>مسح</button>
               </div>
             </div>
             {TASKS_MAP.map(group => (
-              <div key={group.group} style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: group.color, fontWeight: 700, marginBottom: 6 }}>{group.group}</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <div key={group.group} style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 10, color: group.color, fontWeight: 700, marginBottom: 4 }}>{group.group}</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                   {group.tasks.map(task => {
                     const on = selectedTasks.has(task)
-                    return <button key={task} onClick={() => toggleTask(task)} style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${on ? group.color : '#30363d'}`, background: on ? group.color + '20' : '#21262d', color: on ? group.color : '#8b949e', fontSize: 11, cursor: 'pointer', transition: 'all 0.15s' }}>{task}</button>
+                    return <button key={task} onClick={() => toggleTask(task)} style={{ padding: '3px 8px', borderRadius: 5, border: `1px solid ${on ? group.color : '#30363d'}`, background: on ? group.color + '20' : '#21262d', color: on ? group.color : '#8b949e', fontSize: 10, cursor: 'pointer', transition: 'all 0.15s' }}>{task}</button>
                   })}
                 </div>
               </div>
             ))}
           </div>
 
+          {/* Run Button */}
           {activeFarm && (
             <div style={{ marginTop: 'auto' }}>
-              <div style={{ fontSize: 12, color: '#8b949e', marginBottom: 8, textAlign: 'center' }}>{selectedTasks.size > 0 ? `${selectedTasks.size} مهمة محددة` : 'لم تُحدَّد مهام'}</div>
-              <button
-                onClick={() => { if (selectedTasks.size === 0) { showMsg('⚠️ اختر مهمة واحدة على الأقل'); return }; runTasks(activeFarm.id, Array.from(selectedTasks)) }}
-                disabled={running[activeFarm.id]}
-                style={{ width: '100%', padding: '12px', background: selectedTasks.size > 0 ? 'linear-gradient(135deg,#10b981,#059669)' : '#21262d', color: selectedTasks.size > 0 ? '#fff' : '#8b949e', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: selectedTasks.size > 0 ? 'pointer' : 'not-allowed', marginBottom: 8 }}
+              <div style={{ fontSize: 11, color: '#8b949e', marginBottom: 6, textAlign: 'center' }}>{selectedTasks.size > 0 ? `${selectedTasks.size} مهمة محددة` : 'لم تُحدَّد مهام'}</div>
+              <button onClick={() => { if (selectedTasks.size === 0) { showMsg('⚠️ اختر مهمة'); return }; runTasks(activeFarm.id, Array.from(selectedTasks)) }} disabled={running[activeFarm.id]}
+                style={{ width: '100%', padding: '11px', background: selectedTasks.size > 0 ? 'linear-gradient(135deg,#10b981,#059669)' : '#21262d', color: selectedTasks.size > 0 ? '#fff' : '#8b949e', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: selectedTasks.size > 0 ? 'pointer' : 'not-allowed', marginBottom: 6 }}
               >{running[activeFarm.id] ? '⏳ جارٍ التشغيل...' : `▶ تشغيل ${selectedTasks.size} مهمة`}</button>
-              <button onClick={() => stopFarm(activeFarm.id)} style={{ width: '100%', padding: '10px', background: '#f8514910', border: '1px solid #f8514930', color: '#f85149', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>■ إيقاف المزرعة</button>
+              <button onClick={() => stopFarm(activeFarm.id)} style={{ width: '100%', padding: '9px', background: '#f8514910', border: '1px solid #f8514930', color: '#f85149', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>■ إيقاف المزرعة</button>
             </div>
           )}
         </div>
@@ -529,7 +554,7 @@ export default function LivePage() {
             <img src={zoomedScreenshot} alt="Zoomed" onClick={e => e.stopPropagation()} style={{ maxWidth: '95vw', maxHeight: '92vh', borderRadius: 8, display: 'block', boxShadow: '0 0 60px rgba(0,0,0,0.8)' }} />
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(0,0,0,0.6)', borderRadius: '8px 8px 0 0' }}>
               <span style={{ color: '#f0a500', fontSize: 13, fontWeight: 700 }}>📺 {streamFarm}</span>
-              <button onClick={() => setZoomedScreenshot(null)} style={{ background: 'rgba(248,81,73,0.2)', border: '1px solid #f8514950', color: '#f85149', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✕ إغلاق</button>
+              <button onClick={() => setZoomedScreenshot(null)} style={{ background: 'rgba(248,81,73,0.2)', border: '1px solid #f8514950', color: '#f85149', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 13 }}>✕</button>
             </div>
           </div>
         </div>
@@ -537,14 +562,30 @@ export default function LivePage() {
 
       {/* Live Overlay */}
       {streaming && screenshot && (
-        <div style={{ position: 'fixed', bottom: 20, right: 20, width: 300, background: '#161b22', border: '2px solid rgba(239,68,68,0.4)', borderRadius: 10, overflow: 'hidden', zIndex: 9998, boxShadow: '0 8px 32px rgba(0,0,0,0.7)' }}>
+        <div style={{ position: 'fixed', bottom: 20, right: 20, width: 280, background: '#161b22', border: '2px solid rgba(239,68,68,0.4)', borderRadius: 10, overflow: 'hidden', zIndex: 9998, boxShadow: '0 8px 32px rgba(0,0,0,0.7)' }}>
           <div style={{ position: 'relative' }}>
-            <img src={screenshot} alt="Live" onMouseDown={onImgMouseDown} onMouseUp={onImgMouseUp} draggable={false} onClick={() => setZoomedScreenshot(screenshot)} style={{ width: '100%', display: 'block', cursor: tapMode ? 'crosshair' : 'zoom-in', userSelect: 'none' }} />
+            <img src={screenshot} alt="Live" onMouseDown={onImgMouseDown} onMouseUp={onImgMouseUp} draggable={false} onClick={() => setZoomedScreenshot(screenshot)}
+              style={{ width: '100%', display: 'block', cursor: tapMode ? 'crosshair' : 'zoom-in', userSelect: 'none' }} />
             {tapFeedback && <div style={{ position: 'absolute', left: tapFeedback.x - 12, top: tapFeedback.y - 12, width: 24, height: 24, borderRadius: '50%', border: '2px solid #f59e0b', background: 'rgba(245,158,11,0.2)', pointerEvents: 'none', animation: 'tapPulse 0.6s ease-out' }} />}
+            {adbFeedback && <div style={{ position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: adbFeedback.startsWith('✅') ? '#3fb950' : '#f85149', padding: '3px 10px', borderRadius: 5, fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>{adbFeedback}</div>}
             <div style={{ position: 'absolute', top: 6, left: 8, background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700 }}>● LIVE — {streamFarm}</div>
             <div style={{ position: 'absolute', top: 4, right: 6, display: 'flex', gap: 4 }}>
-              <button onClick={e => { e.stopPropagation(); setTapMode(p => !p) }} style={{ background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.7)', border: 'none', color: tapMode ? '#000' : '#fff', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>🎮</button>
+              <button onClick={e => { e.stopPropagation(); setTapMode(p => !p) }} style={{ background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.7)', border: 'none', color: tapMode ? '#000' : '#fff', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 11 }}>🎮</button>
               <button onClick={stopStream} style={{ background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 12 }}>✕</button>
+            </div>
+            {/* Quick controls in overlay */}
+            <div style={{ display: 'flex', gap: 4, padding: '6px 8px', background: '#0d1117' }}>
+              {[
+                { label: '◀', cmd: 'key:BACK', color: '#58a6ff' },
+                { label: '⌂', cmd: 'key:HOME', color: '#3fb950' },
+                { label: '🗺️', cmd: 'tap:71,647', color: '#f59e0b' },
+                { label: '✉️', cmd: 'tap:1210,647', color: '#8b5cf6' },
+                { label: '⚔️', cmd: 'tap:949,467', color: '#ef4444' },
+              ].map(btn => (
+                <button key={btn.cmd} onClick={e => { e.stopPropagation(); streamFarm && sendAdb(streamFarm, btn.cmd) }}
+                  style={{ flex: 1, padding: '5px 2px', background: btn.color + '15', border: `1px solid ${btn.color}40`, color: btn.color, borderRadius: 5, cursor: 'pointer', fontSize: 12 }}
+                >{btn.label}</button>
+              ))}
             </div>
           </div>
         </div>
@@ -553,7 +594,7 @@ export default function LivePage() {
       {/* Transfer Modal */}
       {showTransfer && (
         <div onClick={() => setShowTransfer(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#161b22', border: '1px solid #58a6ff30', borderRadius: 16, padding: 28, width: '100%', maxWidth: 460, fontFamily: 'sans-serif' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#161b22', border: '1px solid #58a6ff30', borderRadius: 16, padding: 28, width: '100%', maxWidth: 460 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h3 style={{ color: '#58a6ff', margin: 0, fontSize: 16, fontWeight: 700 }}>📦 نقل الموارد — {transferFarm}</h3>
               <button onClick={() => setShowTransfer(false)} style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: 20 }}>✕</button>
@@ -586,12 +627,12 @@ export default function LivePage() {
             <div style={{ marginBottom: 20 }}>
               <label style={{ fontSize: 12, color: '#8b949e', display: 'block', marginBottom: 8 }}>🏛️ طريقة النقل</label>
               <div style={{ display: 'flex', gap: 8 }}>
-                {[{ key: 'tribe_hall', label: '🏛️ قاعة القبيلة (أفضل)' }, { key: 'world_map', label: '🗺️ الخريطة العالمية' }].map(m => (
+                {[{ key: 'tribe_hall', label: '🏛️ قاعة القبيلة' }, { key: 'world_map', label: '🗺️ الخريطة' }].map(m => (
                   <button key={m.key} onClick={() => setTransferMethod(m.key as 'tribe_hall'|'world_map')} style={{ flex: 1, padding: '8px', background: transferMethod === m.key ? '#8b5cf620' : '#0d1117', border: `2px solid ${transferMethod === m.key ? '#8b5cf6' : '#30363d'}`, borderRadius: 8, color: transferMethod === m.key ? '#8b5cf6' : '#8b949e', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>{m.label}</button>
                 ))}
               </div>
             </div>
-            <div style={{ marginBottom: 16, padding: '8px 12px', background: '#f0a50010', border: '1px solid #f0a50030', borderRadius: 8, fontSize: 12, color: '#f0a500' }}>⚠️ ملاحظة: ضريبة 32% تُطبَّق — إرسال 100k = المستقبل يستلم ~68k</div>
+            <div style={{ marginBottom: 16, padding: '8px 12px', background: '#f0a50010', border: '1px solid #f0a50030', borderRadius: 8, fontSize: 12, color: '#f0a500' }}>⚠️ ضريبة 32% — إرسال 100k = المستقبل يستلم ~68k</div>
             {transferMsg && <div style={{ padding: '8px 12px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: transferMsg.startsWith('✅') ? '#3fb95015' : '#f8514915', border: `1px solid ${transferMsg.startsWith('✅') ? '#3fb95040' : '#f8514940'}`, color: transferMsg.startsWith('✅') ? '#3fb950' : '#f85149' }}>{transferMsg}</div>}
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setShowTransfer(false)} style={{ flex: 1, padding: '12px', background: '#21262d', border: '1px solid #30363d', borderRadius: 8, color: '#8b949e', cursor: 'pointer', fontSize: 14 }}>إلغاء</button>
