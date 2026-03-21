@@ -39,7 +39,6 @@ export async function POST(req: Request) {
 
     if (!farm_id) return NextResponse.json({ error: "farm_id required" }, { status: 400 });
 
-    // جلب المزرعة مع الـ container_id
     const { data: farm } = await service
       .from("cloud_farms")
       .select("farm_name, container_id, status")
@@ -49,31 +48,29 @@ export async function POST(req: Request) {
 
     if (!farm) return NextResponse.json({ error: "Farm not found" }, { status: 404 });
 
-    // ── Reset: إعادة تعيين حالة error → stopped ──
     if (action === "reset") {
       await service
         .from("cloud_farms")
         .update({ status: "stopped", updated_at: new Date().toISOString() })
         .eq("farm_name", farm_id)
         .eq("user_id", user.id);
-
-      // سجّل الحدث
       try {
         await service.from("farm_events").insert({
-          user_id:    user.id,
-          farm_name:  farm_id,
+          user_id: user.id, farm_name: farm_id,
           event_type: "farm_reset",
-          message:    `Reset ${farm_id} from error → stopped`,
-          tasks:      [],
+          message: `Reset ${farm_id} from error → stopped`,
+          tasks: [],
         });
       } catch {}
-
       return NextResponse.json({ ok: true, message: `تم إعادة تعيين ${farm_id} إلى stopped` });
     }
 
-    const target_id = farm.container_id || farm_id;
+    // ── FIX: تأكد أن target_id دائماً بصيغة "farm_001" ──────────
+    const raw = farm.container_id || "";
+    const target_id = raw
+      ? (raw.startsWith("farm_") ? raw : `farm_${raw}`)
+      : farm_id;
 
-    // تحقق أن المزرعة شغّالة قبل إرسال الأوامر
     if (farm.status !== "running" && action !== "stop") {
       return NextResponse.json({
         ok: false,
@@ -92,14 +89,12 @@ export async function POST(req: Request) {
     if (!result.ok) {
       try {
         await service.from("farm_events").insert({
-          user_id:    user.id,
-          farm_name:  farm_id,
+          user_id: user.id, farm_name: farm_id,
           event_type: "error",
-          message:    `Task failed on ${farm_id} (container: ${target_id}): ${result.error || "Hetzner error"}`,
+          message: `Task failed on ${farm_id} (container: ${target_id}): ${result.error || "Hetzner error"}`,
           tasks: tasks || [],
         });
       } catch {}
-
       return NextResponse.json({
         ok: false,
         error: result.error || "فشل تشغيل المهام — السيرفر لم يستجب",
@@ -108,20 +103,17 @@ export async function POST(req: Request) {
       });
     }
 
-    // سجّل الحدث
     try {
       await service.from("farm_events").insert({
-        user_id:    user.id,
-        farm_name:  farm_id,
+        user_id: user.id, farm_name: farm_id,
         event_type: action === "stop" ? "farm_stopped" : "farm_started",
-        message:    action === "stop"
+        message: action === "stop"
           ? `Stopped ${farm_id} (container: ${target_id})`
           : `Running ${tasks?.length || 0} tasks on ${farm_id} (container: ${target_id})`,
         tasks: tasks || [],
       });
     } catch {}
 
-    // Update heartbeat
     try {
       await service.from("cloud_farms")
         .update({ last_heartbeat: new Date().toISOString() })
