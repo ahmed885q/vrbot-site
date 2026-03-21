@@ -104,23 +104,23 @@ export default function MonitorPage() {
   }, [fetchAll])
 
   // ── send command to orchestrator ───────────────────
-  const sendCommand = useCallback(async (cmd: string, params: any = {}) => {
+  const sendCommand = useCallback(async (cmd: string, farmId: string = 'all') => {
     if (running) return
     setRunning(true)
     setCmdResult('')
-    addEvent('info', `تنفيذ أمر: ${cmd}`)
+    addEvent('info', `تنفيذ: ${cmd} على ${farmId}`)
     try {
       const res = await fetch(`${ORCH}/api/farms/command`, {
         method: 'POST',
         headers: { ...H, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: cmd, ...params })
+        body: JSON.stringify({ farm_id: farmId, command: cmd })
       })
       const d = await res.json()
-      const msg = d.message || d.status || JSON.stringify(d).slice(0, 80)
+      const msg = d.status || d.message || (d.ok ? 'تم بنجاح' : 'خطأ')
       setCmdResult(msg)
-      addEvent('success', `${cmd}: ${msg}`)
+      addEvent('success', `${cmd} [${farmId}]: ${msg}`)
     } catch (e: any) {
-      const msg = e.message || 'فشل'
+      const msg = e.message || 'فشل الاتصال'
       setCmdResult(msg)
       addEvent('error', `${cmd} فشل: ${msg}`)
     } finally {
@@ -391,16 +391,16 @@ export default function MonitorPage() {
             </div>
             <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               {[
-                { label: '▶ تشغيل دورة Agent',    cmd: 'run_agent_cycle', color: '#00d4aa', icon: '🤖' },
-                { label: '📊 تقرير فوري',          cmd: 'get_report',      color: '#0095ff', icon: '📋' },
-                { label: '🔄 إعادة تشغيل المزارع', cmd: 'restart_all',     color: '#ff9500', icon: '🔄' },
-                { label: '⏹ إيقاف جميع المزارع',  cmd: 'stop_all',        color: '#ff3b5c', icon: '⏹' },
-                { label: '🌱 بدء الزراعة',         cmd: 'start_farming',   color: '#22c55e', icon: '🌱' },
-                { label: '🔍 فحص المزارع',         cmd: 'health_check',    color: '#a855f7', icon: '🔍' },
+                { label: '▶ تشغيل دورة', cmd: 'run_cycle',  color: '#00d4aa', icon: '🤖' },
+                { label: '📊 حالة الكل',  cmd: 'status',     color: '#0095ff', icon: '📋' },
+                { label: '🔄 إعادة تشغيل',cmd: 'restart',    color: '#ff9500', icon: '🔄' },
+                { label: '⏹ إيقاف الكل', cmd: 'stop',       color: '#ff3b5c', icon: '⏹' },
+                { label: '🌱 بدء الزراعة',cmd: 'gather',     color: '#22c55e', icon: '🌱' },
+                { label: '🔍 فحص صحة',   cmd: 'niflung',    color: '#a855f7', icon: '🔍' },
               ].map((c, i) => (
                 <button
                   key={i}
-                  onClick={() => sendCommand(c.cmd)}
+                  onClick={() => sendCommand(c.cmd, 'all')}
                   disabled={running}
                   style={{
                     padding:      '12px',
