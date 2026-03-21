@@ -42,7 +42,6 @@ export default function LivePage() {
   const [screenshot, setScreenshot]           = useState<string | null>(null)
   const [streamFarm, setStreamFarm]           = useState<string | null>(null)
   const screenshotTimer                       = useRef<NodeJS.Timeout | null>(null)
-  // FIX STREAM: token فريد لكل stream — يمنع الـ captures القديمة من الكتابة فوق الجديدة
   const streamActive                          = useRef<string | null>(null)
   const [tapMode, setTapMode]                 = useState(false)
   const [tapFeedback, setTapFeedback]         = useState<{x:number,y:number} | null>(null)
@@ -65,7 +64,6 @@ export default function LivePage() {
     return {}
   }, [supabase])
 
-  // FIX POLLING: حذف selectedFarm من deps لمنع إعادة إنشاء الـ interval
   const loadFarms = useCallback(async () => {
     try {
       const authHeaders = await getAuthHeaders()
@@ -90,9 +88,8 @@ export default function LivePage() {
       console.error('loadFarms error:', e)
     }
     setLoading(false)
-  }, [getAuthHeaders]) // ← حذف selectedFarm
+  }, [getAuthHeaders])
 
-  // FIX POLLING: selectedFarm يُعيَّن مرة واحدة فقط عند أول تحميل
   useEffect(() => {
     if (farms.length > 0 && !selectedFarm) {
       setSelected(farms[0].id)
@@ -107,6 +104,7 @@ export default function LivePage() {
 
   useEffect(() => {
     return () => {
+      streamActive.current = null
       if (screenshotTimer.current) clearInterval(screenshotTimer.current)
     }
   }, [])
@@ -171,14 +169,8 @@ export default function LivePage() {
   }
 
   async function handleTransfer() {
-    if (!transferFarm || !transferTarget.trim()) {
-      setTransferMsg('⚠️ أدخل اسم اللاعب المستقبل')
-      return
-    }
-    if (transferRes.size === 0) {
-      setTransferMsg('⚠️ اختر نوع مورد واحد على الأقل')
-      return
-    }
+    if (!transferFarm || !transferTarget.trim()) { setTransferMsg('⚠️ أدخل اسم اللاعب المستقبل'); return }
+    if (transferRes.size === 0) { setTransferMsg('⚠️ اختر نوع مورد واحد على الأقل'); return }
     setTransferring(true)
     setTransferMsg('')
     try {
@@ -187,12 +179,9 @@ export default function LivePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
-          farm_id:     transferFarm,
-          target_name: transferTarget.trim(),
-          resources:   Array.from(transferRes),
-          amount:      transferAmount,
-          max_marches: transferMarches,
-          method:      transferMethod,
+          farm_id: transferFarm, target_name: transferTarget.trim(),
+          resources: Array.from(transferRes), amount: transferAmount,
+          max_marches: transferMarches, method: transferMethod,
         }),
       })
       const d = await res.json()
@@ -202,9 +191,7 @@ export default function LivePage() {
       } else {
         setTransferMsg(`❌ ${d.error || 'فشل النقل'}`)
       }
-    } catch {
-      setTransferMsg('❌ خطأ في الاتصال')
-    }
+    } catch { setTransferMsg('❌ خطأ في الاتصال') }
     setTransferring(false)
   }
 
@@ -227,9 +214,7 @@ export default function LivePage() {
     setTapFeedback({ x: e.clientX - rect.left, y: e.clientY - rect.top })
     setTimeout(() => setTapFeedback(null), 600)
     const dist = Math.hypot(endX - startX, endY - startY)
-    const cmd = dist < 10
-      ? `tap:${endX},${endY}`
-      : `swipe:${startX},${startY},${endX},${endY}`
+    const cmd = dist < 10 ? `tap:${endX},${endY}` : `swipe:${startX},${startY},${endX},${endY}`
     try {
       const authHeaders = await getAuthHeaders()
       await fetch("/api/farms/command", {
@@ -240,26 +225,29 @@ export default function LivePage() {
     } catch {}
   }
 
+  // FIX: الـ endpoint الصحيح /api/screenshot/{num} + cache-busting
   async function getScreenshot(farmId: string): Promise<Response> {
-    const farm = farms.find(f => f.farm_name === farmId || f.id === farmId)
     const numMatch = farmId.match(/farm_(\d+)/)
-    const containerId = numMatch
-      ? numMatch[1].padStart(3, '0')
-      : (farm as any)?.container_id?.padStart?.(3, '0')
-    if (containerId) {
+    const num = numMatch ? parseInt(numMatch[1]) : null
+    const t = Date.now()
+
+    if (num !== null) {
       try {
-        const res = await fetch(`https://cloud.vrbot.me/screenshot/${containerId}`, {
-          signal: AbortSignal.timeout(4000),
-        })
+        const res = await fetch(
+          `https://cloud.vrbot.me/api/screenshot/${num}?t=${t}`,
+          {
+            headers: { 'X-API-Key': 'vrbot_admin_2026' },
+            signal: AbortSignal.timeout(4000),
+          }
+        )
         if (res.ok) return res
       } catch {}
     }
-    return fetch(`/api/farms/screenshot?farm_id=${farmId}`)
+    return fetch(`/api/farms/screenshot?farm_id=${farmId}&t=${t}`)
   }
 
-  // FIX STREAM: stopStream يلغي الـ token أولاً قبل أي شيء
   function stopStream() {
-    streamActive.current = null // ← يلغي كل captures قديمة فوراً
+    streamActive.current = null
     setStreaming(false)
     setStreamFarm(null)
     if (screenshotTimer.current) {
@@ -272,9 +260,7 @@ export default function LivePage() {
     })
   }
 
-  // FIX STREAM: كل stream له token فريد — capture يتوقف لو تغيّر الـ token
   function startStream(farmId: string) {
-    // أوقف القديم أولاً
     if (screenshotTimer.current) {
       clearInterval(screenshotTimer.current)
       screenshotTimer.current = null
@@ -284,7 +270,6 @@ export default function LivePage() {
       return null
     })
 
-    // token فريد لهذا الـ stream
     const token = `${farmId}_${Date.now()}`
     streamActive.current = token
 
@@ -292,22 +277,12 @@ export default function LivePage() {
     setStreaming(true)
     showMsg('📺 جارٍ بدء البث...', 4000)
 
-    let useDirect = false
-
     async function capture() {
-      // إذا تغيّر الـ stream (مزرعة ثانية أو stopStream) — أوقف هذا الـ capture
       if (streamActive.current !== token) return
-
       try {
-        const res = useDirect
-          ? await getScreenshot(farmId)
-          : await fetch(`/api/farms/screenshot?farm_id=${farmId}`, {
-              signal: AbortSignal.timeout(4000),
-            })
-
-        // تحقق مرة ثانية بعد الـ await (قد يكون تغيّر أثناء الانتظار)
+        // FIX: استخدم getScreenshot دائماً (يحمل cache-busting)
+        const res = await getScreenshot(farmId)
         if (streamActive.current !== token) return
-
         if (res.ok) {
           const blob = await res.blob()
           if (streamActive.current !== token) return
@@ -317,7 +292,6 @@ export default function LivePage() {
               if (prev) URL.revokeObjectURL(prev)
               return url
             })
-            useDirect = true
             showMsg('', 0)
           }
         }
@@ -329,11 +303,7 @@ export default function LivePage() {
   }
 
   function toggleTask(t: string) {
-    setTasks(p => {
-      const n = new Set(p)
-      n.has(t) ? n.delete(t) : n.add(t)
-      return n
-    })
+    setTasks(p => { const n = new Set(p); n.has(t) ? n.delete(t) : n.add(t); return n })
   }
 
   const sc = (s: string) =>
@@ -367,7 +337,6 @@ export default function LivePage() {
         </div>
       </div>
 
-      {/* Message bar */}
       {msg && (
         <div style={{ background: '#58a6ff15', borderBottom: '1px solid #58a6ff30', color: '#58a6ff', padding: '8px 24px', fontSize: 13, fontFamily: 'monospace' }}>{msg}</div>
       )}
@@ -403,9 +372,7 @@ export default function LivePage() {
                       borderRadius: 10,
                       border: `2px solid ${isSelected ? '#f0a500' : '#21262d'}`,
                       background: isSelected ? '#f0a50010' : '#161b22',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      padding: 16,
+                      cursor: 'pointer', transition: 'all 0.2s', padding: 16,
                       boxShadow: isSelected ? '0 0 20px #f0a50025' : 'none',
                     }}
                   >
@@ -414,20 +381,15 @@ export default function LivePage() {
                         <span style={{ width: 8, height: 8, borderRadius: '50%', background: sc(farm.status), display: 'inline-block', boxShadow: `0 0 6px ${sc(farm.status)}` }} />
                         <span style={{ fontWeight: 700, fontSize: 14 }}>{farm.farm_name}</span>
                       </div>
-                      <span style={{ fontSize: 11, color: sc(farm.status), fontFamily: 'monospace', background: sc(farm.status) + '15', padding: '2px 8px', borderRadius: 4 }}>
-                        {farm.status}
-                      </span>
+                      <span style={{ fontSize: 11, color: sc(farm.status), fontFamily: 'monospace', background: sc(farm.status) + '15', padding: '2px 8px', borderRadius: 4 }}>{farm.status}</span>
                     </div>
                     <div style={{ display: 'flex', gap: 12, marginBottom: 4, fontSize: 12, color: '#8b949e' }}>
                       <span>📧 {farm.game_account || '—'}</span>
                       <span>⚡ {farm.tasks_today || 0} مهمة</span>
                     </div>
-                    {farm.current_task && (
-                      <div style={{ fontSize: 11, color: '#f0a500', marginBottom: 4 }}>⚡ {farm.current_task}</div>
-                    )}
-                    {farm.live_status === 'idle' && (
-                      <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 4 }}>⏳ جاري التجهيز...</div>
-                    )}
+                    {farm.current_task && <div style={{ fontSize: 11, color: '#f0a500', marginBottom: 4 }}>⚡ {farm.current_task}</div>}
+                    {farm.live_status === 'idle' && <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 4 }}>⏳ جاري التجهيز...</div>}
+
                     <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                       {(farm.status === 'provisioning' || farm.live_status === 'idle') ? (
                         <button
@@ -443,9 +405,7 @@ export default function LivePage() {
                               })
                               const d = await res.json()
                               showMsg(d.ok ? `✅ تم تفعيل ${farm.farm_name}` : `❌ ${d.error || 'فشل التفعيل'}`)
-                            } catch {
-                              showMsg('❌ خطأ في الاتصال')
-                            }
+                            } catch { showMsg('❌ خطأ في الاتصال') }
                             setTimeout(loadFarms, 3000)
                           }}
                           style={{ flex: 1, background: '#f0a50018', border: '1px solid #f0a50050', color: '#f0a500', padding: '6px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
@@ -485,9 +445,7 @@ export default function LivePage() {
               <div style={{ background: '#0d1117', borderRadius: 8, padding: 12, border: '1px solid #f0a50030' }}>
                 <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{activeFarm.farm_name}</div>
                 <div style={{ fontSize: 12, color: '#8b949e' }}>📧 {activeFarm.game_account || '—'}</div>
-                <div style={{ fontSize: 12, marginTop: 4 }}>
-                  <span style={{ color: sc(activeFarm.status) }}>● {activeFarm.status}</span>
-                </div>
+                <div style={{ fontSize: 12, marginTop: 4 }}><span style={{ color: sc(activeFarm.status) }}>● {activeFarm.status}</span></div>
               </div>
             ) : (
               <p style={{ color: '#8b949e', fontSize: 12 }}>اختر مزرعة من اليسار</p>
@@ -497,30 +455,17 @@ export default function LivePage() {
           {/* Live Screen */}
           {activeFarm && (
             <div>
-              <div style={{
-                background: '#000', borderRadius: 8, overflow: 'hidden',
-                width: '100%', aspectRatio: '16/9',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                position: 'relative', minHeight: 160, maxHeight: 240,
-                border: streaming ? '2px solid rgba(239,68,68,0.5)' : '2px solid #21262d',
-                transition: 'border-color 0.3s',
-              }}>
+              <div style={{ background: '#000', borderRadius: 8, overflow: 'hidden', width: '100%', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', minHeight: 160, maxHeight: 240, border: streaming ? '2px solid rgba(239,68,68,0.5)' : '2px solid #21262d', transition: 'border-color 0.3s' }}>
                 {screenshot ? (
                   <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                     <img
-                      src={screenshot}
-                      alt="Live Screen"
-                      onMouseDown={onImgMouseDown}
-                      onMouseUp={onImgMouseUp}
+                      src={screenshot} alt="Live Screen"
+                      onMouseDown={onImgMouseDown} onMouseUp={onImgMouseUp}
                       draggable={false}
                       style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: tapMode ? 'crosshair' : 'zoom-in', userSelect: 'none' }}
                     />
-                    {tapFeedback && (
-                      <div style={{ position: 'absolute', left: tapFeedback.x - 15, top: tapFeedback.y - 15, width: 30, height: 30, borderRadius: '50%', border: '2px solid #f59e0b', background: 'rgba(245,158,11,0.2)', pointerEvents: 'none', animation: 'tapPulse 0.6s ease-out' }} />
-                    )}
-                    {streaming && (
-                      <button onClick={e => { e.stopPropagation(); setTapMode(p => !p) }} style={{ position: 'absolute', bottom: 8, right: 8, background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.6)', border: tapMode ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.2)', color: tapMode ? '#000' : '#fff', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{tapMode ? '🎮 تحكم' : '🎮'}</button>
-                    )}
+                    {tapFeedback && <div style={{ position: 'absolute', left: tapFeedback.x - 15, top: tapFeedback.y - 15, width: 30, height: 30, borderRadius: '50%', border: '2px solid #f59e0b', background: 'rgba(245,158,11,0.2)', pointerEvents: 'none', animation: 'tapPulse 0.6s ease-out' }} />}
+                    {streaming && <button onClick={e => { e.stopPropagation(); setTapMode(p => !p) }} style={{ position: 'absolute', bottom: 8, right: 8, background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.6)', border: tapMode ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.2)', color: tapMode ? '#000' : '#fff', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{tapMode ? '🎮 تحكم' : '🎮'}</button>}
                     <button onClick={e => { e.stopPropagation(); setZoomedScreenshot(screenshot) }} style={{ position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer' }}>🔍 تكبير</button>
                   </div>
                 ) : (
@@ -529,9 +474,7 @@ export default function LivePage() {
                     <div style={{ fontSize: 11 }}>{streaming ? '⏳ جارٍ التحميل...' : 'اضغط بث للمشاهدة'}</div>
                   </div>
                 )}
-                {streaming && (
-                  <div style={{ position: 'absolute', top: 6, right: 6, background: '#ef4444', color: '#fff', padding: '1px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700 }}>● LIVE</div>
-                )}
+                {streaming && <div style={{ position: 'absolute', top: 6, right: 6, background: '#ef4444', color: '#fff', padding: '1px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700 }}>● LIVE</div>}
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                 {!streaming ? (
@@ -543,7 +486,7 @@ export default function LivePage() {
             </div>
           )}
 
-          {/* Tasks Selection */}
+          {/* Tasks */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <h4 style={{ color: '#e6edf3', margin: 0, fontSize: 13 }}>📋 اختر المهام</h4>
@@ -558,26 +501,18 @@ export default function LivePage() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {group.tasks.map(task => {
                     const on = selectedTasks.has(task)
-                    return (
-                      <button key={task} onClick={() => toggleTask(task)} style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${on ? group.color : '#30363d'}`, background: on ? group.color + '20' : '#21262d', color: on ? group.color : '#8b949e', fontSize: 11, cursor: 'pointer', transition: 'all 0.15s' }}>{task}</button>
-                    )
+                    return <button key={task} onClick={() => toggleTask(task)} style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${on ? group.color : '#30363d'}`, background: on ? group.color + '20' : '#21262d', color: on ? group.color : '#8b949e', fontSize: 11, cursor: 'pointer', transition: 'all 0.15s' }}>{task}</button>
                   })}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Run Button */}
           {activeFarm && (
             <div style={{ marginTop: 'auto' }}>
-              <div style={{ fontSize: 12, color: '#8b949e', marginBottom: 8, textAlign: 'center' }}>
-                {selectedTasks.size > 0 ? `${selectedTasks.size} مهمة محددة` : 'لم تُحدَّد مهام'}
-              </div>
+              <div style={{ fontSize: 12, color: '#8b949e', marginBottom: 8, textAlign: 'center' }}>{selectedTasks.size > 0 ? `${selectedTasks.size} مهمة محددة` : 'لم تُحدَّد مهام'}</div>
               <button
-                onClick={() => {
-                  if (selectedTasks.size === 0) { showMsg('⚠️ اختر مهمة واحدة على الأقل'); return }
-                  runTasks(activeFarm.id, Array.from(selectedTasks))
-                }}
+                onClick={() => { if (selectedTasks.size === 0) { showMsg('⚠️ اختر مهمة واحدة على الأقل'); return }; runTasks(activeFarm.id, Array.from(selectedTasks)) }}
                 disabled={running[activeFarm.id]}
                 style={{ width: '100%', padding: '12px', background: selectedTasks.size > 0 ? 'linear-gradient(135deg,#10b981,#059669)' : '#21262d', color: selectedTasks.size > 0 ? '#fff' : '#8b949e', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: selectedTasks.size > 0 ? 'pointer' : 'not-allowed', marginBottom: 8 }}
               >{running[activeFarm.id] ? '⏳ جارٍ التشغيل...' : `▶ تشغيل ${selectedTasks.size} مهمة`}</button>
@@ -587,7 +522,7 @@ export default function LivePage() {
         </div>
       </div>
 
-      {/* Modal تكبير الصورة */}
+      {/* Zoom Modal */}
       {zoomedScreenshot && (
         <div onClick={() => setZoomedScreenshot(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, cursor: 'zoom-out' }}>
           <div style={{ position: 'relative', maxWidth: '95vw', maxHeight: '95vh' }}>
@@ -600,14 +535,12 @@ export default function LivePage() {
         </div>
       )}
 
-      {/* Live Stream Overlay */}
+      {/* Live Overlay */}
       {streaming && screenshot && (
         <div style={{ position: 'fixed', bottom: 20, right: 20, width: 300, background: '#161b22', border: '2px solid rgba(239,68,68,0.4)', borderRadius: 10, overflow: 'hidden', zIndex: 9998, boxShadow: '0 8px 32px rgba(0,0,0,0.7)' }}>
           <div style={{ position: 'relative' }}>
             <img src={screenshot} alt="Live" onMouseDown={onImgMouseDown} onMouseUp={onImgMouseUp} draggable={false} onClick={() => setZoomedScreenshot(screenshot)} style={{ width: '100%', display: 'block', cursor: tapMode ? 'crosshair' : 'zoom-in', userSelect: 'none' }} />
-            {tapFeedback && (
-              <div style={{ position: 'absolute', left: tapFeedback.x - 12, top: tapFeedback.y - 12, width: 24, height: 24, borderRadius: '50%', border: '2px solid #f59e0b', background: 'rgba(245,158,11,0.2)', pointerEvents: 'none', animation: 'tapPulse 0.6s ease-out' }} />
-            )}
+            {tapFeedback && <div style={{ position: 'absolute', left: tapFeedback.x - 12, top: tapFeedback.y - 12, width: 24, height: 24, borderRadius: '50%', border: '2px solid #f59e0b', background: 'rgba(245,158,11,0.2)', pointerEvents: 'none', animation: 'tapPulse 0.6s ease-out' }} />}
             <div style={{ position: 'absolute', top: 6, left: 8, background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700 }}>● LIVE — {streamFarm}</div>
             <div style={{ position: 'absolute', top: 4, right: 6, display: 'flex', gap: 4 }}>
               <button onClick={e => { e.stopPropagation(); setTapMode(p => !p) }} style={{ background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.7)', border: 'none', color: tapMode ? '#000' : '#fff', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>🎮</button>
@@ -659,9 +592,7 @@ export default function LivePage() {
               </div>
             </div>
             <div style={{ marginBottom: 16, padding: '8px 12px', background: '#f0a50010', border: '1px solid #f0a50030', borderRadius: 8, fontSize: 12, color: '#f0a500' }}>⚠️ ملاحظة: ضريبة 32% تُطبَّق — إرسال 100k = المستقبل يستلم ~68k</div>
-            {transferMsg && (
-              <div style={{ padding: '8px 12px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: transferMsg.startsWith('✅') ? '#3fb95015' : '#f8514915', border: `1px solid ${transferMsg.startsWith('✅') ? '#3fb95040' : '#f8514940'}`, color: transferMsg.startsWith('✅') ? '#3fb950' : '#f85149' }}>{transferMsg}</div>
-            )}
+            {transferMsg && <div style={{ padding: '8px 12px', borderRadius: 8, marginBottom: 12, fontSize: 13, background: transferMsg.startsWith('✅') ? '#3fb95015' : '#f8514915', border: `1px solid ${transferMsg.startsWith('✅') ? '#3fb95040' : '#f8514940'}`, color: transferMsg.startsWith('✅') ? '#3fb950' : '#f85149' }}>{transferMsg}</div>}
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setShowTransfer(false)} style={{ flex: 1, padding: '12px', background: '#21262d', border: '1px solid #30363d', borderRadius: 8, color: '#8b949e', cursor: 'pointer', fontSize: 14 }}>إلغاء</button>
               <button onClick={handleTransfer} disabled={transferring || !transferTarget.trim()} style={{ flex: 2, padding: '12px', background: transferring || !transferTarget.trim() ? '#21262d' : 'linear-gradient(135deg, #58a6ff, #1f6feb)', border: 'none', borderRadius: 8, color: transferring || !transferTarget.trim() ? '#8b949e' : '#fff', cursor: transferring || !transferTarget.trim() ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700 }}>
