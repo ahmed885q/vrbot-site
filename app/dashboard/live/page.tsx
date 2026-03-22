@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
+import { useBotEngine } from './useBotEngine'
+import { useRealtimeSocket } from './useRealtimeSocket'
+import { useHealthMonitor } from './useHealthMonitor'
 
 const TASKS_MAP = [
   { group: 'الموارد 🌾',  color: '#10b981', tasks: ['Gather Resources', 'Collect Farms', 'Open Chests', 'Collect Free Items'] },
@@ -61,7 +64,15 @@ export default function LivePage() {
   const tapFeedbackTimerRef                    = useRef<NodeJS.Timeout | null>(null)
   const transferTimerRef                       = useRef<NodeJS.Timeout | null>(null)
 
+  // ── Stable ref for sendAdb (used by hooks before function is defined) ──
+  const sendAdbRef = useRef<(farmId: string, command: string) => void>(() => {})
+
   const supabase = useMemo(() => createSupabaseBrowserClient(), [])
+
+  // ── Initialize 3 systems ──────────────────────────────────
+  const bot = useBotEngine((farmId, cmd) => sendAdbRef.current(farmId, cmd))
+  const ws = useRealtimeSocket()
+  const monitor = useHealthMonitor()
 
   const showMsg = (m: string, ms = 4000) => {
     if (msgTimerRef.current) clearTimeout(msgTimerRef.current)
@@ -147,8 +158,27 @@ export default function LivePage() {
       if (tapFeedbackTimerRef.current) clearTimeout(tapFeedbackTimerRef.current)
       if (transferTimerRef.current) clearTimeout(transferTimerRef.current)
       adbQueueRef.current.length = 0
+      // Cleanup 3 systems
+      bot.cleanup()
+      ws.cleanup()
+      monitor.cleanup()
     }
   }, [])
+
+  // ── Start health monitor when streaming ──────────────────
+  useEffect(() => {
+    if (streaming && streamFarm) {
+      monitor.startMonitoring(streamFarm, {
+        restartStream: () => { if (streamFarm) startStream(streamFarm) },
+        clearAdbQueue: () => { adbQueueRef.current.length = 0 },
+        reconnectWs: () => { if (streamFarm) ws.connectToFarm(streamFarm) },
+        stopBot: () => bot.stopBot(),
+        goHome: () => { if (streamFarm) sendAdb(streamFarm, 'key:HOME') },
+      })
+    } else {
+      monitor.stopMonitoring()
+    }
+  }, [streaming, streamFarm])
 
   // ── دالة تشغيل اللعبة (مع حماية من التكرار) ─────────────
   async function launchGame(farmId: string) {
@@ -214,14 +244,17 @@ export default function LivePage() {
         if (d.ok) {
           setAdbFeedback(`✅ ${item.command}`)
           adbTimerRef.current = setTimeout(() => { setAdbFeedback(''); adbTimerRef.current = null }, 1500)
+          monitor.reportCommand(true)
         } else {
           setAdbFeedback(`❌ ${d.error || 'فشل'}`)
           adbTimerRef.current = setTimeout(() => { setAdbFeedback(''); adbTimerRef.current = null }, 2000)
+          monitor.reportCommand(false)
         }
       } catch {
         if (adbTimerRef.current) clearTimeout(adbTimerRef.current)
         setAdbFeedback('❌ خطأ في الاتصال')
         adbTimerRef.current = setTimeout(() => { setAdbFeedback(''); adbTimerRef.current = null }, 2000)
+        monitor.reportCommand(false)
       }
     }
     adbProcessingRef.current = false
@@ -240,6 +273,9 @@ export default function LivePage() {
     adbQueueRef.current.push({ farmId, command })
     processAdbQueue()
   }
+
+  // Wire sendAdbRef so hooks can call sendAdb
+  sendAdbRef.current = sendAdb
 
   async function runTasks(farmId: string, taskList: string[], action?: string) {
     setRunning(p => ({ ...p, [farmId]: true }))
@@ -372,6 +408,9 @@ export default function LivePage() {
     // Clear ADB queue — commands for a stopped stream are stale
     adbQueueRef.current.length = 0
     setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
+    // Notify systems
+    monitor.reportStreamActive(false)
+    ws.disconnect()
   }
 
   function startStream(farmId: string) {
@@ -385,8 +424,27 @@ export default function LivePage() {
     setStreamFarm(farmId)
     setStreaming(true)
     showMsg('📺 جارٍ بدء البث...', 4000)
+
+    // Notify systems
+    monitor.reportStreamActive(true)
+    monitor.resetStreamRestarts()
+    ws.connectToFarm(farmId)
+
+    // WS screenshot handler — if WS pushes frames, use them
+    ws.setOnScreenshot((blob: Blob) => {
+      if (streamActive.current !== token) return
+      if (blob.size > 5000) {
+        const url = URL.createObjectURL(blob)
+        setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return url })
+        monitor.reportScreenshot()
+        showMsg('', 0)
+      }
+    })
+
     async function capture() {
       if (streamActive.current !== token) return
+      // Skip HTTP polling if WS is delivering frames
+      if (ws.isConnected && !ws.isFallback) return
       // Prevent overlapping captures when network is slow
       if (capturingRef.current) return
       capturingRef.current = true
@@ -399,6 +457,7 @@ export default function LivePage() {
           if (blob.size > 5000) {
             const url = URL.createObjectURL(blob)
             setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return url })
+            monitor.reportScreenshot()
             showMsg('', 0)
           }
         }
@@ -642,6 +701,63 @@ export default function LivePage() {
               <button onClick={() => setTapMode(p => !p)}
                 style={{ width: '100%', padding: '8px', background: tapMode ? 'rgba(245,158,11,0.2)' : '#21262d', border: `1px solid ${tapMode ? '#f59e0b' : '#30363d'}`, color: tapMode ? '#f59e0b' : '#8b949e', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
               >{tapMode ? '🎮 وضع التحكم: شغّال — انقر على الشاشة' : '🎮 تفعيل النقر على الشاشة'}</button>
+            </div>
+          )}
+
+          {/* ══ System Status Bar ══ */}
+          {activeFarm && streaming && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {/* Health indicator */}
+              <div style={{ flex: 1, minWidth: 80, padding: '6px 10px', borderRadius: 6, fontSize: 10, fontWeight: 700, textAlign: 'center',
+                background: monitor.health === 'healthy' ? '#3fb95015' : monitor.health === 'degraded' ? '#f59e0b15' : '#f8514915',
+                border: `1px solid ${monitor.health === 'healthy' ? '#3fb95040' : monitor.health === 'degraded' ? '#f59e0b40' : '#f8514940'}`,
+                color: monitor.health === 'healthy' ? '#3fb950' : monitor.health === 'degraded' ? '#f59e0b' : '#f85149',
+              }}>
+                {monitor.health === 'healthy' ? '🟢' : monitor.health === 'degraded' ? '🟡' : '🔴'} {monitor.health}
+              </div>
+              {/* WS status */}
+              <div style={{ flex: 1, minWidth: 80, padding: '6px 10px', borderRadius: 6, fontSize: 10, fontWeight: 700, textAlign: 'center',
+                background: ws.isConnected ? '#3fb95015' : '#21262d',
+                border: `1px solid ${ws.isConnected ? '#3fb95040' : '#30363d'}`,
+                color: ws.isConnected ? '#3fb950' : '#8b949e',
+              }}>
+                {ws.isConnected ? '⚡ WS' : ws.wsStatus === 'reconnecting' ? '🔄 WS' : ws.isFallback ? '📡 HTTP' : '○ WS'}
+                {ws.wsLatency !== null && ws.isConnected ? ` ${ws.wsLatency}ms` : ''}
+              </div>
+              {/* Bot toggle */}
+              <button onClick={() => {
+                if (bot.botState === 'idle' && streamFarm) { bot.startBot(streamFarm) }
+                else if (bot.botState === 'running') { bot.pauseBot() }
+                else if (bot.botState === 'paused') { bot.resumeBot() }
+                else { bot.stopBot() }
+              }} style={{ flex: 1, minWidth: 80, padding: '6px 10px', borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
+                background: bot.botState === 'running' ? '#10b98120' : bot.botState === 'paused' ? '#f59e0b20' : '#21262d',
+                border: `1px solid ${bot.botState === 'running' ? '#10b98150' : bot.botState === 'paused' ? '#f59e0b50' : '#30363d'}`,
+                color: bot.botState === 'running' ? '#10b981' : bot.botState === 'paused' ? '#f59e0b' : '#8b949e',
+              }}>
+                {bot.botState === 'running' ? `🤖 ${bot.actionsThisMinute}/${bot.maxActionsPerMinute}` :
+                 bot.botState === 'paused' ? '⏸ Bot' :
+                 bot.botState === 'cooldown' ? '⏳ Bot' : '🤖 Bot'}
+              </button>
+            </div>
+          )}
+
+          {/* ══ Bot Controls (when bot active) ══ */}
+          {activeFarm && bot.botState !== 'idle' && (
+            <div style={{ background: '#0d1117', borderRadius: 8, padding: 10, border: '1px solid #10b98130' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 10, color: '#10b981', fontWeight: 700 }}>🤖 Smart Bot — {bot.botFarm}</span>
+                <button onClick={() => bot.stopBot()} style={{ fontSize: 9, padding: '2px 8px', background: '#f8514918', border: '1px solid #f8514930', color: '#f85149', borderRadius: 4, cursor: 'pointer' }}>إيقاف</button>
+              </div>
+              {/* Bot logs (last 5) */}
+              <div style={{ maxHeight: 80, overflowY: 'auto', fontSize: 9, fontFamily: 'monospace', color: '#8b949e', lineHeight: 1.6 }}>
+                {bot.botLogs.slice(-5).map((l, i) => (
+                  <div key={i} style={{ color: l.level === 'error' ? '#f85149' : l.level === 'warn' ? '#f59e0b' : '#8b949e' }}>
+                    {new Date(l.ts).toLocaleTimeString('en', { hour12: false })} {l.msg}
+                  </div>
+                ))}
+                {bot.botLogs.length === 0 && <div>جارٍ التشغيل...</div>}
+              </div>
             </div>
           )}
 
