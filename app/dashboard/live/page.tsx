@@ -48,6 +48,8 @@ export default function LivePage() {
   const dragStart                             = useRef<{x:number,y:number}|null>(null)
   const [zoomedScreenshot, setZoomedScreenshot] = useState<string | null>(null)
   const [adbFeedback, setAdbFeedback]         = useState<string>('')
+  const knownFarms                             = useRef<Set<string>>(new Set())
+  const initialLoadDone                        = useRef(false)
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), [])
 
@@ -84,6 +86,20 @@ export default function LivePage() {
           current_task: f.current_task || f.live_task || null,
         }))
         setFarms(list)
+
+        // Auto-launch: detect newly added running farms
+        if (initialLoadDone.current) {
+          for (const farm of list) {
+            if (farm.status === 'running' && !knownFarms.current.has(farm.farm_name)) {
+              console.log(`🎮 Auto-launching game for new farm: ${farm.farm_name}`)
+              launchGame(farm.farm_name)
+              break // only auto-launch one at a time
+            }
+          }
+        }
+        // Update known farms set
+        knownFarms.current = new Set(list.map((f: Farm) => f.farm_name))
+        initialLoadDone.current = true
       }
     } catch (e) {
       console.error('loadFarms error:', e)
@@ -108,7 +124,32 @@ export default function LivePage() {
     }
   }, [])
 
-  // ── FIX: دالة ADB مباشرة عبر /api/farms/adb ─────────────
+  // ── دالة تشغيل اللعبة ─────────────
+  async function launchGame(farmId: string) {
+    showMsg(`🎮 جارٍ تشغيل اللعبة على ${farmId}...`, 8000)
+    try {
+      const authHeaders = await getAuthHeaders()
+      const res = await fetch('/api/farms/launch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ farm_id: farmId }),
+        signal: AbortSignal.timeout(15000),
+      })
+      const d = await res.json()
+      if (d.ok) {
+        showMsg(`✅ اللعبة تعمل على ${farmId} — سيبدأ البث بعد 5 ثوانٍ...`, 6000)
+        setTimeout(() => {
+          startStream(farmId)
+        }, 5000)
+      } else {
+        showMsg(`❌ فشل تشغيل اللعبة: ${d.error || 'خطأ غير معروف'}`)
+      }
+    } catch (e: any) {
+      showMsg(`❌ خطأ في الاتصال: ${e?.message || 'timeout'}`)
+    }
+  }
+
+  // ── دالة ADB مباشرة عبر /api/farms/adb ─────────────
   async function sendAdb(farmId: string, command: string) {
     try {
       const authHeaders = await getAuthHeaders()
@@ -370,6 +411,9 @@ export default function LivePage() {
                       <button onClick={e => { e.stopPropagation(); setTransferFarm(farm.id); setShowTransfer(true); setTransferMsg('') }} style={{ background: '#58a6ff18', border: '1px solid #58a6ff50', color: '#58a6ff', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📦</button>
                       <button onClick={e => { e.stopPropagation(); stopFarm(farm.id) }} disabled={isRunning} style={{ background: '#f8514918', border: '1px solid #f8514950', color: '#f85149', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>■</button>
                       <button onClick={e => { e.stopPropagation(); deleteFarm(farm.id) }} style={{ background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', color: '#f85149', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>🗑️</button>
+                      <button onClick={e => { e.stopPropagation(); launchGame(farm.farm_name) }}
+                        title="تشغيل اللعبة"
+                        style={{ background: '#8b5cf618', border: '1px solid #8b5cf650', color: '#8b5cf6', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>🎮</button>
                       <button onClick={e => { e.stopPropagation(); streaming && streamFarm === farm.farm_name ? stopStream() : startStream(farm.farm_name) }}
                         style={{ background: streaming && streamFarm === farm.farm_name ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.1)', border: streaming && streamFarm === farm.farm_name ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(59,130,246,0.3)', color: streaming && streamFarm === farm.farm_name ? '#f87171' : '#58a6ff', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
                       >{streaming && streamFarm === farm.farm_name ? '⏹' : '📺'}</button>
