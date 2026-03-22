@@ -50,12 +50,23 @@ export default function LivePage() {
   const [adbFeedback, setAdbFeedback]         = useState<string>('')
   const knownFarms                             = useRef<Set<string>>(new Set())
   const initialLoadDone                        = useRef(false)
+  const launchingRef                           = useRef<Set<string>>(new Set())
+  const launchTimerRef                         = useRef<NodeJS.Timeout | null>(null)
+  const msgTimerRef                            = useRef<NodeJS.Timeout | null>(null)
+  const adbTimerRef                            = useRef<NodeJS.Timeout | null>(null)
+  const loadingFarmsRef                        = useRef(false)
+  const adbQueueRef                            = useRef<Array<{ farmId: string; command: string }>>([])
+  const adbProcessingRef                       = useRef(false)
+  const capturingRef                           = useRef(false)
+  const tapFeedbackTimerRef                    = useRef<NodeJS.Timeout | null>(null)
+  const transferTimerRef                       = useRef<NodeJS.Timeout | null>(null)
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), [])
 
   const showMsg = (m: string, ms = 4000) => {
+    if (msgTimerRef.current) clearTimeout(msgTimerRef.current)
     setMsg(m)
-    if (ms > 0) setTimeout(() => setMsg(''), ms)
+    if (ms > 0) msgTimerRef.current = setTimeout(() => { setMsg(''); msgTimerRef.current = null }, ms)
   }
 
   const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
@@ -68,6 +79,9 @@ export default function LivePage() {
   }, [supabase])
 
   const loadFarms = useCallback(async () => {
+    // Prevent overlapping fetches
+    if (loadingFarmsRef.current) return
+    loadingFarmsRef.current = true
     try {
       const authHeaders = await getAuthHeaders()
       const res = await fetch('/api/farms/list', {
@@ -88,9 +102,14 @@ export default function LivePage() {
         setFarms(list)
 
         // Auto-launch: detect newly added running farms
+        // Guard: only if initial load done AND farm not already being launched
         if (initialLoadDone.current) {
           for (const farm of list) {
-            if (farm.status === 'running' && !knownFarms.current.has(farm.farm_name)) {
+            if (
+              farm.status === 'running' &&
+              !knownFarms.current.has(farm.farm_name) &&
+              !launchingRef.current.has(farm.farm_name)
+            ) {
               console.log(`🎮 Auto-launching game for new farm: ${farm.farm_name}`)
               launchGame(farm.farm_name)
               break // only auto-launch one at a time
@@ -105,6 +124,7 @@ export default function LivePage() {
       console.error('loadFarms error:', e)
     }
     setLoading(false)
+    loadingFarmsRef.current = false
   }, [getAuthHeaders])
 
   useEffect(() => {
@@ -121,11 +141,30 @@ export default function LivePage() {
     return () => {
       streamActive.current = null
       if (screenshotTimer.current) clearInterval(screenshotTimer.current)
+      if (launchTimerRef.current) clearTimeout(launchTimerRef.current)
+      if (msgTimerRef.current) clearTimeout(msgTimerRef.current)
+      if (adbTimerRef.current) clearTimeout(adbTimerRef.current)
+      if (tapFeedbackTimerRef.current) clearTimeout(tapFeedbackTimerRef.current)
+      if (transferTimerRef.current) clearTimeout(transferTimerRef.current)
+      adbQueueRef.current.length = 0
     }
   }, [])
 
-  // ── دالة تشغيل اللعبة ─────────────
+  // ── دالة تشغيل اللعبة (مع حماية من التكرار) ─────────────
   async function launchGame(farmId: string) {
+    // Prevent concurrent launches for the same farm
+    if (launchingRef.current.has(farmId)) {
+      console.log(`⏳ launchGame already in progress for ${farmId}, skipping`)
+      return
+    }
+    launchingRef.current.add(farmId)
+
+    // Cancel any pending stream-start timer from a previous launch
+    if (launchTimerRef.current) {
+      clearTimeout(launchTimerRef.current)
+      launchTimerRef.current = null
+    }
+
     showMsg(`🎮 جارٍ تشغيل اللعبة على ${farmId}...`, 8000)
     try {
       const authHeaders = await getAuthHeaders()
@@ -138,40 +177,68 @@ export default function LivePage() {
       const d = await res.json()
       if (d.ok) {
         showMsg(`✅ اللعبة تعمل على ${farmId} — سيبدأ البث بعد 5 ثوانٍ...`, 6000)
-        setTimeout(() => {
-          startStream(farmId)
+        // Cancellable delayed stream start — only fires if no other stream took over
+        launchTimerRef.current = setTimeout(() => {
+          launchTimerRef.current = null
+          // Only start stream if nothing else is already streaming a different farm
+          if (!streamActive.current || streamActive.current.startsWith(farmId)) {
+            startStream(farmId)
+          }
         }, 5000)
       } else {
         showMsg(`❌ فشل تشغيل اللعبة: ${d.error || 'خطأ غير معروف'}`)
       }
     } catch (e: any) {
       showMsg(`❌ خطأ في الاتصال: ${e?.message || 'timeout'}`)
+    } finally {
+      launchingRef.current.delete(farmId)
     }
   }
 
-  // ── دالة ADB مباشرة عبر /api/farms/adb ─────────────
-  async function sendAdb(farmId: string, command: string) {
-    try {
-      const authHeaders = await getAuthHeaders()
-      const res = await fetch('/api/farms/adb', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ farm_id: farmId, command }),
-      })
-      const d = await res.json()
-      if (d.ok) {
-        setAdbFeedback(`✅ ${command}`)
-        setTimeout(() => setAdbFeedback(''), 1500)
-      } else {
-        setAdbFeedback(`❌ ${d.error || 'فشل'}`)
-        setTimeout(() => setAdbFeedback(''), 2000)
+  // ── ADB: sequential queue (prevents parallel commands to device) ─────────────
+  async function processAdbQueue() {
+    if (adbProcessingRef.current) return
+    adbProcessingRef.current = true
+    while (adbQueueRef.current.length > 0) {
+      const item = adbQueueRef.current.shift()!
+      try {
+        const authHeaders = await getAuthHeaders()
+        const res = await fetch('/api/farms/adb', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify({ farm_id: item.farmId, command: item.command }),
+          signal: AbortSignal.timeout(8000),
+        })
+        const d = await res.json()
+        if (adbTimerRef.current) clearTimeout(adbTimerRef.current)
+        if (d.ok) {
+          setAdbFeedback(`✅ ${item.command}`)
+          adbTimerRef.current = setTimeout(() => { setAdbFeedback(''); adbTimerRef.current = null }, 1500)
+        } else {
+          setAdbFeedback(`❌ ${d.error || 'فشل'}`)
+          adbTimerRef.current = setTimeout(() => { setAdbFeedback(''); adbTimerRef.current = null }, 2000)
+        }
+      } catch {
+        if (adbTimerRef.current) clearTimeout(adbTimerRef.current)
+        setAdbFeedback('❌ خطأ في الاتصال')
+        adbTimerRef.current = setTimeout(() => { setAdbFeedback(''); adbTimerRef.current = null }, 2000)
       }
-      return d.ok
-    } catch {
-      setAdbFeedback('❌ خطأ في الاتصال')
-      setTimeout(() => setAdbFeedback(''), 2000)
-      return false
     }
+    adbProcessingRef.current = false
+  }
+
+  function sendAdb(farmId: string, command: string) {
+    // Queue overflow protection: drop oldest if > 10 pending
+    if (adbQueueRef.current.length >= 10) {
+      adbQueueRef.current.splice(0, adbQueueRef.current.length - 5)
+      setAdbFeedback('⚠️ أوامر كثيرة — تم تقليص الطابور')
+    }
+    // Clear queue if farm changed (don't send stale commands to wrong farm)
+    if (adbQueueRef.current.length > 0 && adbQueueRef.current[0].farmId !== farmId) {
+      adbQueueRef.current.length = 0
+    }
+    adbQueueRef.current.push({ farmId, command })
+    processAdbQueue()
   }
 
   async function runTasks(farmId: string, taskList: string[], action?: string) {
@@ -183,6 +250,7 @@ export default function LivePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ farm_id: farmId, tasks: taskList, action }),
+        signal: AbortSignal.timeout(15000),
       })
       const d = await res.json()
       if (d.ok) {
@@ -191,20 +259,25 @@ export default function LivePage() {
       } else {
         showMsg(`❌ خطأ: ${d.error || 'فشل التشغيل'}`)
       }
-    } catch { showMsg('❌ لا يمكن الاتصال بالسيرفر') }
+    } catch { showMsg('❌ لا يمكن الاتصال بالسيرفر (timeout)') }
     setRunning(p => ({ ...p, [farmId]: false }))
   }
 
   async function stopFarm(farmId: string) {
     setRunning(p => ({ ...p, [farmId]: true }))
     showMsg(`⏹ جارٍ إيقاف ${farmId}...`)
-    const authHeaders = await getAuthHeaders()
-    await fetch('/api/farms/run-tasks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders },
-      body: JSON.stringify({ farm_id: farmId, action: 'stop' }),
-    })
-    showMsg(`⏹ تم إيقاف ${farmId}`)
+    try {
+      const authHeaders = await getAuthHeaders()
+      await fetch('/api/farms/run-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ farm_id: farmId, action: 'stop' }),
+        signal: AbortSignal.timeout(10000),
+      })
+      showMsg(`⏹ تم إيقاف ${farmId}`)
+    } catch {
+      showMsg(`❌ فشل إيقاف ${farmId} (timeout)`)
+    }
     setRunning(p => ({ ...p, [farmId]: false }))
     loadFarms()
   }
@@ -214,7 +287,7 @@ export default function LivePage() {
     const authHeaders = await getAuthHeaders()
     showMsg(`🗑️ جارٍ حذف ${farmId}...`)
     try {
-      const res = await fetch(`/api/farms/delete?id=${farmId}`, { method: 'DELETE', headers: authHeaders })
+      const res = await fetch(`/api/farms/delete?id=${farmId}`, { method: 'DELETE', headers: authHeaders, signal: AbortSignal.timeout(10000) })
       const d = await res.json()
       if (d.ok) {
         showMsg(`✅ تم حذف مزرعة ${farmId}`)
@@ -234,9 +307,10 @@ export default function LivePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ farm_id: transferFarm, target_name: transferTarget.trim(), resources: Array.from(transferRes), amount: transferAmount, max_marches: transferMarches, method: transferMethod }),
+        signal: AbortSignal.timeout(15000),
       })
       const d = await res.json()
-      if (d.ok) { setTransferMsg(`✅ تم إرسال أمر النقل إلى ${transferFarm}`); setTimeout(() => { setShowTransfer(false); setTransferMsg('') }, 3000) }
+      if (d.ok) { setTransferMsg(`✅ تم إرسال أمر النقل إلى ${transferFarm}`); if (transferTimerRef.current) clearTimeout(transferTimerRef.current); transferTimerRef.current = setTimeout(() => { setShowTransfer(false); setTransferMsg(''); transferTimerRef.current = null }, 3000) }
       else { setTransferMsg(`❌ ${d.error || 'فشل النقل'}`) }
     } catch { setTransferMsg('❌ خطأ في الاتصال') }
     setTransferring(false)
@@ -260,7 +334,8 @@ export default function LivePage() {
     const { x: startX, y: startY } = dragStart.current
     dragStart.current = null
     setTapFeedback({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-    setTimeout(() => setTapFeedback(null), 600)
+    if (tapFeedbackTimerRef.current) clearTimeout(tapFeedbackTimerRef.current)
+    tapFeedbackTimerRef.current = setTimeout(() => { setTapFeedback(null); tapFeedbackTimerRef.current = null }, 600)
     const dist = Math.hypot(endX - startX, endY - startY)
     const cmd = dist < 15
       ? `tap:${endX},${endY}`
@@ -281,20 +356,30 @@ export default function LivePage() {
         if (res.ok) return res
       } catch {}
     }
-    return fetch(`/api/farms/screenshot?farm_id=${farmId}&t=${t}`)
+    return fetch(`/api/farms/screenshot?farm_id=${farmId}&t=${t}`, {
+      signal: AbortSignal.timeout(6000),
+    })
   }
 
   function stopStream() {
     streamActive.current = null
+    capturingRef.current = false
     setStreaming(false)
     setStreamFarm(null)
     if (screenshotTimer.current) { clearInterval(screenshotTimer.current); screenshotTimer.current = null }
+    // Cancel any pending launchGame → startStream timer
+    if (launchTimerRef.current) { clearTimeout(launchTimerRef.current); launchTimerRef.current = null }
+    // Clear ADB queue — commands for a stopped stream are stale
+    adbQueueRef.current.length = 0
     setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
   }
 
   function startStream(farmId: string) {
     if (screenshotTimer.current) { clearInterval(screenshotTimer.current); screenshotTimer.current = null }
     setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
+    capturingRef.current = false
+    // Clear ADB queue when switching streams
+    adbQueueRef.current.length = 0
     const token = `${farmId}_${Date.now()}`
     streamActive.current = token
     setStreamFarm(farmId)
@@ -302,6 +387,9 @@ export default function LivePage() {
     showMsg('📺 جارٍ بدء البث...', 4000)
     async function capture() {
       if (streamActive.current !== token) return
+      // Prevent overlapping captures when network is slow
+      if (capturingRef.current) return
+      capturingRef.current = true
       try {
         const res = await getScreenshot(farmId)
         if (streamActive.current !== token) return
@@ -315,6 +403,7 @@ export default function LivePage() {
           }
         }
       } catch {}
+      capturingRef.current = false
     }
     capture()
     screenshotTimer.current = setInterval(capture, 2000)
@@ -397,7 +486,7 @@ export default function LivePage() {
                           e.stopPropagation(); showMsg(`⏳ جارٍ تفعيل ${farm.farm_name}...`)
                           try {
                             const authHeaders = await getAuthHeaders()
-                            const res = await fetch('/api/farms/activate', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders }, body: JSON.stringify({ farm_name: farm.farm_name }) })
+                            const res = await fetch('/api/farms/activate', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders }, body: JSON.stringify({ farm_name: farm.farm_name }), signal: AbortSignal.timeout(10000) })
                             const d = await res.json()
                             showMsg(d.ok ? `✅ تم تفعيل ${farm.farm_name}` : `❌ ${d.error || 'فشل التفعيل'}`)
                           } catch { showMsg('❌ خطأ في الاتصال') }
