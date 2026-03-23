@@ -1,10 +1,18 @@
 export const dynamic = "force-dynamic";
+export const maxDuration = 120; // Allow up to 120s for task sequences
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { getTaskSequence } from "@/lib/task-sequences";
 import { resolveFarmNum } from "@/lib/farm-mapper";
+
+const HETZNER_BASE = () => `https://${process.env.HETZNER_IP || "cloud.vrbot.me"}`;
+const API_KEY = () => process.env.VRBOT_API_KEY || "vrbot_admin_2026";
+
+// Reduced delay between ADB commands — game processes taps quickly,
+// long delays were causing Vercel function timeout
+const STEP_DELAY_MS = 600;
 
 async function getUser(req: Request) {
   const service = createClient(
@@ -34,13 +42,10 @@ async function sendAdbCommand(
   farmId: string,
   command: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const HETZNER = process.env.HETZNER_IP || "cloud.vrbot.me";
-  const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
-
   try {
-    const res = await fetch(`https://${HETZNER}/api/farms/adb`, {
+    const res = await fetch(`${HETZNER_BASE()}/api/farms/adb`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
+      headers: { "Content-Type": "application/json", "X-API-Key": API_KEY() },
       body: JSON.stringify({ farm_id: farmId, command }),
       signal: AbortSignal.timeout(10000),
     });
@@ -51,7 +56,7 @@ async function sendAdbCommand(
   }
 }
 
-// ── Execute a full task sequence ──────────────────────────────────
+// ── Execute a full task sequence with minimal delays ─────────────
 async function executeTaskSequence(
   farmId: string,
   taskName: string
@@ -68,16 +73,30 @@ async function executeTaskSequence(
 
     if (!result.ok) {
       errors.push(`Step ${stepsDone} (${step.desc || step.cmd}): ${result.error || "failed"}`);
-      // Continue with remaining steps — don't abort on non-critical failures
     }
 
-    // Wait the specified delay before next step
-    if (step.delay > 0) {
-      await new Promise(resolve => setTimeout(resolve, step.delay));
-    }
+    // Use reduced fixed delay to prevent Vercel timeout
+    // The ADB call itself takes ~200-400ms, so total per step ≈ 800-1000ms
+    await new Promise(resolve => setTimeout(resolve, STEP_DELAY_MS));
   }
 
   return { ok: errors.length === 0, steps: stepsDone, errors };
+}
+
+// ── Resolve farm name → Hetzner farm_XXX id ──────────────────────
+async function resolveTargetId(farm: any, farmId: string): Promise<string> {
+  let num: number | null = null;
+  if (farm.container_id) {
+    const m = String(farm.container_id).match(/\d+/);
+    if (m) num = parseInt(m[0]);
+  }
+  if (num === null && farm.adb_port) {
+    num = Number(farm.adb_port) - 5554;
+  }
+  if (num === null) {
+    num = (await resolveFarmNum(farmId)) ?? 1;
+  }
+  return `farm_${String(num).padStart(3, "0")}`;
 }
 
 export async function POST(req: Request) {
@@ -110,19 +129,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, message: `تم إعادة تعيين ${farm_id}` });
     }
 
-    // ── Resolve farm → Hetzner farm_XXX format ──
-    let num: number | null = null;
-    if (farm.container_id) {
-      const m = farm.container_id.match(/\d+/);
-      if (m) num = parseInt(m[0]);
-    }
-    if (num === null && farm.adb_port) {
-      num = farm.adb_port - 5554;
-    }
-    if (num === null) {
-      num = (await resolveFarmNum(farm_id)) ?? 1;
-    }
-    const target_id = `farm_${String(num).padStart(3, "0")}`;
+    const target_id = await resolveTargetId(farm, farm_id);
 
     if (farm.status !== "running" && action !== "stop") {
       return NextResponse.json({
@@ -146,7 +153,7 @@ export async function POST(req: Request) {
     }
 
     // ── Execute tasks via ADB sequences ──
-    const taskList = tasks || [];
+    const taskList: string[] = tasks || [];
     if (taskList.length === 0) {
       return NextResponse.json({ ok: false, error: "No tasks specified" }, { status: 400 });
     }
