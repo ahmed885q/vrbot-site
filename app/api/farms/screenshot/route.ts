@@ -16,8 +16,15 @@ export async function GET(req: Request) {
     const HETZNER = process.env.HETZNER_IP || "cloud.vrbot.me";
     const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
 
-    // ── Resolve farm name → number (supports "smz", "farm_001", "3", etc.) ──
-    const num = (await resolveFarmNum(farm_id)) ?? 1;
+    // ── Resolve farm name → number ──
+    // Priority: explicit ?num= param > farm-mapper Supabase lookup > fallback 1
+    const explicitNum = url.searchParams.get("num");
+    let num: number;
+    if (explicitNum && /^\d+$/.test(explicitNum)) {
+      num = parseInt(explicitNum);
+    } else {
+      num = (await resolveFarmNum(farm_id)) ?? 1;
+    }
     const device = `172.17.0.${num + 1}:5555`;
 
     // ── Strategy 1: Hetzner screenshot endpoint ──────────────────
