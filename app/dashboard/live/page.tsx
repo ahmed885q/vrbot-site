@@ -80,7 +80,7 @@ export default function LivePage() {
           status:       f.status || 'offline',
           game_account: f.game_account || '',
           tasks_today:  f.tasks_today || f.live_tasks_ok || 0,
-          live_status:  f.is_online ? 'online' : f.status === 'provisioning' ? 'idle' : 'offline',
+          live_status:  f.live_status || (f.is_online ? 'online' : f.status === 'running' ? 'idle' : 'offline'),
           current_task: f.current_task || f.live_task || null,
         }))
         setFarms(list)
@@ -228,19 +228,11 @@ export default function LivePage() {
   }
 
   async function getScreenshot(farmId: string): Promise<Response> {
-    const numMatch = farmId.match(/farm_(\d+)/)
-    const num = numMatch ? parseInt(numMatch[1]) : null
-    const t = Date.now()
-    if (num !== null) {
-      try {
-        const res = await fetch(`https://cloud.vrbot.me/api/screenshot/${num}?t=${t}`, {
-          headers: { 'X-API-Key': 'vrbot_admin_2026' },
-          signal: AbortSignal.timeout(4000),
-        })
-        if (res.ok) return res
-      } catch {}
-    }
-    return fetch(`/api/farms/screenshot?farm_id=${farmId}&t=${t}`)
+    // Always use our API route — it handles farm name → number resolution
+    // and has multi-strategy fallback (Hetzner → ADB → retry)
+    return fetch(`/api/farms/screenshot?farm_id=${encodeURIComponent(farmId)}&t=${Date.now()}`, {
+      signal: AbortSignal.timeout(10000),
+    })
   }
 
   function stopStream() {
