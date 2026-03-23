@@ -73,14 +73,18 @@ export async function GET() {
       const merged = farms.map((f: any) => {
         const liveData = liveFarms.find(
           (l: any) => l.farm_id === f.farm_name || l.container_id === f.container_id
-        ) || {}
+        ) || {} as any
+        const isOnline = liveData.live_status === 'online' || liveData.is_online === true
         return {
           ...f,
-          farm_id:      f.farm_name,  // للتوافق مع الـ frontend
-          nickname:     f.farm_name,
-          live_status:  liveData.live_status || (f.status === 'running' ? 'online' : 'offline'),
-          tasks_today:  liveData.tasks_today || 0,
-          success_rate: liveData.success_rate || 100,
+          farm_id:       f.farm_name,  // للتوافق مع الـ frontend
+          nickname:      f.farm_name,
+          is_online:     isOnline,
+          live_status:   isOnline ? 'online' : (f.status === 'running' ? 'idle' : 'offline'),
+          tasks_today:   liveData.tasks_today || 0,
+          success_rate:  liveData.success_rate || 100,
+          container_id:  f.container_id || liveData.container_id || null,
+          adb_port:      f.adb_port || liveData.adb_port || null,
         }
       })
 
@@ -89,11 +93,14 @@ export async function GET() {
       // إذا Hetzner لا يستجيب، أرجع البيانات من Supabase فقط
       const mapped = farms.map((f: any) => ({
         ...f,
-        farm_id:      f.farm_name,
-        nickname:     f.farm_name,
-        live_status:  f.status === 'running' ? 'idle' : 'offline',
-        tasks_today:  0,
-        success_rate: 100,
+        farm_id:       f.farm_name,
+        nickname:      f.farm_name,
+        is_online:     false,
+        live_status:   f.status === 'running' ? 'idle' : 'offline',
+        tasks_today:   0,
+        success_rate:  100,
+        container_id:  f.container_id || null,
+        adb_port:      f.adb_port || null,
       }))
       return NextResponse.json({ farms: mapped })
     }
