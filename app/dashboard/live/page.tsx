@@ -19,6 +19,8 @@ type Farm = {
   tasks_today?: number
   live_status?: 'online' | 'idle' | 'offline'
   current_task?: string | null
+  container_id?: string | null
+  adb_port?: number | null
 }
 
 export default function LivePage() {
@@ -75,13 +77,15 @@ export default function LivePage() {
       if (res.ok) {
         const d = await res.json()
         const list = (d.farms || []).map((f: any) => ({
-          id:           f.farm_name || f.id,
-          farm_name:    f.farm_name || f.id,
-          status:       f.status || 'offline',
-          game_account: f.game_account || '',
-          tasks_today:  f.tasks_today || f.live_tasks_ok || 0,
-          live_status:  f.is_online ? 'online' : f.status === 'provisioning' ? 'idle' : 'offline',
-          current_task: f.current_task || f.live_task || null,
+          id:            f.farm_name || f.id,
+          farm_name:     f.farm_name || f.id,
+          status:        f.status || 'offline',
+          game_account:  f.game_account || '',
+          tasks_today:   f.tasks_today || f.live_tasks_ok || 0,
+          live_status:   f.live_status || (f.is_online ? 'online' : f.status === 'running' ? 'idle' : 'offline'),
+          current_task:  f.current_task || f.live_task || null,
+          container_id:  f.container_id || null,
+          adb_port:      f.adb_port || null,
         }))
         setFarms(list)
       }
@@ -227,20 +231,25 @@ export default function LivePage() {
     await sendAdb(streamFarm, cmd)
   }
 
-  async function getScreenshot(farmId: string): Promise<Response> {
-    const numMatch = farmId.match(/farm_(\d+)/)
-    const num = numMatch ? parseInt(numMatch[1]) : null
-    const t = Date.now()
-    if (num !== null) {
-      try {
-        const res = await fetch(`https://cloud.vrbot.me/api/screenshot/${num}?t=${t}`, {
-          headers: { 'X-API-Key': 'vrbot_admin_2026' },
-          signal: AbortSignal.timeout(4000),
-        })
-        if (res.ok) return res
-      } catch {}
+  function getFarmNum(farmId: string): number | null {
+    const farm = farms.find(f => f.farm_name === farmId || f.id === farmId)
+    if (farm?.container_id) {
+      const m = farm.container_id.match(/\d+/)
+      if (m) return parseInt(m[0])
     }
-    return fetch(`/api/farms/screenshot?farm_id=${farmId}&t=${t}`)
+    if (farm?.adb_port) return farm.adb_port - 5554
+    const direct = farmId.match(/\d+/)
+    if (direct) return parseInt(direct[0])
+    return null
+  }
+
+  async function getScreenshot(farmId: string): Promise<Response> {
+    const num = getFarmNum(farmId)
+    const params = new URLSearchParams({ farm_id: farmId, t: String(Date.now()) })
+    if (num !== null) params.set('num', String(num))
+    return fetch(`/api/farms/screenshot?${params}`, {
+      signal: AbortSignal.timeout(10000),
+    })
   }
 
   function stopStream() {
