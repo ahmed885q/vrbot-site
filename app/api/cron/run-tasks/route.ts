@@ -112,11 +112,12 @@ export async function GET(req: Request) {
         if (res.ok) {
           succeeded++;
           // Update heartbeat so this farm won't run again for 5.5h
-          await service
-            .from("cloud_farms")
-            .update({ last_heartbeat: new Date().toISOString() })
-            .eq("farm_name", farmId)
-            .catch(() => {});
+          try {
+            await service
+              .from("cloud_farms")
+              .update({ last_heartbeat: new Date().toISOString() })
+              .eq("farm_name", farmId);
+          } catch {}
         } else {
           failed++;
         }
