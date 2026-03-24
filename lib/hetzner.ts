@@ -1,5 +1,6 @@
 const BASE_URL = process.env.ORCHESTRATOR_URL || "https://cloud.vrbot.me";
-const API_KEY  = process.env.VRBOT_API_KEY    || "vrbot_admin_2026";
+const API_KEY  = process.env.VRBOT_API_KEY;
+if (!API_KEY) console.warn("[hetzner] WARNING: VRBOT_API_KEY not set — API calls will fail");
 
 function normId(id: string): string {
   return (id || "").replace(/\D/g, "").padStart(3, "0");
@@ -11,7 +12,7 @@ export async function getAvailableContainer(
 ): Promise<string | null> {
   try {
     const res = await fetch(`${BASE_URL}/api/farms/status/live`, {
-      headers: { "X-API-Key": API_KEY },
+      headers: { "X-API-Key": API_KEY || "" },
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) {
@@ -60,7 +61,7 @@ export async function loginFarm(params: {
   try {
     const res = await fetch(`${BASE_URL}/api/farms/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
+      headers: { "Content-Type": "application/json", "X-API-Key": API_KEY || "" },
       body: JSON.stringify({
         farm_id:      params.container_id,
         nickname:     params.nickname,
@@ -106,7 +107,7 @@ export async function runFarmTasks(params: {
 
     const res = await fetch(`${BASE_URL}/api/farms/command`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
+      headers: { "Content-Type": "application/json", "X-API-Key": API_KEY || "" },
       body: JSON.stringify({ farm_id, command, user_id: params.user_id }),
       signal: AbortSignal.timeout(30000),
     });
@@ -130,7 +131,7 @@ export async function transferResources(params: {
   try {
     const res = await fetch(`${BASE_URL}/api/farms/transfer`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
+      headers: { "Content-Type": "application/json", "X-API-Key": API_KEY || "" },
       body: JSON.stringify({
         from_farm_id: params.from_container,
         to_farm_id:   params.to_container,
@@ -152,7 +153,7 @@ export async function transferResources(params: {
 export async function getFarmStatus(container_id: string): Promise<any> {
   try {
     const res = await fetch(`${BASE_URL}/api/farms/status/live`, {
-      headers: { "X-API-Key": API_KEY },
+      headers: { "X-API-Key": API_KEY || "" },
       signal: AbortSignal.timeout(5000),
     });
     const d = await res.json();
