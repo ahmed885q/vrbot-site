@@ -6,9 +6,10 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { getTaskSequence } from "@/lib/task-sequences";
 import { resolveFarmNum } from "@/lib/farm-mapper";
+import { RunTasksSchema, validateBody } from "@/lib/schemas";
 
 const HETZNER_BASE = () => `https://${process.env.HETZNER_IP || "cloud.vrbot.me"}`;
-const API_KEY = () => process.env.VRBOT_API_KEY || "vrbot_admin_2026";
+const API_KEY = () => process.env.VRBOT_API_KEY || "";
 
 // Reduced delay between ADB commands — game processes taps quickly,
 // long delays were causing Vercel function timeout
@@ -105,10 +106,15 @@ export async function POST(req: Request) {
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { user, service } = auth;
 
-    const body = await req.json().catch(() => ({}));
-    const { farm_id, tasks, action } = body;
-
-    if (!farm_id) return NextResponse.json({ error: "farm_id required" }, { status: 400 });
+    const rawBody = await req.json().catch(() => ({}));
+    // Allow action-only requests (stop/reset) without tasks array
+    const { data: body, error: validationError } = rawBody.action && !rawBody.tasks
+      ? validateBody(RunTasksSchema.partial({ tasks: true }), rawBody)
+      : validateBody(RunTasksSchema, rawBody);
+    if (validationError) {
+      return NextResponse.json({ error: `Validation failed: ${validationError}` }, { status: 400 });
+    }
+    const { farm_id, tasks, action } = body as { farm_id: string; tasks?: string[]; action?: string };
 
     const { data: farm } = await service
       .from("cloud_farms")
