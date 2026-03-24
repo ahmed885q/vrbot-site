@@ -1,6 +1,8 @@
-const BASE_URL = process.env.ORCHESTRATOR_URL || "https://cloud.vrbot.me";
+const BASE_URL = process.env.ORCHESTRATOR_URL;
 const API_KEY  = process.env.VRBOT_API_KEY;
-if (!API_KEY) console.warn("[hetzner] WARNING: VRBOT_API_KEY not set — API calls will fail");
+
+if (!BASE_URL) throw new Error("[hetzner] ORCHESTRATOR_URL environment variable is required");
+if (!API_KEY)  throw new Error("[hetzner] VRBOT_API_KEY environment variable is required");
 
 function normId(id: string): string {
   return (id || "").replace(/\D/g, "").padStart(3, "0");

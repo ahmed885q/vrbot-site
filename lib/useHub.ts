@@ -93,13 +93,29 @@ export function useHub({ userId, onMessage, autoConnect = true }: UseHubOptions)
       const ws = new WebSocket(WS_URL);
       wsRef.current = ws;
 
-      ws.onopen = () => {
-        // Send auth
+      ws.onopen = async () => {
+        // Fetch auth token from Supabase session for secure WS auth
+        let token: string | undefined;
+        try {
+          const { createClient } = await import("@supabase/supabase-js");
+          const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+          );
+          const { data } = await supabase.auth.getSession();
+          token = data.session?.access_token;
+        } catch {}
+
+        if (!token) {
+          console.warn("[Hub] No auth token — WS auth may be weak");
+        }
+
         ws.send(
           JSON.stringify({
             type: "auth",
             role: "dashboard",
             userId,
+            token, // Secure: server should validate this JWT
           })
         );
       };

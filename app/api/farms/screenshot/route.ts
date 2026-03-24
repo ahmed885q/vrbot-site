@@ -13,8 +13,8 @@ export async function GET(req: Request) {
     if (!farm_id)
       return NextResponse.json({ error: "farm_id required" }, { status: 400 });
 
-    const HETZNER = process.env.HETZNER_IP || "cloud.vrbot.me";
-    const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
+    const HETZNER = process.env.HETZNER_IP || process.env.ORCHESTRATOR_URL?.replace("https://", "") || "cloud.vrbot.me";
+    const API_KEY = process.env.VRBOT_API_KEY || "";
 
     // ── Resolve farm name → number ──
     // Priority: explicit ?num= param > farm-mapper Supabase lookup > fallback 1

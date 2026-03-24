@@ -1,7 +1,9 @@
 // lib/orchestrator.ts
-const ORCHESTRATOR_URL = process.env.ORCHESTRATOR_URL || "https://cloud.vrbot.me";
+const ORCHESTRATOR_URL = process.env.ORCHESTRATOR_URL;
 const API_KEY = process.env.VRBOT_API_KEY;
-if (!API_KEY) console.warn("[orchestrator] WARNING: VRBOT_API_KEY not set — API calls will fail");
+
+if (!ORCHESTRATOR_URL) throw new Error("[orchestrator] ORCHESTRATOR_URL environment variable is required");
+if (!API_KEY) throw new Error("[orchestrator] VRBOT_API_KEY environment variable is required");
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
