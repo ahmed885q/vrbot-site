@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
+import { encrypt } from "@/lib/crypto";
 
 async function getUser(req: Request) {
   const service = createClient(
@@ -48,7 +49,7 @@ export async function PATCH(req: Request) {
     const { user, service } = auth;
 
     const body = await req.json().catch(() => ({}));
-    const { farm_name, game_account } = body;
+    const { farm_name, game_account, game_password } = body;
 
     if (!farm_name)
       return NextResponse.json({ error: "farm_name required" }, { status: 400 });
@@ -81,12 +82,20 @@ export async function PATCH(req: Request) {
         );
     }
 
+    // بناء بيانات التحديث
+    const updateData: Record<string, string> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (game_account !== undefined) updateData.game_account = game_account || "";
+    if (game_password) {
+      const encryptedPassword = await encrypt(game_password);
+      updateData.game_password = encryptedPassword;
+      updateData.igg_password = encryptedPassword;
+    }
+
     const { error } = await service
       .from("cloud_farms")
-      .update({
-        game_account: game_account || "",
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq("farm_name", farm_name)
       .eq("user_id", user.id);
 

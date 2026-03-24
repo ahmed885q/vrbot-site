@@ -40,7 +40,7 @@ export async function GET(req: Request) {
     const [supabaseResult, hetznerResult] = await Promise.allSettled([
       service
         .from("cloud_farms")
-        .select("farm_name, status, game_account, container_id, adb_port, created_at")
+        .select("farm_name, status, game_account, game_password, container_id, adb_port, created_at")
         .eq("user_id", user.id)
         .neq("status", "deleted")
         .order("farm_name", { ascending: true }),
@@ -73,6 +73,8 @@ export async function GET(req: Request) {
       const isOnline = liveData.live_status === "online" || liveData.is_online === true;
       return {
         ...f,
+        game_password: undefined,          // لا ترجع الباسورد أبداً
+        has_password:  !!f.game_password,   // فقط هل موجود أم لا
         farm_id:      f.farm_name,
         nickname:     f.farm_name,
         is_online:    isOnline,
