@@ -6,7 +6,7 @@ const API_KEY  = process.env.VRBOT_API_KEY;
 if (!BASE_URL) throw new Error("[hetzner] ORCHESTRATOR_URL environment variable is required");
 if (!API_KEY)  throw new Error("[hetzner] VRBOT_API_KEY environment variable is required");
 
-// ── Circuit-breaker-protected fetch for Hetzner ──────────────────────────
+// â”€â”€ Circuit-breaker-protected fetch for Hetzner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function hetznerFetch(path: string, options?: RequestInit): Promise<Response> {
   return withCircuitBreaker(
     "hetzner",
@@ -30,7 +30,7 @@ function normId(id: string): string {
   return (id || "").replace(/\D/g, "").padStart(3, "0");
 }
 
-// ── Smart Container Allocator ──────────────────────────────────────────────
+// â”€â”€ Smart Container Allocator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function getAvailableContainer(
   assignedContainerIds: string[] = []
 ): Promise<string | null> {
@@ -74,7 +74,7 @@ export async function getAvailableContainer(
   }
 }
 
-// ── Login Farm ─────────────────────────────────────────────────────────────
+// â”€â”€ Login Farm â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function loginFarm(params: {
   container_id: string;
   nickname: string;
@@ -103,15 +103,15 @@ export async function loginFarm(params: {
   }
 }
 
-// ── Run Farm Tasks ─────────────────────────────────────────────────────────
+// â”€â”€ Run Farm Tasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function runFarmTasks(params: {
   container_id: string;
   tasks: string[];
   user_id: string;
-  action?: string; // FIX: أضف action — يدعم "stop" | "status" | "start"
+  action?: string; // FIX: Ø£Ø¶Ù action â€” ÙŠØ¯Ø¹Ù… "stop" | "status" | "start"
 }): Promise<{ ok: boolean; result?: any; error?: string }> {
   try {
-    // FIX: بناء الـ command بناءً على action
+    // FIX: Ø¨Ù†Ø§Ø¡ Ø§Ù„Ù€ command Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ action
     let command: string;
     if (params.action === "stop") {
       command = "stop";
@@ -123,7 +123,7 @@ export async function runFarmTasks(params: {
       command = "status";
     }
 
-    // FIX: تأكد أن farm_id دائماً بصيغة "farm_001"
+    // FIX: ØªØ£ÙƒØ¯ Ø£Ù† farm_id Ø¯Ø§Ø¦Ù…Ø§Ù‹ Ø¨ØµÙŠØºØ© "farm_001"
     const raw = (params.container_id || "").replace(/\D/g, "").padStart(3, "0");
     const farm_id = params.container_id.startsWith("farm_")
       ? params.container_id
@@ -144,7 +144,7 @@ export async function runFarmTasks(params: {
   }
 }
 
-// ── Transfer Resources ─────────────────────────────────────────────────────
+// â”€â”€ Transfer Resources â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function transferResources(params: {
   from_container: string;
   to_container: string;
@@ -173,7 +173,7 @@ export async function transferResources(params: {
   }
 }
 
-// ── Get Farm Status ────────────────────────────────────────────────────────
+// â”€â”€ Get Farm Status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function getFarmStatus(container_id: string): Promise<any> {
   try {
     const res = await fetch(`${BASE_URL}/api/farms/status/live`, {
