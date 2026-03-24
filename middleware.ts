@@ -43,6 +43,17 @@ function getAdminEmails(): string[] {
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
 
+  // API versioning: /api/v1/* → /api/*
+  // This allows /api/v1/farms/list to work same as /api/farms/list
+  if (pathname.startsWith("/api/v1/")) {
+    const newPath = pathname.replace("/api/v1/", "/api/");
+    const url = req.nextUrl.clone();
+    url.pathname = newPath;
+    const res = NextResponse.rewrite(url);
+    res.headers.set("X-API-Version", "v1");
+    return res;
+  }
+
   if (isExcluded(pathname)) return NextResponse.next()
 
   if (isProtectedRoute(pathname)) {
