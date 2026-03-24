@@ -72,7 +72,7 @@ export default function LivePage() {
       const authHeaders = await getAuthHeaders()
       const res = await fetch('/api/farms/list', {
         headers: authHeaders,
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(15000),
       })
       if (res.ok) {
         const d = await res.json()
@@ -260,6 +260,18 @@ export default function LivePage() {
     setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
   }
 
+  async function launchGameIfNeeded(farmId: string) {
+    try {
+      const authHeaders = await getAuthHeaders()
+      await fetch('/api/farms/launch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ farm_id: farmId }),
+        signal: AbortSignal.timeout(10000),
+      })
+    } catch {}
+  }
+
   function startStream(farmId: string) {
     if (screenshotTimer.current) { clearInterval(screenshotTimer.current); screenshotTimer.current = null }
     setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
@@ -379,7 +391,7 @@ export default function LivePage() {
                       <button onClick={e => { e.stopPropagation(); setTransferFarm(farm.id); setShowTransfer(true); setTransferMsg('') }} style={{ background: '#58a6ff18', border: '1px solid #58a6ff50', color: '#58a6ff', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📦</button>
                       <button onClick={e => { e.stopPropagation(); stopFarm(farm.id) }} disabled={isRunning} style={{ background: '#f8514918', border: '1px solid #f8514950', color: '#f85149', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>■</button>
                       <button onClick={e => { e.stopPropagation(); deleteFarm(farm.id) }} style={{ background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', color: '#f85149', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>🗑️</button>
-                      <button onClick={e => { e.stopPropagation(); streaming && streamFarm === farm.farm_name ? stopStream() : startStream(farm.farm_name) }}
+                      <button onClick={async e => { e.stopPropagation(); if (streaming && streamFarm === farm.farm_name) { stopStream() } else { await launchGameIfNeeded(farm.farm_name); startStream(farm.farm_name) } }}
                         style={{ background: streaming && streamFarm === farm.farm_name ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.1)', border: streaming && streamFarm === farm.farm_name ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(59,130,246,0.3)', color: streaming && streamFarm === farm.farm_name ? '#f87171' : '#58a6ff', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
                       >{streaming && streamFarm === farm.farm_name ? '⏹' : '📺'}</button>
                     </div>
@@ -437,7 +449,7 @@ export default function LivePage() {
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                 {!streaming ? (
-                  <button onClick={() => startStream(activeFarm.farm_name)} style={{ flex: 1, padding: '7px', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📺 بث مباشر</button>
+                  <button onClick={async () => { await launchGameIfNeeded(activeFarm.farm_name); startStream(activeFarm.farm_name) }} style={{ flex: 1, padding: '7px', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📺 بث مباشر</button>
                 ) : (
                   <button onClick={stopStream} style={{ flex: 1, padding: '7px', background: '#21262d', color: '#f85149', border: '1px solid #f8514930', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⏹ إيقاف البث</button>
                 )}
@@ -475,15 +487,15 @@ export default function LivePage() {
                 <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 5 }}>Viking Rise</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5 }}>
                   {[
-                    { label: '🗺️ خريطة',   cmd: 'tap:71,647'   },
-                    { label: '🏰 قلعة',    cmd: 'tap:640,360'  },
-                    { label: '✉️ بريد',    cmd: 'tap:1210,647' },
-                    { label: '🎁 مكافآت', cmd: 'tap:1140,647' },
-                    { label: '⚔️ هجوم',   cmd: 'tap:949,467'  },
-                    { label: '🛡️ دفاع',   cmd: 'tap:850,467'  },
-                    { label: '⚗️ بحث',    cmd: 'tap:640,467'  },
-                    { label: '🏗️ بناء',   cmd: 'tap:640,550'  },
-                    { label: '👥 تحالف',  cmd: 'tap:71,467'   },
+                    { label: '🗺️ خريطة',   cmd: 'tap:47,643'    },
+                    { label: '🏰 قلعة',    cmd: 'tap:640,360'   },
+                    { label: '✉️ بريد',    cmd: 'tap:1245,580'  },
+                    { label: '🎁 مكافآت', cmd: 'tap:1140,580'  },
+                    { label: '⚔️ هجوم',   cmd: 'tap:950,462'   },
+                    { label: '🔍 بحث',    cmd: 'tap:155,525'   },
+                    { label: '🏗️ بناء',   cmd: 'tap:640,550'   },
+                    { label: '👥 تحالف',  cmd: 'tap:1100,685'  },
+                    { label: '◀ رجوع',    cmd: 'key:BACK'      },
                   ].map(btn => (
                     <button key={btn.cmd} className="ctrl-btn"
                       onClick={() => streamFarm && sendAdb(streamFarm, btn.cmd)}
@@ -587,9 +599,9 @@ export default function LivePage() {
               {[
                 { label: '◀', cmd: 'key:BACK', color: '#58a6ff' },
                 { label: '⌂', cmd: 'key:HOME', color: '#3fb950' },
-                { label: '🗺️', cmd: 'tap:71,647', color: '#f59e0b' },
-                { label: '✉️', cmd: 'tap:1210,647', color: '#8b5cf6' },
-                { label: '⚔️', cmd: 'tap:949,467', color: '#ef4444' },
+                { label: '🗺️', cmd: 'tap:47,643', color: '#f59e0b' },
+                { label: '✉️', cmd: 'tap:1245,580', color: '#8b5cf6' },
+                { label: '⚔️', cmd: 'tap:950,462', color: '#ef4444' },
               ].map(btn => (
                 <button key={btn.cmd} onClick={e => { e.stopPropagation(); streamFarm && sendAdb(streamFarm, btn.cmd) }}
                   style={{ flex: 1, padding: '5px 2px', background: btn.color + '15', border: `1px solid ${btn.color}40`, color: btn.color, borderRadius: 5, cursor: 'pointer', fontSize: 12 }}
