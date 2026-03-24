@@ -33,27 +33,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'INVALID_BATCH_TAG (use letters/numbers/_- max64)' }, { status: 400 })
   }
 
-  const cookieStore = cookies()
-  const supabaseAuth = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
-  )
-
-  const { data: userData } = await supabaseAuth.auth.getUser()
-  const user = userData?.user
-  if (!user) return NextResponse.json({ ok: false, error: 'NOT_AUTHENTICATED' }, { status: 401 })
-  if (!isAdminEmail(user.email)) return NextResponse.json({ ok: false, error: 'NOT_ADMIN' }, { status: 403 })
-
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  )
+  const admin = await requireAdmin()
+  if (!admin.ok) return NextResponse.json({ ok: false, error: admin.error }, { status: admin.status })
 
   const rows = Array.from({ length: count }, () => ({
     code: genKey(),
-    created_by: auth.user.id,
+    created_by: admin.user!.id,
     batch_tag: batchTag,
     note,
   }))

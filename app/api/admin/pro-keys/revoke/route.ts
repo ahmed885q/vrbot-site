@@ -9,23 +9,8 @@ export async function POST(req: Request) {
   const code = String(body?.code || '').trim()
   if (!code) return NextResponse.json({ ok: false, error: 'CODE_REQUIRED' }, { status: 400 })
 
-  const cookieStore = cookies()
-  const supabaseAuth = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
-  )
-
-  const { data: userData } = await supabaseAuth.auth.getUser()
-  const adminUser = userData?.user
-  if (!adminUser) return NextResponse.json({ ok: false, error: 'NOT_AUTHENTICATED' }, { status: 401 })
-  if (!isAdminEmail(auth.user.email)) return NextResponse.json({ ok: false, error: 'NOT_ADMIN' }, { status: 403 })
-
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  )
+  const admin = await requireAdmin()
+  if (!admin.ok) return NextResponse.json({ ok: false, error: admin.error }, { status: admin.status })
 
   const { data: keyRow } = await supabaseAdmin
     .from('pro_keys')
@@ -38,7 +23,7 @@ export async function POST(req: Request) {
 
   await supabaseAdmin
     .from('pro_keys')
-    .update({ revoked_at: new Date().toISOString(), revoked_by: auth.user.id })
+    .update({ revoked_at: new Date().toISOString(), revoked_by: admin.user!.id })
     .eq('code', code)
 
   // Ø¥Ø°Ø§ ÙƒØ§Ù† Ù…Ø³ØªØ®Ø¯Ù…: downgrade ÙÙ‚Ø· Ø¥Ø°Ø§ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ Ù…Ø±ØªØ¨Ø· Ø¨Ù‡Ø°Ø§ Ø§Ù„Ù…ÙØªØ§Ø­
