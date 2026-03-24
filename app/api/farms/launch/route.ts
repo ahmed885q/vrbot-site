@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { LaunchSchema, validateBody } from "@/lib/schemas";
 
 export async function POST(req: Request) {
   try {
@@ -9,11 +10,14 @@ export async function POST(req: Request) {
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { data } = await service.auth.getUser(token);
     if (!data?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const body = await req.json().catch(() => ({}));
+    const rawBody = await req.json().catch(() => ({}));
+    const { data: body, error: validationError } = validateBody(LaunchSchema, rawBody);
+    if (validationError) {
+      return NextResponse.json({ error: `Validation failed: ${validationError}` }, { status: 400 });
+    }
     const { farm_id } = body;
-    if (!farm_id) return NextResponse.json({ error: "farm_id required" }, { status: 400 });
     const HETZNER = process.env.HETZNER_IP || "cloud.vrbot.me";
-    const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
+    const API_KEY = process.env.VRBOT_API_KEY || "";
     const res = await fetch(`https://${HETZNER}/api/farms/launch`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },

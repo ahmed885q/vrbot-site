@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { resolveFarmNum } from "@/lib/farm-mapper";
+import { AdbCommandSchema, validateBody } from "@/lib/schemas";
 
 async function getUser(req: Request) {
   const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
@@ -67,15 +68,18 @@ export async function POST(req: Request) {
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { user, service } = auth;
 
-    const body = await req.json().catch(() => ({}));
+    const rawBody = await req.json().catch(() => ({}));
+    const { data: body, error: validationError } = validateBody(AdbCommandSchema, rawBody);
+    if (validationError) {
+      return NextResponse.json({ error: `Validation failed: ${validationError}` }, { status: 400 });
+    }
     const { farm_id, command } = body;
-    if (!farm_id || !command) return NextResponse.json({ error: "farm_id and command required" }, { status: 400 });
 
     // Resolve farm name → farm_XXX for Hetzner
     const target_id = await resolveTargetId(farm_id, service, user.id);
 
     const HETZNER = process.env.HETZNER_IP || "cloud.vrbot.me";
-    const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
+    const API_KEY = process.env.VRBOT_API_KEY || "";
     const res = await fetch(`https://${HETZNER}/api/farms/adb`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
