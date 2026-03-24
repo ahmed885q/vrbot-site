@@ -397,6 +397,7 @@ export default function DashboardClient() {
               {cloudOnline ? s.cloudOnline : s.cloudOffline}
             </span>
           </div>
+          <a href="/dashboard/farms" style={{ padding: "6px 14px", background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.3)", borderRadius: 8, color: "#f0a500", textDecoration: "none", fontSize: 12, fontWeight: 600 }}>مزارعي</a>
           <a href="/dashboard/live" style={{ padding: "6px 14px", background: "rgba(240,165,0,0.1)", border: "1px solid rgba(240,165,0,0.3)", borderRadius: 8, color: "#f0a500", textDecoration: "none", fontSize: 12, fontWeight: 600 }}>📺 Live</a>
           <a href="/dashboard/notifications" style={{ padding: "6px 14px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, color: "#8b949e", textDecoration: "none", fontSize: 12 }}>🔔</a>
           <button onClick={() => setLang(lang === "ar" ? "en" : "ar")} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, color: "#fff", fontSize: 12, cursor: "pointer" }}>{lang === "ar" ? "EN" : "عربي"}</button>
