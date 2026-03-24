@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
+import { encrypt } from "@/lib/crypto";
 
 async function getUser(req: Request) {
   const service = createClient(
@@ -79,8 +80,11 @@ export async function POST(req: Request) {
 
     const body         = await req.json().catch(() => ({}));
     const name         = String(body?.name         ?? "").trim();
-    const igg_email    = String(body?.igg_email    ?? "").trim() || null;
-    const igg_password = String(body?.igg_password ?? "").trim() || null;
+    const igg_email    = String(body?.igg_email    ?? body?.game_account ?? "").trim() || null;
+    const igg_password = String(body?.igg_password ?? body?.game_password ?? "").trim() || null;
+
+    // تشفير الباسورد قبل الحفظ
+    const encryptedPassword = igg_password ? await encrypt(igg_password) : "";
 
     if (!name)
       return NextResponse.json({ error: "اسم المزرعة مطلوب" }, { status: 400 });
@@ -159,8 +163,9 @@ export async function POST(req: Request) {
         server_id:      "server-01",
         container_id:   container_id,   // FIX 3: لم يعد null
         adb_port:       adb_port,       // FIX 3: لم يعد null
-        game_account:   igg_email    || "",
-        igg_password:   igg_password || "",
+        game_account:   igg_email         || "",
+        igg_password:   encryptedPassword || "",
+        game_password:  encryptedPassword || "",
         status:         "running",
         queue_position: position,
         cycle_count:    0,
