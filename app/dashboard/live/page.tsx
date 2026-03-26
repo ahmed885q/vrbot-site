@@ -272,6 +272,32 @@ export default function LivePage() {
     } catch {}
   }
 
+  function connectLive(farmId) {
+    disconnectLive()
+    const num = getFarmNum(farmId)
+    const wsId = num !== null ? String(num).padStart(3,"0") : farmId.replace(/[^0-9]/g,"").padStart(3,"0")
+    const ws = new WebSocket("wss://cloud.vrbot.me/ws/live/" + wsId)
+    ws.binaryType = "arraybuffer"
+    liveRef.current = ws
+    ws.onmessage = (event) => {
+      if (!(event.data instanceof ArrayBuffer)) return
+      const bytes = new Uint8Array(event.data)
+      const isVRBT = bytes[0]===0x56&&bytes[1]===0x52&&bytes[2]===0x42&&bytes[3]===0x54
+      const jpeg = event.data.slice(isVRBT ? 8 : 0)
+      if (jpeg.byteLength < 800) return
+      const url = URL.createObjectURL(new Blob([jpeg],{type:"image/jpeg"}))
+      setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return url })
+    }
+    ws.onclose = () => { if (liveRef.current===ws) reconnectRef.current=setTimeout(()=>connectLive(farmId),2000) }
+  }
+  function disconnectLive() {
+    if (reconnectRef.current) { clearTimeout(reconnectRef.current); reconnectRef.current=null }
+    if (liveRef.current) { liveRef.current.onclose=null; liveRef.current.close(); liveRef.current=null }
+  }
+  function sendLiveCommand(cmd) {
+    if (liveRef.current && liveRef.current.readyState===1) liveRef.current.send(cmd)
+  }
+
   function startStream(farmId: string) {
     if (screenshotTimer.current) { clearInterval(screenshotTimer.current); screenshotTimer.current = null }
     setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
