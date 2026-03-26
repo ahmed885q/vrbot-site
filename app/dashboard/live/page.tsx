@@ -47,6 +47,8 @@ export default function LivePage() {
   const streamActive                          = useRef<string | null>(null)
   const wsRef                                 = useRef<WebSocket | null>(null)
   const [tapMode, setTapMode]                 = useState(false)
+  const [liveMode, setLiveMode]               = useState(false)
+  const liveWsHolder                          = useRef<WebSocket | null>(null)
   const [tapFeedback, setTapFeedback]         = useState<{x:number,y:number} | null>(null)
   const dragStart                             = useRef<{x:number,y:number}|null>(null)
   const [zoomedScreenshot, setZoomedScreenshot] = useState<string | null>(null)
@@ -229,7 +231,13 @@ export default function LivePage() {
     const cmd = dist < 15
       ? `tap:${endX},${endY}`
       : `swipe:${startX},${startY},${endX},${endY}`
-    await sendAdb(streamFarm, cmd)
+    if (liveMode && liveWsHolder.current && liveWsHolder.current.readyState === WebSocket.OPEN) {
+      liveWsHolder.current.send(cmd)
+      setAdbFeedback(`⚡ ${cmd}`)
+      setTimeout(() => setAdbFeedback(''), 1200)
+    } else {
+      await sendAdb(streamFarm, cmd)
+    }
   }
 
   function getFarmNum(farmId: string): number | null {
@@ -278,6 +286,46 @@ export default function LivePage() {
         signal: AbortSignal.timeout(10000),
       })
     } catch {}
+  }
+
+
+  // ── Live Mode (Beta) ──
+  function startLiveStream(farmId: string) {
+    if (liveWsHolder.current) { liveWsHolder.current.onmessage = null; liveWsHolder.current.close(); liveWsHolder.current = null }
+    if (wsRef.current) { wsRef.current.onmessage = null; wsRef.current.close(); wsRef.current = null }
+    if (screenshotTimer.current) { clearInterval(screenshotTimer.current); screenshotTimer.current = null }
+    setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
+    const token = `${farmId}_${Date.now()}`
+    streamActive.current = token; setStreamFarm(farmId); setStreaming(true)
+    showMsg('🎮 Live Mode...', 5000)
+    const num = getFarmNum(farmId)
+    const wsId = num !== null ? String(num).padStart(3,'0') : farmId.replace(/\D/g,'').padStart(3,'0')
+    let ws: WebSocket
+    try { ws = new WebSocket(`wss://cloud.vrbot.me/ws/live/${wsId}`); ws.binaryType = 'arraybuffer'; liveWsHolder.current = ws }
+    catch { startPollingFallback(farmId, token); return }
+    const ct = setTimeout(() => { if (ws.readyState !== 1) { ws.close(); liveWsHolder.current = null; startPollingFallback(farmId, token) } }, 5000)
+    ws.onopen = () => { clearTimeout(ct); showMsg('', 0) }
+    ws.onmessage = (event) => {
+      if (streamActive.current !== token) return
+      try {
+        if (event.data instanceof ArrayBuffer) {
+          const b = new Uint8Array(event.data)
+          const isVRBT = b[0]===0x56&&b[1]===0x52&&b[2]===0x42&&b[3]===0x54
+          const jpeg = event.data.slice(isVRBT ? 8 : 0)
+          if (jpeg.byteLength < 500) return
+          const url = URL.createObjectURL(new Blob([jpeg],{type:'image/jpeg'}))
+          setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return url })
+        } else if (typeof event.data === 'string') {
+          try { const d=JSON.parse(event.data); if(d.ok&&d.action){setAdbFeedback(`✅ ${d.action}`);setTimeout(()=>setAdbFeedback(''),1200)}else if(d.error){setAdbFeedback(`❌ ${d.error}`);setTimeout(()=>setAdbFeedback(''),2000)} } catch {}
+        }
+      } catch {}
+    }
+    ws.onerror = () => { ws.close(); liveWsHolder.current = null; if (streamActive.current === token) startPollingFallback(farmId, token) }
+    ws.onclose = () => { if (streamActive.current === token && !screenshotTimer.current) startPollingFallback(farmId, token) }
+  }
+  function stopLiveStream() {
+    if (liveWsHolder.current) { liveWsHolder.current.onmessage = null; liveWsHolder.current.close(); liveWsHolder.current = null }
+    stopStream()
   }
 
   function startStream(farmId: string) {
@@ -533,9 +581,12 @@ export default function LivePage() {
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                 {!streaming ? (
-                  <button onClick={async () => { await launchGameIfNeeded(activeFarm.farm_name); startStream(activeFarm.farm_name) }} style={{ flex: 1, padding: '7px', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📺 بث مباشر</button>
+                  <div style={{display:'flex',flexDirection:'column',gap:5,flex:1}}>
+                    <button onClick={() => setLiveMode(v => !v)} style={{padding:'4px 8px',background:liveMode?'rgba(245,158,11,0.15)':'rgba(30,30,40,0.8)',border:liveMode?'1px solid #f59e0b':'1px solid #30363d',color:liveMode?'#f59e0b':'#8b949e',borderRadius:5,cursor:'pointer',fontSize:10,fontWeight:600}}>{liveMode ? '⚡ Live Mode ✓' : '📡 Live Mode (Beta)'}</button>
+                    <button onClick={async () => { await launchGameIfNeeded(activeFarm.farm_name); liveMode ? startLiveStream(activeFarm.farm_name) : startStream(activeFarm.farm_name) }} style={{flex:1,padding:'7px',background:'linear-gradient(135deg,#ef4444,#dc2626)',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700}}>{liveMode ? '⚡ بث تفاعلي' : '📺 بث مباشر'}</button>
+                  </div>
                 ) : (
-                  <button onClick={stopStream} style={{ flex: 1, padding: '7px', background: '#21262d', color: '#f85149', border: '1px solid #f8514930', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⏹ إيقاف البث</button>
+                  <button onClick={liveMode ? stopLiveStream : stopStream} style={{flex:1,padding:'7px',background:'#21262d',color:'#f85149',border:'1px solid #f8514930',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700}}>⏹ إيقاف البث</button>
                 )}
               </div>
             </div>
