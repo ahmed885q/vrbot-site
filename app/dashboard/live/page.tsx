@@ -116,9 +116,10 @@ export default function LivePage() {
 
   // ── FIX: دالة ADB مباشرة عبر /api/farms/adb ─────────────
   async function sendAdb(farmId: string, command: string) {
-    if (liveRef.current && liveRef.current.readyState === 1) {
-      liveRef.current.send(command)
-      setAdbFeedback(⚡ )
+    const _ws = liveRef.current as WebSocket | null
+    if (_ws && _ws.readyState === 1) {
+      _ws.send(command)
+      setAdbFeedback('⚡ ' + command)
       setTimeout(() => setAdbFeedback(''), 1200)
       return true
     }
