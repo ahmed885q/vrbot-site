@@ -30,23 +30,8 @@ export async function GET(req: Request) {
   const batch = (url.searchParams.get('batch') || '').trim()
   const deliveredTo = (url.searchParams.get('to') || '').trim()
 
-  const cookieStore = cookies()
-  const supabaseAuth = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
-  )
-
-  const { data: userData } = await supabaseAuth.auth.getUser()
-  const user = userData?.user
-  if (!user) return new NextResponse('NOT_AUTHENTICATED', { status: 401 })
-  if (!isAdminEmail(user.email)) return new NextResponse('NOT_ADMIN', { status: 403 })
-
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  )
+  const admin = await requireAdmin()
+  if (!admin.ok) return new NextResponse(admin.error, { status: admin.status })
 
   let q = supabaseAdmin
     .from('pro_keys')

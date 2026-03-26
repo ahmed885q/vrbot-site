@@ -1,6 +1,9 @@
 // lib/orchestrator.ts
-const ORCHESTRATOR_URL = process.env.ORCHESTRATOR_URL || "https://cloud.vrbot.me";
-const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
+const ORCHESTRATOR_URL = process.env.ORCHESTRATOR_URL;
+const API_KEY = process.env.VRBOT_API_KEY;
+
+if (!ORCHESTRATOR_URL) throw new Error("[orchestrator] ORCHESTRATOR_URL environment variable is required");
+if (!API_KEY) throw new Error("[orchestrator] VRBOT_API_KEY environment variable is required");
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -152,7 +155,7 @@ async function orchFetch(path: string, options?: RequestInit) {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      "X-API-Key": API_KEY,
+      "X-API-Key": API_KEY || "",
       ...(options?.headers || {}),
     },
   });
