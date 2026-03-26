@@ -117,6 +117,13 @@ export default function LivePage() {
 
   // ── FIX: دالة ADB مباشرة عبر /api/farms/adb ─────────────
   async function sendAdb(farmId: string, command: string) {
+    // Live Mode: route via WebSocket instead of HTTP
+    if (liveMode && liveWsHolder.current && liveWsHolder.current.readyState === WebSocket.OPEN) {
+      liveWsHolder.current.send(command)
+      setAdbFeedback(`⚡ ${command}`)
+      setTimeout(() => setAdbFeedback(''), 1200)
+      return true
+    }
     try {
       const authHeaders = await getAuthHeaders()
       const res = await fetch('/api/farms/adb', {
