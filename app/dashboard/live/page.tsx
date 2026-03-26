@@ -45,6 +45,11 @@ export default function LivePage() {
   const [streamFarm, setStreamFarm]           = useState<string | null>(null)
   const screenshotTimer                       = useRef<NodeJS.Timeout | null>(null)
   const streamActive                          = useRef<string | null>(null)
+<<<<<<< HEAD
+=======
+  const liveRef                               = useRef<WebSocket | null>(null)
+  const reconnectRef                          = useRef<ReturnType<typeof setTimeout> | null>(null)
+>>>>>>> 9dda0412a95f64bc51deca23e41d164ba0cb7f88
   const [tapMode, setTapMode]                 = useState(false)
   const [tapFeedback, setTapFeedback]         = useState<{x:number,y:number} | null>(null)
   const dragStart                             = useRef<{x:number,y:number}|null>(null)
@@ -114,6 +119,16 @@ export default function LivePage() {
 
   // ── FIX: دالة ADB مباشرة عبر /api/farms/adb ─────────────
   async function sendAdb(farmId: string, command: string) {
+<<<<<<< HEAD
+=======
+    const _ws = liveRef.current as WebSocket | null
+    if (_ws && _ws.readyState === 1) {
+      _ws.send(command)
+      setAdbFeedback('⚡ ' + command)
+      setTimeout(() => setAdbFeedback(''), 1200)
+      return true
+    }
+>>>>>>> 9dda0412a95f64bc51deca23e41d164ba0cb7f88
     try {
       const authHeaders = await getAuthHeaders()
       const res = await fetch('/api/farms/adb', {
