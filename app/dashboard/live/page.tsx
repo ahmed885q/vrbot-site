@@ -45,6 +45,7 @@ export default function LivePage() {
   const [streamFarm, setStreamFarm]           = useState<string | null>(null)
   const screenshotTimer                       = useRef<NodeJS.Timeout | null>(null)
   const streamActive                          = useRef<string | null>(null)
+  const wsRef                                 = useRef<WebSocket | null>(null)
   const [tapMode, setTapMode]                 = useState(false)
   const [tapFeedback, setTapFeedback]         = useState<{x:number,y:number} | null>(null)
   const dragStart                             = useRef<{x:number,y:number}|null>(null)
@@ -256,6 +257,13 @@ export default function LivePage() {
     streamActive.current = null
     setStreaming(false)
     setStreamFarm(null)
+    // Stop WebSocket stream
+    if (wsRef.current) {
+      wsRef.current.onmessage = null
+      wsRef.current.close()
+      wsRef.current = null
+    }
+    // Stop polling fallback
     if (screenshotTimer.current) { clearInterval(screenshotTimer.current); screenshotTimer.current = null }
     setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
   }
@@ -273,12 +281,88 @@ export default function LivePage() {
   }
 
   function startStream(farmId: string) {
+    // Stop any existing stream
+    if (wsRef.current) { wsRef.current.onmessage = null; wsRef.current.close(); wsRef.current = null }
     if (screenshotTimer.current) { clearInterval(screenshotTimer.current); screenshotTimer.current = null }
     setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
+
     const token = `${farmId}_${Date.now()}`
     streamActive.current = token
     setStreamFarm(farmId)
     setStreaming(true)
+    showMsg('📺 جارٍ بدء البث...', 4000)
+
+    // ── Convert farmId (farm001) → farm_id for WS server (001) ──
+    const num = getFarmNum(farmId)
+    const wsId = num !== null ? String(num).padStart(3, '0') : farmId.replace(/\D/g, '').padStart(3, '0')
+
+    // ── WebSocket URL via nginx proxy ──
+    const wsUrl = `wss://cloud.vrbot.me/ws/stream/${wsId}`
+
+    let ws: WebSocket
+    try {
+      ws = new WebSocket(wsUrl)
+      ws.binaryType = 'arraybuffer'
+      wsRef.current = ws
+    } catch {
+      // WS not available — fallback to polling
+      startPollingFallback(farmId, token)
+      return
+    }
+
+    let connected = false
+    const connectTimeout = setTimeout(() => {
+      if (!connected) {
+        ws.close()
+        wsRef.current = null
+        startPollingFallback(farmId, token)
+      }
+    }, 5000)
+
+    ws.onopen = () => {
+      connected = true
+      clearTimeout(connectTimeout)
+      showMsg('', 0)
+    }
+
+    ws.onmessage = (event) => {
+      if (streamActive.current !== token) return
+      try {
+        const data = event.data
+        if (data instanceof ArrayBuffer) {
+          // Binary JPEG — check for VRBT magic header (4 bytes) + timestamp (4 bytes)
+          const bytes = new Uint8Array(data)
+          const isVRBT = bytes[0] === 0x56 && bytes[1] === 0x52 && bytes[2] === 0x42 && bytes[3] === 0x54
+          const jpegStart = isVRBT ? 8 : 0
+          const jpeg = data.slice(jpegStart)
+          if (jpeg.byteLength < 1000) return
+          const blob = new Blob([jpeg], { type: 'image/jpeg' })
+          const url = URL.createObjectURL(blob)
+          setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return url })
+        } else if (typeof data === 'string') {
+          // JSON message (connected/pong/metrics) — ignore for display
+        }
+      } catch {}
+    }
+
+    ws.onerror = () => {
+      if (streamActive.current !== token) return
+      ws.close()
+      wsRef.current = null
+      startPollingFallback(farmId, token)
+    }
+
+    ws.onclose = () => {
+      if (streamActive.current === token) {
+        wsRef.current = null
+        startPollingFallback(farmId, token)
+      }
+    }
+  }
+
+  // Fallback HTTP polling (original behavior)
+  function startPollingFallback(farmId: string, token: string) {
+    if (streamActive.current !== token) return
     showMsg('📺 جارٍ بدء البث...', 4000)
     async function capture() {
       if (streamActive.current !== token) return
