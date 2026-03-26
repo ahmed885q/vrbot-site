@@ -49,6 +49,8 @@ export default function LivePage() {
   const [tapMode, setTapMode]                 = useState(false)
   const [liveMode, setLiveMode]               = useState(false)
   const liveWsHolder                          = useRef<WebSocket | null>(null)
+  const liveRef                               = useRef<WebSocket | null>(null)
+  const reconnectRef                          = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [tapFeedback, setTapFeedback]         = useState<{x:number,y:number} | null>(null)
   const dragStart                             = useRef<{x:number,y:number}|null>(null)
   const [zoomedScreenshot, setZoomedScreenshot] = useState<string | null>(null)
@@ -295,6 +297,35 @@ export default function LivePage() {
     } catch {}
   }
 
+
+  // ── LIVE CORE ──
+  function connectLive(farmId: string) {
+    disconnectLive()
+    const num = getFarmNum(farmId)
+    const wsId = num !== null ? String(num).padStart(3,'0') : farmId.replace(/\D/g,'').padStart(3,'0')
+    const ws = new WebSocket(`wss://cloud.vrbot.me/ws/live/${wsId}`)
+    ws.binaryType = 'arraybuffer'
+    liveRef.current = ws
+    ws.onmessage = (event) => {
+      if (!(event.data instanceof ArrayBuffer)) return
+      const bytes = new Uint8Array(event.data)
+      const isVRBT = bytes[0]===0x56&&bytes[1]===0x52&&bytes[2]===0x42&&bytes[3]===0x54
+      const jpeg = event.data.slice(isVRBT ? 8 : 0)
+      if (jpeg.byteLength < 800) return
+      const url = URL.createObjectURL(new Blob([jpeg], {type:'image/jpeg'}))
+      setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return url })
+    }
+    ws.onclose = () => {
+      if (liveRef.current === ws) reconnectRef.current = setTimeout(() => connectLive(farmId), 2000)
+    }
+  }
+  function disconnectLive() {
+    if (reconnectRef.current) { clearTimeout(reconnectRef.current); reconnectRef.current = null }
+    if (liveRef.current) { liveRef.current.onclose = null; liveRef.current.close(); liveRef.current = null }
+  }
+  function sendLiveCommand(cmd: string) {
+    if (liveRef.current?.readyState === 1) liveRef.current.send(cmd)
+  }
 
   // ── Live Mode (Beta) ──
   function startLiveStream(farmId: string) {
@@ -590,10 +621,10 @@ export default function LivePage() {
                 {!streaming ? (
                   <div style={{display:'flex',flexDirection:'column',gap:5,flex:1}}>
                     <button onClick={() => setLiveMode(v => !v)} style={{padding:'4px 8px',background:liveMode?'rgba(245,158,11,0.15)':'rgba(30,30,40,0.8)',border:liveMode?'1px solid #f59e0b':'1px solid #30363d',color:liveMode?'#f59e0b':'#8b949e',borderRadius:5,cursor:'pointer',fontSize:10,fontWeight:600}}>{liveMode ? '⚡ Live Mode ✓' : '📡 Live Mode (Beta)'}</button>
-                    <button onClick={async () => { await launchGameIfNeeded(activeFarm.farm_name); liveMode ? startLiveStream(activeFarm.farm_name) : startStream(activeFarm.farm_name) }} style={{flex:1,padding:'7px',background:'linear-gradient(135deg,#ef4444,#dc2626)',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700}}>{liveMode ? '⚡ بث تفاعلي' : '📺 بث مباشر'}</button>
+                    <button onClick={async () => { await launchGameIfNeeded(activeFarm.farm_name); liveMode ? (connectLive(activeFarm.farm_name), setStreamFarm(activeFarm.farm_name), setStreaming(true)) : startStream(activeFarm.farm_name) }} style={{flex:1,padding:'7px',background:'linear-gradient(135deg,#ef4444,#dc2626)',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700}}>{liveMode ? '⚡ بث تفاعلي' : '📺 بث مباشر'}</button>
                   </div>
                 ) : (
-                  <button onClick={liveMode ? stopLiveStream : stopStream} style={{flex:1,padding:'7px',background:'#21262d',color:'#f85149',border:'1px solid #f8514930',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700}}>⏹ إيقاف البث</button>
+                  <button onClick={() => { if (liveMode) { disconnectLive(); setStreaming(false) } else stopStream() }} style={{flex:1,padding:'7px',background:'#21262d',color:'#f85149',border:'1px solid #f8514930',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700}}>⏹ إيقاف البث</button>
                 )}
               </div>
             </div>
