@@ -475,7 +475,7 @@ export default function LivePage() {
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                 {!streaming ? (
-                  <button onClick={async () => { await launchGameIfNeeded(activeFarm.farm_name); startStream(activeFarm.farm_name) }} style={{ flex: 1, padding: '7px', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📺 بث مباشر</button>
+                  <button onClick={async () => { await launchGameIfNeeded(activeFarm.farm_name); connectLive(activeFarm.farm_name); setStreamFarm(activeFarm.farm_name); setStreaming(true) }} style={{ flex: 1, padding: '7px', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📺 بث مباشر</button>
                 ) : (
                   <button onClick={stopStream} style={{ flex: 1, padding: '7px', background: '#21262d', color: '#f85149', border: '1px solid #f8514930', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⏹ إيقاف البث</button>
                 )}
