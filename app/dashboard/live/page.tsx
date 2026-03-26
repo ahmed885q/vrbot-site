@@ -45,6 +45,8 @@ export default function LivePage() {
   const [streamFarm, setStreamFarm]           = useState<string | null>(null)
   const screenshotTimer                       = useRef<NodeJS.Timeout | null>(null)
   const streamActive                          = useRef<string | null>(null)
+  const liveRef                               = useRef<WebSocket | null>(null)
+  const reconnectRef                          = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [tapMode, setTapMode]                 = useState(false)
   const [tapFeedback, setTapFeedback]         = useState<{x:number,y:number} | null>(null)
   const dragStart                             = useRef<{x:number,y:number}|null>(null)
