@@ -116,6 +116,12 @@ export default function LivePage() {
 
   // ── FIX: دالة ADB مباشرة عبر /api/farms/adb ─────────────
   async function sendAdb(farmId: string, command: string) {
+    if (liveRef.current && liveRef.current.readyState === 1) {
+      liveRef.current.send(command)
+      setAdbFeedback(⚡ )
+      setTimeout(() => setAdbFeedback(''), 1200)
+      return true
+    }
     try {
       const authHeaders = await getAuthHeaders()
       const res = await fetch('/api/farms/adb', {
