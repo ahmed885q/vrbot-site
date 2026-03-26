@@ -45,7 +45,12 @@ export default function LivePage() {
   const [streamFarm, setStreamFarm]           = useState<string | null>(null)
   const screenshotTimer                       = useRef<NodeJS.Timeout | null>(null)
   const streamActive                          = useRef<string | null>(null)
+  const wsRef                                 = useRef<WebSocket | null>(null)
   const [tapMode, setTapMode]                 = useState(false)
+  const [liveMode, setLiveMode]               = useState(false)
+  const liveWsHolder                          = useRef<WebSocket | null>(null)
+  const liveRef                               = useRef<WebSocket | null>(null)
+  const reconnectRef                          = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [tapFeedback, setTapFeedback]         = useState<{x:number,y:number} | null>(null)
   const dragStart                             = useRef<{x:number,y:number}|null>(null)
   const [zoomedScreenshot, setZoomedScreenshot] = useState<string | null>(null)
@@ -114,6 +119,13 @@ export default function LivePage() {
 
   // ── FIX: دالة ADB مباشرة عبر /api/farms/adb ─────────────
   async function sendAdb(farmId: string, command: string) {
+    // Live Mode: route via WebSocket instead of HTTP
+    if (liveMode && liveWsHolder.current && liveWsHolder.current.readyState === WebSocket.OPEN) {
+      liveWsHolder.current.send(command)
+      setAdbFeedback(`⚡ ${command}`)
+      setTimeout(() => setAdbFeedback(''), 1200)
+      return true
+    }
     try {
       const authHeaders = await getAuthHeaders()
       const res = await fetch('/api/farms/adb', {
@@ -228,7 +240,13 @@ export default function LivePage() {
     const cmd = dist < 15
       ? `tap:${endX},${endY}`
       : `swipe:${startX},${startY},${endX},${endY}`
-    await sendAdb(streamFarm, cmd)
+    if (liveMode && liveWsHolder.current && liveWsHolder.current.readyState === WebSocket.OPEN) {
+      liveWsHolder.current.send(cmd)
+      setAdbFeedback(`⚡ ${cmd}`)
+      setTimeout(() => setAdbFeedback(''), 1200)
+    } else {
+      await sendAdb(streamFarm, cmd)
+    }
   }
 
   function getFarmNum(farmId: string): number | null {
@@ -256,6 +274,13 @@ export default function LivePage() {
     streamActive.current = null
     setStreaming(false)
     setStreamFarm(null)
+    // Stop WebSocket stream
+    if (wsRef.current) {
+      wsRef.current.onmessage = null
+      wsRef.current.close()
+      wsRef.current = null
+    }
+    // Stop polling fallback
     if (screenshotTimer.current) { clearInterval(screenshotTimer.current); screenshotTimer.current = null }
     setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
   }
@@ -302,9 +327,121 @@ export default function LivePage() {
     if (screenshotTimer.current) { clearInterval(screenshotTimer.current); screenshotTimer.current = null }
     setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
     const token = `${farmId}_${Date.now()}`
+    streamActive.current = token; setStreamFarm(farmId); setStreaming(true)
+    showMsg('🎮 Live Mode...', 5000)
+    const num = getFarmNum(farmId)
+    const wsId = num !== null ? String(num).padStart(3,'0') : farmId.replace(/\D/g,'').padStart(3,'0')
+    let ws: WebSocket
+    try { ws = new WebSocket(`wss://cloud.vrbot.me/ws/live/${wsId}`); ws.binaryType = 'arraybuffer'; liveWsHolder.current = ws }
+    catch { startPollingFallback(farmId, token); return }
+    const ct = setTimeout(() => { if (ws.readyState !== 1) { ws.close(); liveWsHolder.current = null; startPollingFallback(farmId, token) } }, 5000)
+    ws.onopen = () => { clearTimeout(ct); showMsg('', 0) }
+    ws.onmessage = (event) => {
+      if (streamActive.current !== token) return
+      try {
+        if (event.data instanceof ArrayBuffer) {
+          const b = new Uint8Array(event.data)
+          const isVRBT = b[0]===0x56&&b[1]===0x52&&b[2]===0x42&&b[3]===0x54
+          const jpeg = event.data.slice(isVRBT ? 8 : 0)
+          if (jpeg.byteLength < 500) return
+          const url = URL.createObjectURL(new Blob([jpeg],{type:'image/jpeg'}))
+          setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return url })
+        } else if (typeof event.data === 'string') {
+          try { const d=JSON.parse(event.data); if(d.ok&&d.action){setAdbFeedback(`✅ ${d.action}`);setTimeout(()=>setAdbFeedback(''),1200)}else if(d.error){setAdbFeedback(`❌ ${d.error}`);setTimeout(()=>setAdbFeedback(''),2000)} } catch {}
+        }
+      } catch {}
+    }
+    ws.onerror = () => { ws.close(); liveWsHolder.current = null; if (streamActive.current === token) startPollingFallback(farmId, token) }
+    ws.onclose = () => { if (streamActive.current === token && !screenshotTimer.current) startPollingFallback(farmId, token) }
+  }
+  function stopLiveStream() {
+    if (liveWsHolder.current) { liveWsHolder.current.onmessage = null; liveWsHolder.current.close(); liveWsHolder.current = null }
+    stopStream()
+  }
+
+  function startStream(farmId: string) {
+    // Stop any existing stream
+    if (wsRef.current) { wsRef.current.onmessage = null; wsRef.current.close(); wsRef.current = null }
+    if (screenshotTimer.current) { clearInterval(screenshotTimer.current); screenshotTimer.current = null }
+    setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
+
+    const token = `${farmId}_${Date.now()}`
     streamActive.current = token
     setStreamFarm(farmId)
     setStreaming(true)
+    showMsg('📺 جارٍ بدء البث...', 4000)
+
+    // ── Convert farmId (farm001) → farm_id for WS server (001) ──
+    const num = getFarmNum(farmId)
+    const wsId = num !== null ? String(num).padStart(3, '0') : farmId.replace(/\D/g, '').padStart(3, '0')
+
+    // ── WebSocket URL via nginx proxy ──
+    const wsUrl = `wss://cloud.vrbot.me/ws/stream/${wsId}`
+
+    let ws: WebSocket
+    try {
+      ws = new WebSocket(wsUrl)
+      ws.binaryType = 'arraybuffer'
+      wsRef.current = ws
+    } catch {
+      // WS not available — fallback to polling
+      startPollingFallback(farmId, token)
+      return
+    }
+
+    let connected = false
+    const connectTimeout = setTimeout(() => {
+      if (!connected) {
+        ws.close()
+        wsRef.current = null
+        startPollingFallback(farmId, token)
+      }
+    }, 5000)
+
+    ws.onopen = () => {
+      connected = true
+      clearTimeout(connectTimeout)
+      showMsg('', 0)
+    }
+
+    ws.onmessage = (event) => {
+      if (streamActive.current !== token) return
+      try {
+        const data = event.data
+        if (data instanceof ArrayBuffer) {
+          // Binary JPEG — check for VRBT magic header (4 bytes) + timestamp (4 bytes)
+          const bytes = new Uint8Array(data)
+          const isVRBT = bytes[0] === 0x56 && bytes[1] === 0x52 && bytes[2] === 0x42 && bytes[3] === 0x54
+          const jpegStart = isVRBT ? 8 : 0
+          const jpeg = data.slice(jpegStart)
+          if (jpeg.byteLength < 1000) return
+          const blob = new Blob([jpeg], { type: 'image/jpeg' })
+          const url = URL.createObjectURL(blob)
+          setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return url })
+        } else if (typeof data === 'string') {
+          // JSON message (connected/pong/metrics) — ignore for display
+        }
+      } catch {}
+    }
+
+    ws.onerror = () => {
+      if (streamActive.current !== token) return
+      ws.close()
+      wsRef.current = null
+      startPollingFallback(farmId, token)
+    }
+
+    ws.onclose = () => {
+      if (streamActive.current === token) {
+        wsRef.current = null
+        startPollingFallback(farmId, token)
+      }
+    }
+  }
+
+  // Fallback HTTP polling (original behavior)
+  function startPollingFallback(farmId: string, token: string) {
+    if (streamActive.current !== token) return
     showMsg('📺 جارٍ بدء البث...', 4000)
     async function capture() {
       if (streamActive.current !== token) return
@@ -477,7 +614,7 @@ export default function LivePage() {
                 {!streaming ? (
                   <button onClick={async () => { await launchGameIfNeeded(activeFarm.farm_name); connectLive(activeFarm.farm_name); setStreamFarm(activeFarm.farm_name); setStreaming(true) }} style={{ flex: 1, padding: '7px', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📺 بث مباشر</button>
                 ) : (
-                  <button onClick={stopStream} style={{ flex: 1, padding: '7px', background: '#21262d', color: '#f85149', border: '1px solid #f8514930', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⏹ إيقاف البث</button>
+                  <button onClick={() => { if (liveMode) { disconnectLive(); setStreaming(false) } else stopStream() }} style={{flex:1,padding:'7px',background:'#21262d',color:'#f85149',border:'1px solid #f8514930',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:700}}>⏹ إيقاف البث</button>
                 )}
               </div>
             </div>
