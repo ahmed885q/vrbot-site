@@ -148,6 +148,7 @@ export default function AgentConfigPanel({
   const fetchAgents = useCallback(async () => {
     try {
       const res = await fetch(`/api/agents/status?user_id=${userId}`);
+      if (!res.ok) { console.warn(`fetchAgents: HTTP ${res.status}`); return; }
       const data = await res.json();
       if (data.agents) setAgents(data.agents);
     } catch (e) {
@@ -159,6 +160,7 @@ export default function AgentConfigPanel({
   const fetchTokens = useCallback(async () => {
     try {
       const res = await fetch(`/api/agents/token?user_id=${userId}`);
+      if (!res.ok) { console.warn(`fetchTokens: HTTP ${res.status}`); return; }
       const data = await res.json();
       if (data.tokens) setTokens(data.tokens);
     } catch (e) {
