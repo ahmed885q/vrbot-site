@@ -332,7 +332,7 @@ export default function LivePage() {
       } catch {}
     }
     capture()
-    screenshotTimer.current = setInterval(capture, 2000)
+    // DISABLED: polling replaced by connectLive
   }
 
   function toggleTask(t: string) {
@@ -390,7 +390,7 @@ export default function LivePage() {
                 const isSelected = farm.id === selectedFarm
                 const isRunning  = running[farm.id]
                 return (
-                  <div key={farm.id} onClick={() => { setSelected(farm.id); if (streaming && streamFarm !== farm.farm_name) startStream(farm.farm_name) }}
+                  <div key={farm.id} onClick={() => { setSelected(farm.id); if (streaming && streamFarm !== farm.farm_name) { connectLive(farm.farm_name); setStreamFarm(farm.farm_name) } }}
                     style={{ borderRadius: 10, border: `2px solid ${isSelected ? '#f0a500' : '#21262d'}`, background: isSelected ? '#f0a50010' : '#161b22', cursor: 'pointer', transition: 'all 0.2s', padding: 16, boxShadow: isSelected ? '0 0 20px #f0a50025' : 'none' }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
