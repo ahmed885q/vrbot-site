@@ -74,7 +74,7 @@ export default function LivePage() {
       const authHeaders = await getAuthHeaders()
       const res = await fetch('/api/farms/list', {
         headers: authHeaders,
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(5000),
       })
       if (res.ok) {
         const d = await res.json()
@@ -92,7 +92,7 @@ export default function LivePage() {
         setFarms(list)
       }
     } catch (e) {
-      console.error('loadFarms error:', e)
+      console.warn('farms:', e?.message?.slice(0,30))
     }
     setLoading(false)
   }, [getAuthHeaders])
