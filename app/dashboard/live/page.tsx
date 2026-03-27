@@ -308,31 +308,7 @@ export default function LivePage() {
   }
 
   function startStream(farmId: string) {
-    if (screenshotTimer.current) { clearInterval(screenshotTimer.current); screenshotTimer.current = null }
-    setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
-    const token = `${farmId}_${Date.now()}`
-    streamActive.current = token
-    setStreamFarm(farmId)
-    setStreaming(true)
-    showMsg('📺 جارٍ بدء البث...', 4000)
-    async function capture() {
-      if (streamActive.current !== token) return
-      try {
-        const res = await getScreenshot(farmId)
-        if (streamActive.current !== token) return
-        if (res.ok) {
-          const blob = await res.blob()
-          if (streamActive.current !== token) return
-          if (blob.size > 5000) {
-            const url = URL.createObjectURL(blob)
-            setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return url })
-            showMsg('', 0)
-          }
-        }
-      } catch {}
-    }
-    capture()
-    // DISABLED: polling replaced by connectLive
+    connectLive(farmId)
   }
 
   function toggleTask(t: string) {
