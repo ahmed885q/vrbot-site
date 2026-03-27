@@ -4,6 +4,12 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
+
+// Simple in-memory cache
+let _cache: any = null;
+let _cacheTime = 0;
+const CACHE_TTL = 10000; // 10 seconds
+
 const HETZNER = () => process.env.HETZNER_IP || "cloud.vrbot.me";
 const API_KEY = () => process.env.VRBOT_API_KEY || "vrbot_admin_2026";
 
@@ -31,6 +37,11 @@ async function getUser(req: Request) {
 }
 
 export async function GET(req: Request) {
+  // Cache check
+  const now = Date.now()
+  if (_cache && now - _cacheTime < CACHE_TTL) {
+    return NextResponse.json(_cache)
+  }
   try {
     const auth = await getUser(req);
     if (!auth) return NextResponse.json({ farms: [] }, { status: 401 });
@@ -86,7 +97,10 @@ export async function GET(req: Request) {
       };
     });
 
-    return NextResponse.json({ farms: merged, total: merged.length });
+    const result = { farms: merged, total: merged.length }
+    _cache = result
+    _cacheTime = Date.now()
+    return NextResponse.json(result);
   } catch (e: any) {
     console.error("[FARMS-LIST] error:", e?.message);
     return NextResponse.json({ farms: [], error: e?.message }, { status: 500 });
