@@ -55,7 +55,7 @@ export async function GET(req: Request) {
         .eq("user_id", user.id)
         .neq("status", "deleted")
         .order("farm_name", { ascending: true }),
-      fetch(`https://${HETZNER()}/api/farms/status`, {
+      fetch(`https://${HETZNER()}/api/v1/workers`, {
         headers: { "X-API-Key": API_KEY() },
         cache: "no-store",
         signal: AbortSignal.timeout(5000),
