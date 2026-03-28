@@ -322,9 +322,10 @@ export default function LivePage() {
           }))
           setFarms(prev => {
             if (prev.length > 0) {
+              // Merge WS data (online status) with Supabase data (tasks etc)
               return prev.map(pf => {
                 const live = list.find((l: any) => l.farm_name === pf.farm_name)
-                return live ? { ...pf, ...live } : pf
+                return live ? { ...pf, live_status: live.live_status, status: live.status } : pf
               })
             }
             return list
