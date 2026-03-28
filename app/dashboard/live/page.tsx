@@ -47,6 +47,7 @@ export default function LivePage() {
   const streamActive                          = useRef<string | null>(null)
   const liveRef                               = useRef<WebSocket | null>(null)
   const reconnectRef                          = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const farmsWsRef                            = useRef<WebSocket | null>(null)
   const [tapMode, setTapMode]                 = useState(false)
   const [tapFeedback, setTapFeedback]         = useState<{x:number,y:number} | null>(null)
   const dragStart                             = useRef<{x:number,y:number}|null>(null)
@@ -103,6 +104,7 @@ export default function LivePage() {
 
   useEffect(() => {
     loadFarms()
+    connectFarmsWS()
     const t = setInterval(loadFarms, 15000)
     return () => clearInterval(t)
   }, [loadFarms])
@@ -299,6 +301,40 @@ export default function LivePage() {
     }
     ws.onclose = () => { if (liveRef.current===ws) reconnectRef.current=setTimeout(()=>connectLive(farmId),2000) }
   }
+  function connectFarmsWS() {
+    if (farmsWsRef.current) farmsWsRef.current.close()
+    const ws = new WebSocket('wss://cloud.vrbot.me/ws/live/farms')
+    farmsWsRef.current = ws
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data)
+        if (msg.type === 'farms' && Array.isArray(msg.data)) {
+          const list = msg.data.map((f: any) => ({
+            id: f.farm_id,
+            farm_name: f.farm_id,
+            status: f.status || 'offline',
+            game_account: '',
+            tasks_today: f.tasks_today || 0,
+            live_status: f.online ? 'online' : 'offline',
+            current_task: null,
+            container_id: null,
+            adb_port: null,
+          }))
+          setFarms(prev => {
+            if (prev.length > 0) {
+              return prev.map(pf => {
+                const live = list.find((l: any) => l.farm_name === pf.farm_name)
+                return live ? { ...pf, ...live } : pf
+              })
+            }
+            return list
+          })
+        }
+      } catch {}
+    }
+    ws.onclose = () => { setTimeout(connectFarmsWS, 3000) }
+  }
+
   function disconnectLive() {
     if (reconnectRef.current) { clearTimeout(reconnectRef.current); reconnectRef.current=null }
     if (liveRef.current) { liveRef.current.onclose=null; liveRef.current.close(); liveRef.current=null }
