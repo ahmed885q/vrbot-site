@@ -48,7 +48,7 @@ export default function LivePage() {
   const liveRef                               = useRef<WebSocket | null>(null)
   const reconnectRef                          = useRef<ReturnType<typeof setTimeout> | null>(null)
   const farmsWsRef                            = useRef<WebSocket | null>(null)
-  const [tapMode, setTapMode]                 = useState(false)
+  const [tapMode, setTapMode]                 = useState(true)
   const [tapFeedback, setTapFeedback]         = useState<{x:number,y:number} | null>(null)
   const dragStart                             = useRef<{x:number,y:number}|null>(null)
   const [zoomedScreenshot, setZoomedScreenshot] = useState<string | null>(null)
