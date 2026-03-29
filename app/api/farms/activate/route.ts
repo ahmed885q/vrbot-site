@@ -72,16 +72,12 @@ export async function POST(req: Request) {
     let hetznerOk = false;
     let hetznerResult: any = {};
     try {
-      const res = await fetch(`http://${HETZNER}:8888/api/farms/provision`, {
+      const res = await fetch(`http://${HETZNER}:8891/api/v1/farms/${target_id}/tasks/gather`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-API-Key": API_KEY,
         },
-        body: JSON.stringify({
-          farm_id: target_id,
-          game_account: farm.game_account || "",
-        }),
         signal: AbortSignal.timeout(30000),
       });
       hetznerResult = await res.json().catch(() => ({ ok: res.ok }));
