@@ -25,3 +25,20 @@ __pycache__/
 *.pyo
 vrbot-ultra-agent/data/
 vrbot-ultra-logs/
+
+# Fix scripts
+fix*.py
+final_fix.py
+debug_v4.py
+build_log.txt
+vrbot_upgrade_setup.sh
+
+# Phase modules
+phase*_modules/
+phase*_v*/
+phase*_ws/
+
+# Misc
+audit/
+backend/
+vrbot-site/
