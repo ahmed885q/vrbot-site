@@ -35,7 +35,7 @@ export default function LoginPage() {
   async function handleGoogle() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `https://www.vrbot.me/dashboard` }
+      options: { redirectTo: `https://www.vrbot.me/auth/callback` }
     })
   }
 
@@ -220,4 +220,5 @@ export default function LoginPage() {
     </div>
   )
 }
+
 
