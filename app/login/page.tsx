@@ -26,7 +26,7 @@ export default function LoginPage() {
           options: { data: { full_name: name } }
         })
         if (error) setError(error.message)
-        else setSuccess('?? ????? ?????! ???? ?? ?????.')
+        else setSuccess('Account created! Check your email to confirm.')
       }
     } catch (e: any) { setError(e.message) }
     setLoading(false)
@@ -171,7 +171,7 @@ export default function LoginPage() {
 
             {isSignIn && (
               <div style={{ textAlign:'right', marginBottom:16, marginTop:-4 }}>
-                <span style={{ color:'rgba(200,80,0,0.6)', fontSize:12, cursor:'pointer' }}>Forgot password?</span>
+                <a href="/forgot-password" style={{ color:'rgba(200,80,0,0.6)', fontSize:12, cursor:'pointer', textDecoration:'none' }}>Forgot password?</a>
               </div>
             )}
 
