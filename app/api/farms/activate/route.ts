@@ -68,11 +68,11 @@ export async function POST(req: Request) {
     // استخدم container_id إذا موجود، وإلا farm_name
     const target_id = farm.container_id || farm.farm_name;
 
-    // أرسل أمر provision لـ Hetzner
+    // أرسل أمر provision لـ Hetzner (عبر nginx proxy على port 443)
     let hetznerOk = false;
     let hetznerResult: any = {};
     try {
-      const res = await fetch(`http://${HETZNER}:8891/api/v1/farms/${target_id}/tasks/gather`, {
+      const res = await fetch(`https://${HETZNER}/api/farms/${target_id}/tasks/gather`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
