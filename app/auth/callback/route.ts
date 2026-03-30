@@ -1,20 +1,13 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
-  const error = requestUrl.searchParams.get('error')
   const origin = requestUrl.origin
 
-  // إذا كان فيه error من Supabase
-  if (error) {
-    return NextResponse.redirect(`${origin}/login?error=${error}`)
-  }
-
-  // إذا كان فيه code (PKCE flow)
   if (code) {
-    const { createServerClient } = await import('@supabase/ssr')
-    const { cookies } = await import('next/headers')
     const cookieStore = cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,12 +25,9 @@ export async function GET(request: NextRequest) {
         },
       }
     )
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-    if (!exchangeError) {
-      return NextResponse.redirect(`${origin}/dashboard`)
-    }
+    await supabase.auth.exchangeCodeForSession(code)
   }
 
-  // Implicit flow: access_token في الـ hash - أعد للـ dashboard وخلي الـ browser يتعامل معه
+  // سواء كان code أو implicit flow - اذهب للـ dashboard
   return NextResponse.redirect(`${origin}/dashboard`)
 }
