@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
@@ -35,7 +35,7 @@ export default function LoginPage() {
   async function handleGoogle() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/dashboard` }
+      options: { redirectTo: `https://www.vrbot.me/dashboard` }
     })
   }
 
@@ -220,3 +220,4 @@ export default function LoginPage() {
     </div>
   )
 }
+
