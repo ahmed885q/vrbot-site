@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from 'next/server'
+﻿import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 
@@ -20,6 +20,7 @@ function isExcluded(pathname: string) {
   if (pathname.startsWith('/assets')) return true
   if (/\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|woff|woff2)$/.test(pathname)) return true
   if (pathname.startsWith('/api/auth')) return true
+  if (pathname.startsWith('/auth/')) return true
   if (pathname.startsWith('/api/stripe/webhook')) return true
   if (pathname.startsWith('/api/billing/paypal-success')) return true
   return false
@@ -43,7 +44,7 @@ function getAdminEmails(): string[] {
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
 
-  // API versioning: /api/v1/* → /api/*
+  // API versioning: /api/v1/* â†’ /api/*
   // This allows /api/v1/farms/list to work same as /api/farms/list
   if (pathname.startsWith("/api/v1/")) {
     const newPath = pathname.replace("/api/v1/", "/api/");
@@ -126,3 +127,4 @@ export const config = {
     '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|assets).*)',
   ],
 }
+
