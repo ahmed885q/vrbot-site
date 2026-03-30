@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     const API_KEY = process.env.VRBOT_API_KEY || "";
 
     // أرسل أمر provision لـ Hetzner
-    const res = await fetch(`http://${HETZNER}:8888/api/farms/provision`, {
+    const res = await fetch(`https://${HETZNER}/api/farms/provision`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

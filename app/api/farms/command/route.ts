@@ -68,7 +68,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "المزرعة لم تُعيّن لها container" }, { status: 400 });
     }
 
-    const res = await fetch(`http://${HETZNER}:8888/api/farms/command`, {
+    const res = await fetch(`https://${HETZNER}/api/farms/command`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

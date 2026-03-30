@@ -3,8 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 
-const HETZNER  = 'https://cloud.vrbot.me'
-const ORCH     = 'http://88.99.64.19:8888'
+const BASE_URL  = 'https://cloud.vrbot.me'
 const ADMIN_KEY = process.env.VRBOT_ADMIN_KEY || 'vrbot_admin_2026'
 
 export async function GET(
@@ -23,15 +22,7 @@ export async function POST(
 
 async function proxy(req: NextRequest, path: string[], method: string) {
   const endpoint = '/' + path.join('/')
-  const base     = endpoint.startsWith('/api/farms/status') ||
-                   endpoint.startsWith('/api/farms/command') ||
-                   endpoint.startsWith('/api/batch') ||
-                   endpoint.startsWith('/api/tasks') ||
-                   endpoint.startsWith('/api/health') ||
-                   endpoint.startsWith('/api/schedule')
-                   ? ORCH : HETZNER
-
-  const url = base + endpoint
+  const url = BASE_URL + endpoint
 
   const options: RequestInit = {
     method,

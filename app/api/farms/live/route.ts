@@ -56,7 +56,7 @@ export async function GET() {
   let liveFarms: any[] = []
   try {
     const res = await fetch(
-      `http://${HETZNER_IP}:8888/api/farms/status?user_id=${user.id}`,
+      `https://${HETZNER_IP}/api/farms/status`,
       {
         headers: { 'X-API-Key': API_KEY },
         cache: 'no-store',

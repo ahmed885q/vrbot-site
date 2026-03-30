@@ -30,7 +30,7 @@ export async function GET(req: Request) {
 
   try {
     // 1. Get active farms from Hetzner
-    const statusRes = await fetch(`http://${HETZNER}:8888/api/farms/status`, {
+    const statusRes = await fetch(`https://${HETZNER}/api/farms/status`, {
       headers: { "X-API-Key": API_KEY },
       signal: AbortSignal.timeout(10000),
     });
@@ -95,7 +95,7 @@ export async function GET(req: Request) {
     for (const farm of dueFarms) {
       const farmId = farm.farm_id || farm.farm_name;
       try {
-        const res = await fetch(`http://${HETZNER}:8888/api/farms/command`, {
+        const res = await fetch(`https://${HETZNER}/api/farms/command`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

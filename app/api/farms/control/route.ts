@@ -65,7 +65,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const res = await fetch(`http://${HETZNER_IP}:8888/api/farms/command`, {
+    const res = await fetch(`https://${HETZNER_IP}/api/farms/command`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

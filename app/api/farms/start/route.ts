@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   if (!data) return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
 
   try {
-    const res = await fetch(`http://${HETZNER_IP}:8888/api/farms/start`, {
+    const res = await fetch(`https://${HETZNER_IP}/api/farms/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
       body: JSON.stringify({ farm_id: data.container_id || farm_id }),

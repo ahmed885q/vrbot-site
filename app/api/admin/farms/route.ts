@@ -110,7 +110,7 @@ export async function POST(req: Request) {
     // Trigger Hetzner login if credentials provided
     if (game_account && igg_password) {
       const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
-      fetch(`http://${HETZNER}:8888/api/farms/login`, {
+      fetch(`https://${HETZNER}/api/farms/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

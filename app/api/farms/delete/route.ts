@@ -41,7 +41,7 @@ export async function DELETE(req: Request) {
 
     // أوقف المزرعة على Hetzner أولاً (non-blocking)
     const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
-    fetch(`http://${HETZNER}:8888/api/farms/stop`, {
+    fetch(`https://${HETZNER}/api/farms/stop`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

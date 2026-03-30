@@ -425,7 +425,7 @@ export default function LivePage() {
                           e.stopPropagation(); showMsg(`⏳ جارٍ تفعيل ${farm.farm_name}...`)
                           try {
                             const authHeaders = await getAuthHeaders()
-                            const res = await fetch(`/api/v1/farms/${farm.farm_name}/tasks/gather`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders } })
+                            const res = await fetch(`/api/farms/activate`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders }, body: JSON.stringify({ farm_name: farm.farm_name }) })
                             const d = await res.json()
                             showMsg(d.ok ? `✅ تم تفعيل ${farm.farm_name}` : `❌ ${d.error || 'فشل التفعيل'}`)
                           } catch { showMsg('❌ خطأ في الاتصال') }

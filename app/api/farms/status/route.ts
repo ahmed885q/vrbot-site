@@ -80,7 +80,7 @@ export async function GET(req: Request) {
     let hetznerMap: Record<string, any> = {};
 
     try {
-      const res = await fetch(`http://${HETZNER}:8888/api/farms/status`, {
+      const res = await fetch(`https://${HETZNER}/api/farms/status`, {
         headers: { "X-API-Key": API_KEY },
         signal: AbortSignal.timeout(6000),
       });
