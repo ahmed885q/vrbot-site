@@ -505,43 +505,14 @@ export default function LivePage() {
             ) : <p style={{ color: '#8b949e', fontSize: 12 }}>اختر مزرعة من اليسار</p>}
           </div>
 
-          {/* Live Screen */}
-          {activeFarm && (
-            <div>
-              <div style={{ background: '#000', borderRadius: 8, overflow: 'hidden', width: '100%', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', minHeight: 150, maxHeight: 220, border: streaming ? '2px solid rgba(239,68,68,0.5)' : '2px solid #21262d', transition: 'border-color 0.3s' }}>
-                {screenshot ? (
-                  <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                    <img src={screenshot} alt="Live Screen" onMouseDown={onImgMouseDown} onMouseUp={onImgMouseUp} draggable={false}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: tapMode ? 'crosshair' : 'zoom-in', userSelect: 'none' }}
-                    />
-                    {tapFeedback && <div style={{ position: 'absolute', left: tapFeedback.x - 15, top: tapFeedback.y - 15, width: 30, height: 30, borderRadius: '50%', border: '2px solid #f59e0b', background: 'rgba(245,158,11,0.2)', pointerEvents: 'none', animation: 'tapPulse 0.6s ease-out' }} />}
-                    {/* ADB feedback */}
-                    {adbFeedback && (
-                      <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.8)', color: adbFeedback.startsWith('✅') ? '#3fb950' : '#f85149', padding: '4px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{adbFeedback}</div>
-                    )}
-                    {streaming && (
-                      <button onClick={e => { e.stopPropagation(); setTapMode(p => !p) }}
-                        style={{ position: 'absolute', bottom: 8, right: 8, background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.7)', border: tapMode ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.2)', color: tapMode ? '#000' : '#fff', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-                      >{tapMode ? '🎮 تحكم' : '🎮'}</button>
-                    )}
-                    <button onClick={e => { e.stopPropagation(); setZoomedScreenshot(screenshot) }}
-                      style={{ position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: 6, padding: '4px 8px', fontSize: 10, cursor: 'pointer' }}>🔍</button>
-                  </div>
-                ) : (
-                  <div style={{ textAlign: 'center', color: '#8b949e', padding: 16 }}>
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>📺</div>
-                    <div style={{ fontSize: 11 }}>{streaming ? '⏳ جارٍ التحميل...' : 'اضغط بث للمشاهدة'}</div>
-                  </div>
-                )}
-                {streaming && <div style={{ position: 'absolute', top: 6, right: 6, background: '#ef4444', color: '#fff', padding: '1px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700 }}>● LIVE</div>}
-              </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                {!streaming ? (
-                  <button onClick={async () => { await launchGameIfNeeded(activeFarm.farm_name); connectLive(activeFarm.farm_name); setStreamFarm(activeFarm.farm_name); setStreaming(true) }} style={{ flex: 1, padding: '7px', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📺 بث مباشر</button>
-                ) : (
-                  <button onClick={stopStream} style={{ flex: 1, padding: '7px', background: '#21262d', color: '#f85149', border: '1px solid #f8514930', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⏹ إيقاف البث</button>
-                )}
-              </div>
+          {/* Stream controls */}
+          {activeFarm && !streaming && (
+            <button onClick={async () => { await launchGameIfNeeded(activeFarm.farm_name); connectLive(activeFarm.farm_name); setStreamFarm(activeFarm.farm_name); setStreaming(true) }} style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>📺 بث مباشر</button>
+          )}
+          {activeFarm && streaming && (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={stopStream} style={{ flex: 1, padding: '8px', background: '#21262d', color: '#f85149', border: '1px solid #f8514930', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⏹ إيقاف</button>
+              <button onClick={async () => { await launchGameIfNeeded(activeFarm.farm_name); showMsg('🎮 جارٍ فتح اللعبة...') }} style={{ flex: 1, padding: '8px', background: '#3fb95015', color: '#3fb950', border: '1px solid #3fb95040', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>🎮 فتح اللعبة</button>
             </div>
           )}
 
@@ -669,36 +640,7 @@ export default function LivePage() {
         </div>
       )}
 
-      {/* Live Overlay */}
-      {streaming && screenshot && (
-        <div style={{ position: 'fixed', bottom: 20, right: 20, width: 280, background: '#161b22', border: '2px solid rgba(239,68,68,0.4)', borderRadius: 10, overflow: 'hidden', zIndex: 9998, boxShadow: '0 8px 32px rgba(0,0,0,0.7)' }}>
-          <div style={{ position: 'relative' }}>
-            <img src={screenshot} alt="Live" onMouseDown={onImgMouseDown} onMouseUp={onImgMouseUp} draggable={false} onClick={() => setZoomedScreenshot(screenshot)}
-              style={{ width: '100%', display: 'block', cursor: tapMode ? 'crosshair' : 'zoom-in', userSelect: 'none' }} />
-            {tapFeedback && <div style={{ position: 'absolute', left: tapFeedback.x - 12, top: tapFeedback.y - 12, width: 24, height: 24, borderRadius: '50%', border: '2px solid #f59e0b', background: 'rgba(245,158,11,0.2)', pointerEvents: 'none', animation: 'tapPulse 0.6s ease-out' }} />}
-            {adbFeedback && <div style={{ position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: adbFeedback.startsWith('✅') ? '#3fb950' : '#f85149', padding: '3px 10px', borderRadius: 5, fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>{adbFeedback}</div>}
-            <div style={{ position: 'absolute', top: 6, left: 8, background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700 }}>● LIVE — {streamFarm}</div>
-            <div style={{ position: 'absolute', top: 4, right: 6, display: 'flex', gap: 4 }}>
-              <button onClick={e => { e.stopPropagation(); setTapMode(p => !p) }} style={{ background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.7)', border: 'none', color: tapMode ? '#000' : '#fff', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 11 }}>🎮</button>
-              <button onClick={stopStream} style={{ background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 12 }}>✕</button>
-            </div>
-            {/* Quick controls in overlay */}
-            <div style={{ display: 'flex', gap: 4, padding: '6px 8px', background: '#0d1117' }}>
-              {[
-                { label: '◀', cmd: 'key:BACK', color: '#58a6ff' },
-                { label: '⌂', cmd: 'key:HOME', color: '#3fb950' },
-                { label: '🗺️', cmd: 'tap:47,643', color: '#f59e0b' },
-                { label: '✉️', cmd: 'tap:1245,580', color: '#8b5cf6' },
-                { label: '⚔️', cmd: 'tap:950,462', color: '#ef4444' },
-              ].map(btn => (
-                <button key={btn.cmd} onClick={e => { e.stopPropagation(); streamFarm && sendAdb(streamFarm, btn.cmd) }}
-                  style={{ flex: 1, padding: '5px 2px', background: btn.color + '15', border: `1px solid ${btn.color}40`, color: btn.color, borderRadius: 5, cursor: 'pointer', fontSize: 12 }}
-                >{btn.label}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Live Overlay removed — stream shows in main area */}
 
       {/* Transfer Modal */}
       {showTransfer && (
