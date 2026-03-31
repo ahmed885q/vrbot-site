@@ -109,7 +109,7 @@ export async function POST(req: Request) {
 
     // Trigger Hetzner login if credentials provided
     if (game_account && igg_password) {
-      const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
+      const HETZNER = process.env.HETZNER_IP || "cloud.vrbot.me";
       fetch(`https://${HETZNER}/api/farms/login`, {
         method: "POST",
         headers: {

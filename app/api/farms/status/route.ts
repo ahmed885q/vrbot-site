@@ -75,7 +75,7 @@ export async function GET(req: Request) {
     } catch {}
 
     // جلب الحالة الحية من Hetzner
-    const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
+    const HETZNER = process.env.HETZNER_IP || "cloud.vrbot.me";
     const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
     let hetznerMap: Record<string, any> = {};
 

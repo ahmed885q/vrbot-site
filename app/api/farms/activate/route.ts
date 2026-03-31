@@ -62,7 +62,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Farm not found" }, { status: 404 });
     }
 
-    const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
+    const HETZNER = process.env.HETZNER_IP || "cloud.vrbot.me";
     const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
 
     // استخدم container_id إذا موجود، وإلا farm_name

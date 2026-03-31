@@ -9,7 +9,7 @@ export const maxDuration = 300; // 5 minutes max for sequential processing
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
+const HETZNER = process.env.HETZNER_IP || "cloud.vrbot.me";
 const API_KEY = process.env.VRBOT_API_KEY || "vrbot_admin_2026";
 const SECRET = process.env.CRON_SECRET || "vrbot_cron_2026";
 

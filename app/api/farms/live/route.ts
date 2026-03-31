@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 
-const HETZNER_IP = process.env.HETZNER_IP || '88.99.64.19'
+const HETZNER_IP = process.env.HETZNER_IP || 'cloud.vrbot.me'
 const API_KEY    = process.env.VRBOT_API_KEY || ''
 
 /**

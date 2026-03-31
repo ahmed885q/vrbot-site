@@ -40,7 +40,7 @@ export async function DELETE(req: Request) {
     }
 
     // أوقف المزرعة على Hetzner أولاً (non-blocking)
-    const HETZNER = process.env.HETZNER_IP || "88.99.64.19";
+    const HETZNER = process.env.HETZNER_IP || "cloud.vrbot.me";
     fetch(`https://${HETZNER}/api/farms/stop`, {
       method: "POST",
       headers: {
