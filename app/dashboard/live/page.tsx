@@ -404,7 +404,7 @@ export default function LivePage() {
           {/* Main live stream — large view */}
           {streaming && screenshot ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-              <div style={{ width: '100%', maxWidth: 960, aspectRatio: '16/9', position: 'relative', borderRadius: 12, overflow: 'hidden', border: '2px solid rgba(239,68,68,0.4)', boxShadow: '0 0 40px rgba(239,68,68,0.1)' }}>
+              <div style={{ width: '100%', maxWidth: 700, aspectRatio: '16/9', position: 'relative', borderRadius: 12, overflow: 'hidden', border: '2px solid rgba(239,68,68,0.4)', boxShadow: '0 0 40px rgba(239,68,68,0.1)' }}>
                 <img src={screenshot} alt="Live Stream" onMouseDown={onImgMouseDown} onMouseUp={onImgMouseUp} draggable={false}
                   style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000', display: 'block', cursor: tapMode ? 'crosshair' : 'zoom-in', userSelect: 'none' }}
                 />
@@ -513,6 +513,14 @@ export default function LivePage() {
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={stopStream} style={{ flex: 1, padding: '8px', background: '#21262d', color: '#f85149', border: '1px solid #f8514930', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⏹ إيقاف</button>
               <button onClick={async () => { await launchGameIfNeeded(activeFarm.farm_name); showMsg('🎮 جارٍ فتح اللعبة...') }} style={{ flex: 1, padding: '8px', background: '#3fb95015', color: '#3fb950', border: '1px solid #3fb95040', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>🎮 فتح اللعبة</button>
+            </div>
+          )}
+
+          {/* Game Update / Quick Actions */}
+          {activeFarm && streaming && (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => streamFarm && sendAdb(streamFarm, 'tap:522,621')} style={{ flex: 1, padding: '8px', background: '#f59e0b15', color: '#f59e0b', border: '1px solid #f59e0b40', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>⏭ تخطي التحديث</button>
+              <button onClick={() => streamFarm && sendAdb(streamFarm, 'tap:640,360')} style={{ flex: 1, padding: '8px', background: '#58a6ff15', color: '#58a6ff', border: '1px solid #58a6ff40', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>👆 نقر الوسط</button>
             </div>
           )}
 
