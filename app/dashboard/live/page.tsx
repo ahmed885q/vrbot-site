@@ -384,9 +384,49 @@ export default function LivePage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 0, height: 'calc(100vh - 90px)' }}>
 
-        {/* Left — Farms Grid */}
-        <div style={{ padding: 20, overflowY: 'auto' }}>
-          {loading ? (
+        {/* Left — Live Stream (when streaming) or Farms Grid */}
+        <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          {/* Farm selector strip — always visible when streaming */}
+          {streaming && farms.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 }}>
+              {farms.map(farm => (
+                <button key={farm.id} onClick={() => { setSelected(farm.id); connectLive(farm.farm_name); setStreamFarm(farm.farm_name) }}
+                  style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 8, border: `1.5px solid ${streamFarm === farm.farm_name ? '#f0a500' : '#21262d'}`, background: streamFarm === farm.farm_name ? '#f0a50015' : '#161b22', color: streamFarm === farm.farm_name ? '#f0a500' : '#8b949e', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc(farm.status) }} />
+                  {farm.farm_name}
+                </button>
+              ))}
+              <button onClick={stopStream} style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 8, border: '1px solid #f8514940', background: '#f8514910', color: '#f85149', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>✕ إغلاق البث</button>
+            </div>
+          )}
+
+          {/* Main live stream — large view */}
+          {streaming && screenshot ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+              <div style={{ width: '100%', maxWidth: 960, aspectRatio: '16/9', position: 'relative', borderRadius: 12, overflow: 'hidden', border: '2px solid rgba(239,68,68,0.4)', boxShadow: '0 0 40px rgba(239,68,68,0.1)' }}>
+                <img src={screenshot} alt="Live Stream" onMouseDown={onImgMouseDown} onMouseUp={onImgMouseUp} draggable={false}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000', display: 'block', cursor: tapMode ? 'crosshair' : 'zoom-in', userSelect: 'none' }}
+                />
+                {tapFeedback && <div style={{ position: 'absolute', left: tapFeedback.x - 15, top: tapFeedback.y - 15, width: 30, height: 30, borderRadius: '50%', border: '2px solid #f59e0b', background: 'rgba(245,158,11,0.2)', pointerEvents: 'none', animation: 'tapPulse 0.6s ease-out' }} />}
+                {adbFeedback && (
+                  <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: adbFeedback.startsWith('✅') ? '#3fb950' : '#f0a500', padding: '6px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{adbFeedback}</div>
+                )}
+                <div style={{ position: 'absolute', top: 10, right: 10, background: '#ef4444', color: '#fff', padding: '2px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>● LIVE</div>
+                <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(0,0,0,0.7)', color: '#f0a500', padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>{streamFarm}</div>
+                <button onClick={() => setTapMode(p => !p)}
+                  style={{ position: 'absolute', bottom: 10, right: 10, background: tapMode ? 'rgba(245,158,11,0.9)' : 'rgba(0,0,0,0.7)', border: tapMode ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.2)', color: tapMode ? '#000' : '#fff', borderRadius: 6, padding: '5px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                >{tapMode ? '🎮 تحكم' : '🎮'}</button>
+                <button onClick={() => setZoomedScreenshot(screenshot)}
+                  style={{ position: 'absolute', bottom: 10, left: 10, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: 6, padding: '5px 10px', fontSize: 11, cursor: 'pointer' }}>🔍 تكبير</button>
+              </div>
+            </div>
+          ) : streaming && !screenshot ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontSize: 48 }}>📺</div>
+              <p style={{ color: '#8b949e', fontSize: 14 }}>جارٍ الاتصال بالبث المباشر...</p>
+            </div>
+          ) : loading ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontSize: 40 }}>⚔️</div>
               <p style={{ color: '#8b949e', fontSize: 13 }}>جارٍ تحميل مزارعك...</p>
