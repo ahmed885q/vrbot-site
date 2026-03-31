@@ -6,6 +6,11 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async redirects() {
+    return [
+      { source: '/signup', destination: '/login', permanent: true },
+    ]
+  },
   async headers() {
     return [
       {
