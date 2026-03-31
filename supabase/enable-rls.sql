@@ -1,56 +1,63 @@
 -- ============================================================
--- VRBOT: Enable Row Level Security (RLS) on all user tables
--- Run this in Supabase SQL Editor: https://supabase.com/dashboard
+-- VRBOT: Enable Row Level Security (RLS) on all tables
+-- Safe to run multiple times (idempotent)
 -- ============================================================
 
--- 1. cloud_farms — users can only see/modify their own farms
-ALTER TABLE public.cloud_farms ENABLE ROW LEVEL SECURITY;
+-- =========================
+-- Table: cloud_farms
+-- =========================
+ALTER TABLE cloud_farms ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users see own farms" ON public.cloud_farms;
-CREATE POLICY "Users see own farms" ON public.cloud_farms
-  FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users see own farms" ON cloud_farms;
+DROP POLICY IF EXISTS "Users insert own farms" ON cloud_farms;
+DROP POLICY IF EXISTS "Users update own farms" ON cloud_farms;
+DROP POLICY IF EXISTS "Users delete own farms" ON cloud_farms;
+DROP POLICY IF EXISTS "users see own farms" ON cloud_farms;
 
-DROP POLICY IF EXISTS "Users insert own farms" ON public.cloud_farms;
-CREATE POLICY "Users insert own farms" ON public.cloud_farms
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "users see own farms" ON cloud_farms
+  FOR ALL USING (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users update own farms" ON public.cloud_farms;
-CREATE POLICY "Users update own farms" ON public.cloud_farms
-  FOR UPDATE USING (auth.uid() = user_id);
+-- =========================
+-- Table: farms
+-- =========================
+ALTER TABLE farms ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users delete own farms" ON public.cloud_farms;
-CREATE POLICY "Users delete own farms" ON public.cloud_farms
-  FOR DELETE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users see own farms" ON farms;
+DROP POLICY IF EXISTS "users see own farms" ON farms;
 
--- Service role (used by API routes) bypasses RLS automatically
+CREATE POLICY "users see own farms" ON farms
+  FOR ALL USING (auth.uid() = user_id);
 
--- 2. farm_events — users can only see their own events
-ALTER TABLE public.farm_events ENABLE ROW LEVEL SECURITY;
+-- =========================
+-- Table: farm_events
+-- =========================
+ALTER TABLE farm_events ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users see own events" ON public.farm_events;
-CREATE POLICY "Users see own events" ON public.farm_events
-  FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users see own events" ON farm_events;
+DROP POLICY IF EXISTS "Users insert own events" ON farm_events;
+DROP POLICY IF EXISTS "users see own events" ON farm_events;
 
-DROP POLICY IF EXISTS "Users insert own events" ON public.farm_events;
-CREATE POLICY "Users insert own events" ON public.farm_events
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "users see own events" ON farm_events
+  FOR ALL USING (auth.uid() = user_id);
 
--- 3. license_keys — users can only see keys they used
-ALTER TABLE public.license_keys ENABLE ROW LEVEL SECURITY;
+-- =========================
+-- Table: license_keys
+-- =========================
+ALTER TABLE license_keys ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users see own keys" ON public.license_keys;
-CREATE POLICY "Users see own keys" ON public.license_keys
-  FOR SELECT USING (auth.uid()::text = used_by);
+DROP POLICY IF EXISTS "Users see own keys" ON license_keys;
+DROP POLICY IF EXISTS "Users update own keys" ON license_keys;
+DROP POLICY IF EXISTS "users see own keys" ON license_keys;
 
-DROP POLICY IF EXISTS "Users update own keys" ON public.license_keys;
-CREATE POLICY "Users update own keys" ON public.license_keys
-  FOR UPDATE USING (auth.uid()::text = used_by);
+CREATE POLICY "users see own keys" ON license_keys
+  FOR ALL USING (auth.uid()::text = used_by);
 
--- ============================================================
--- VERIFICATION: Run after applying to confirm RLS is active
--- ============================================================
--- SELECT tablename, rowsecurity
--- FROM pg_tables
--- WHERE schemaname = 'public'
---   AND tablename IN ('cloud_farms', 'farm_events', 'license_keys');
--- Expected: all rows show rowsecurity = true
+-- =========================
+-- Table: vrbot_releases (public read)
+-- =========================
+ALTER TABLE vrbot_releases ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "public read releases" ON vrbot_releases;
+
+CREATE POLICY "public read releases" ON vrbot_releases
+  FOR SELECT USING (true);
