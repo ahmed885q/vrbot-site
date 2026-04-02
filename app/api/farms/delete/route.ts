@@ -27,13 +27,27 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "farm_id required" }, { status: 400 });
     }
 
-    // تحقق من الملكية
-    const { data: farm } = await service
+    // تحقق من الملكية — ابحث بـ farm_name أو id
+    let farm: any = null;
+    // Try by farm_name first
+    const { data: byName } = await service
       .from("cloud_farms")
       .select("id, farm_name, status")
       .eq("user_id", userData.user.id)
       .eq("farm_name", farmName)
-      .single();
+      .maybeSingle();
+    farm = byName;
+
+    // If not found, try by UUID id
+    if (!farm) {
+      const { data: byId } = await service
+        .from("cloud_farms")
+        .select("id, farm_name, status")
+        .eq("user_id", userData.user.id)
+        .eq("id", farmName)
+        .maybeSingle();
+      farm = byId;
+    }
 
     if (!farm) {
       return NextResponse.json({ error: "Farm not found" }, { status: 404 });
@@ -47,7 +61,7 @@ export async function DELETE(req: Request) {
         "Content-Type": "application/json",
         "X-API-Key": process.env.VRBOT_API_KEY || "",
       },
-      body: JSON.stringify({ farm_id: farmName }),
+      body: JSON.stringify({ farm_id: farm.farm_name }),
     }).catch(() => {});
 
     // احذف من cloud_farms
@@ -66,7 +80,7 @@ export async function DELETE(req: Request) {
       .from("user_farms")
       .delete()
       .eq("user_id", userData.user.id)
-      .eq("cloud_farm_id", farmName)
+      .eq("name", farm.farm_name)
       .catch(() => {});
 
     // Invalidate the farms list cache for this user
@@ -79,14 +93,14 @@ export async function DELETE(req: Request) {
     try {
       await service.from("farm_events").insert({
         user_id:    userData.user.id,
-        farm_name:  farmName,
+        farm_name:  farm.farm_name,
         event_type: "farm_deleted",
-        message:    `Deleted farm ${farmName}`,
+        message:    `Deleted farm ${farm.farm_name}`,
         tasks:      [],
       });
     } catch {}
 
-    return NextResponse.json({ ok: true, deleted: farmName });
+    return NextResponse.json({ ok: true, deleted: farm.farm_name });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message }, { status: 500 });
   }
