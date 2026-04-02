@@ -43,6 +43,7 @@ export default function LivePage() {
   const [streaming, setStreaming]             = useState(false)
   const [screenshot, setScreenshot]           = useState<string | null>(null)
   const [streamFarm, setStreamFarm]           = useState<string | null>(null)
+  const [ultraFarms, setUltraFarms]           = useState<Set<string>>(new Set())
   const screenshotTimer                       = useRef<NodeJS.Timeout | null>(null)
   const streamActive                          = useRef<string | null>(null)
   const liveRef                               = useRef<WebSocket | null>(null)
@@ -271,6 +272,28 @@ export default function LivePage() {
     setScreenshot(prev => { if (prev) URL.revokeObjectURL(prev); return null })
   }
 
+  async function toggleUltraAgent(farmName: string) {
+    const isActive = ultraFarms.has(farmName)
+    const action = isActive ? 'stop' : 'start'
+    try {
+      const authHeaders = await getAuthHeaders()
+      const res = await fetch('/api/ultra/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ farm_name: farmName, action }),
+      })
+      const d = await res.json()
+      if (d.ok) {
+        const next = new Set(ultraFarms)
+        if (action === 'start') next.add(farmName); else next.delete(farmName)
+        setUltraFarms(next)
+        showMsg(action === 'start' ? `🤖 Ultra Agent started on ${farmName}` : `⏹ Ultra Agent stopped on ${farmName}`)
+      } else {
+        showMsg(`❌ ${d.error || 'Failed'}`)
+      }
+    } catch { showMsg('❌ Connection error') }
+  }
+
   async function launchGameIfNeeded(farmId: string) {
     try {
       const authHeaders = await getAuthHeaders()
@@ -482,6 +505,10 @@ export default function LivePage() {
                       <button onClick={async e => { e.stopPropagation(); if (streaming && streamFarm === farm.farm_name) { stopStream() } else { await launchGameIfNeeded(farm.farm_name); connectLive(farm.farm_name); setStreamFarm(farm.farm_name); setStreaming(true) } }}
                         style={{ background: streaming && streamFarm === farm.farm_name ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.1)', border: streaming && streamFarm === farm.farm_name ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(59,130,246,0.3)', color: streaming && streamFarm === farm.farm_name ? '#f87171' : '#58a6ff', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
                       >{streaming && streamFarm === farm.farm_name ? '⏹' : '📺'}</button>
+                      <button onClick={e => { e.stopPropagation(); toggleUltraAgent(farm.farm_name) }}
+                        style={{ background: ultraFarms.has(farm.farm_name) ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.08)', border: ultraFarms.has(farm.farm_name) ? '1px solid rgba(139,92,246,0.6)' : '1px solid rgba(139,92,246,0.25)', color: ultraFarms.has(farm.farm_name) ? '#a78bfa' : '#7c3aed', padding: '6px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                        title={ultraFarms.has(farm.farm_name) ? 'Stop Ultra Agent' : 'Start Ultra Agent'}
+                      >{ultraFarms.has(farm.farm_name) ? '🤖✓' : '🤖'}</button>
                     </div>
                   </div>
                 )
