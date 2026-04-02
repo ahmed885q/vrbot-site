@@ -93,7 +93,12 @@ export default function SiteHeader() {
         <a href="/dashboard/live" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.live}</a>
         <a href="/dashboard/notifications" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.notifications}</a>
 
-          <a href="https://cloud.vrbot.me" target="_blank" rel="noopener noreferrer" style={{ ...navLinkBase, color: isDark ? 'rgba(255,255,255,0.85)' : '#495057' }}>{t.cloud}</a>
+          <a href="/pricing" style={{
+            ...navLinkBase,
+            color: '#f59e0b',
+            background: isDark ? 'rgba(245,158,11,0.12)' : 'rgba(245,158,11,0.08)',
+            border: '1px solid rgba(245,158,11,0.3)',
+          }}>{t.cloud}</a>
 
         {/* Chat Link */}
         <a href="/dashboard/chat" style={{

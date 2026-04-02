@@ -82,7 +82,7 @@ export async function GET(req: Request) {
       }
 
       return NextResponse.redirect(
-        `${APP_URL}/billing?checkout=success&farms=${farms}&txn=${transactionId || token}`
+        `${APP_URL}/billing/success?farms=${farms}&txn=${transactionId || token}`
       );
     } else {
       return NextResponse.redirect(
