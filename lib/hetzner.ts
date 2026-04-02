@@ -1,20 +1,23 @@
 import { withCircuitBreaker } from "@/lib/circuit-breaker";
 
-const BASE_URL = process.env.ORCHESTRATOR_URL;
-const API_KEY  = process.env.VRBOT_API_KEY;
-
-if (!BASE_URL) throw new Error("[hetzner] ORCHESTRATOR_URL environment variable is required");
-if (!API_KEY)  throw new Error("[hetzner] VRBOT_API_KEY environment variable is required");
+function getHetznerConfig() {
+  const url = process.env.ORCHESTRATOR_URL;
+  const key = process.env.VRBOT_API_KEY;
+  if (!url) throw new Error("[hetzner] ORCHESTRATOR_URL environment variable is required");
+  if (!key) throw new Error("[hetzner] VRBOT_API_KEY environment variable is required");
+  return { url, key };
+}
 
 // â”€â”€ Circuit-breaker-protected fetch for Hetzner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function hetznerFetch(path: string, options?: RequestInit): Promise<Response> {
   return withCircuitBreaker(
     "hetzner",
     async () => {
-      const res = await fetch(`${BASE_URL}${path}`, {
+      const { url: baseUrl, key: apiKey } = getHetznerConfig();
+      const res = await fetch(`${baseUrl}${path}`, {
         ...options,
         headers: {
-          "X-API-Key": API_KEY || "",
+          "X-API-Key": apiKey,
           "Content-Type": "application/json",
           ...options?.headers,
         },

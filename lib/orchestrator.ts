@@ -1,9 +1,11 @@
 // lib/orchestrator.ts
-const ORCHESTRATOR_URL = process.env.ORCHESTRATOR_URL;
-const API_KEY = process.env.VRBOT_API_KEY;
-
-if (!ORCHESTRATOR_URL) throw new Error("[orchestrator] ORCHESTRATOR_URL environment variable is required");
-if (!API_KEY) throw new Error("[orchestrator] VRBOT_API_KEY environment variable is required");
+function getConfig() {
+  const url = process.env.ORCHESTRATOR_URL;
+  const key = process.env.VRBOT_API_KEY;
+  if (!url) throw new Error("[orchestrator] ORCHESTRATOR_URL environment variable is required");
+  if (!key) throw new Error("[orchestrator] VRBOT_API_KEY environment variable is required");
+  return { url, key };
+}
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -151,11 +153,12 @@ export interface LogFilter {
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
 async function orchFetch(path: string, options?: RequestInit) {
-  const res = await fetch(ORCHESTRATOR_URL + path, {
+  const { url, key } = getConfig();
+  const res = await fetch(url + path, {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      "X-API-Key": API_KEY || "",
+      "X-API-Key": key,
       ...(options?.headers || {}),
     },
   });

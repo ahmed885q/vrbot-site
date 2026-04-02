@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -56,7 +56,15 @@ const t: Record<Lang, Record<string, string>> = {
   },
 }
 
-export default function BillingSuccess() {
+export default function BillingSuccessPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#0d1117', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f0a500', fontSize: 24 }}>⏳</div>}>
+      <BillingSuccessContent />
+    </Suspense>
+  )
+}
+
+function BillingSuccessContent() {
   const [status, setStatus] = useState<'loading' | 'success'>('loading')
   const [lang, setLang] = useState<Lang>('ar')
   const searchParams = useSearchParams()

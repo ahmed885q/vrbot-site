@@ -1,10 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getDB() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // POST: Bulk upsert solutions from server
 export async function POST(req: NextRequest) {
@@ -28,11 +30,11 @@ export async function POST(req: NextRequest) {
     for (const col of extraCols) {
       const testRow: any = { task_name: '__col_test__', screen_hash: `__test_${col}__`, action_name: 'test' }
       testRow[col] = col === 'action_params' ? {} : col === 'last_used' ? new Date().toISOString() : col === 'source' ? 'test' : 0
-      const { error } = await supabase.from('learned_solutions').upsert([testRow], { onConflict: 'task_name,screen_hash' })
+      const { error } = await getDB().from('learned_solutions').upsert([testRow], { onConflict: 'task_name,screen_hash' })
       if (!error) {
         knownCols.push(col)
         // Clean up test row
-        await supabase.from('learned_solutions').delete().eq('task_name', '__col_test__').eq('screen_hash', `__test_${col}__`)
+        await getDB().from('learned_solutions').delete().eq('task_name', '__col_test__').eq('screen_hash', `__test_${col}__`)
       }
     }
 
@@ -57,7 +59,7 @@ export async function POST(req: NextRequest) {
         return row
       })
 
-      const { error } = await supabase
+      const { error } = await getDB()
         .from('learned_solutions')
         .upsert(batch, { onConflict: 'task_name,screen_hash', ignoreDuplicates: false })
 

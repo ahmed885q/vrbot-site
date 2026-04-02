@@ -9,10 +9,12 @@ type Settings = {
   setting_key: string
 }
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // ✅ هنا آمن لأنه داخل Route (Node runtime)
-)
+function getDB() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // كاش بسيط يقلل الضغط على DB
 let cached: { v: Settings; at: number } | null = null
@@ -21,7 +23,7 @@ const TTL_MS = 10_000
 async function getSettings(): Promise<Settings> {
   if (cached && Date.now() - cached.at < TTL_MS) return cached.v
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await getDB()
     .from('anti_detection_settings')
     .select('*')
     .eq('setting_key', 'global')

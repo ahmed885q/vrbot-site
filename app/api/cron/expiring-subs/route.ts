@@ -4,10 +4,12 @@ import { sendSubscriptionExpiring, sendAutoRenewLink } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getDB() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 const FARM_PRICE = 3;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.vrbot.me";
@@ -42,7 +44,7 @@ export async function GET(req: Request) {
       targetDate.setDate(targetDate.getDate() + days);
       const dateStr = targetDate.toISOString().split("T")[0];
 
-      const { data: subs } = await supabase
+      const { data: subs } = await getDB()
         .from("subscriptions")
         .select("user_id, expires_at")
         .eq("status", "active")
@@ -52,7 +54,7 @@ export async function GET(req: Request) {
       if (!subs || subs.length === 0) continue;
 
       const userIds = subs.map((s) => s.user_id);
-      const { data: users } = await supabase.from("users").select("id, email").in("id", userIds);
+      const { data: users } = await getDB().from("users").select("id, email").in("id", userIds);
       if (!users) continue;
 
       for (const user of users) {
@@ -68,7 +70,7 @@ export async function GET(req: Request) {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
-    const { data: expiringSubs } = await supabase
+    const { data: expiringSubs } = await getDB()
       .from("subscriptions")
       .select("user_id, farms_count, expires_at")
       .eq("status", "active")
@@ -77,7 +79,7 @@ export async function GET(req: Request) {
 
     if (expiringSubs && expiringSubs.length > 0) {
       const userIds = expiringSubs.map((s) => s.user_id);
-      const { data: users } = await supabase
+      const { data: users } = await getDB()
         .from("users")
         .select("id, email, auto_renew")
         .in("id", userIds);

@@ -1,10 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getDB() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // GET: Describe current table columns
 export async function GET(req: NextRequest) {
@@ -14,7 +16,7 @@ export async function GET(req: NextRequest) {
   }
   try {
     // Try to select one row to see column names
-    const { data, error } = await supabase
+    const { data, error } = await getDB()
       .from('learned_solutions')
       .select('*')
       .limit(1)
@@ -35,7 +37,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { error } = await supabase.rpc('exec_sql', {
+    const { error } = await getDB().rpc('exec_sql', {
       query: `
         CREATE TABLE IF NOT EXISTS learned_solutions (
           id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -59,7 +61,7 @@ export async function POST(req: NextRequest) {
     // If RPC doesn't exist, use raw SQL via postgrest
     if (error) {
       // Fallback: try direct table creation via insert test
-      const { error: testErr } = await supabase
+      const { error: testErr } = await getDB()
         .from('learned_solutions')
         .select('id')
         .limit(1)

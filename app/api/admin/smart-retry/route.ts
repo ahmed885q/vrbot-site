@@ -2,15 +2,17 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getDB() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // ── GET: جلب كل الحلول + إحصائيات ──
 export async function GET() {
   try {
-    const { data: solutions, error } = await supabase
+    const { data: solutions, error } = await getDB()
       .from('learned_solutions')
       .select('*')
       .order('success_count', { ascending: false })
@@ -47,7 +49,7 @@ export async function DELETE(req: NextRequest) {
     const { id } = await req.json()
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-    const { error } = await supabase
+    const { error } = await getDB()
       .from('learned_solutions')
       .delete()
       .eq('id', id)

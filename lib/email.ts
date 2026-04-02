@@ -1,11 +1,15 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 const FROM = process.env.EMAIL_FROM || "VRBOT <onboarding@resend.dev>";
 
 export async function sendPaymentConfirmation(to: string, farms: number, amount: string, txnId: string) {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM, to, subject: "VRBOT - Payment Confirmed!",
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a1a;color:#e0e0e0;border-radius:12px;overflow:hidden">
@@ -30,7 +34,7 @@ export async function sendPaymentConfirmation(to: string, farms: number, amount:
 
 export async function sendWelcomeEmail(to: string) {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM, to, subject: "Welcome to VRBOT!",
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a1a;color:#e0e0e0;border-radius:12px;overflow:hidden">
@@ -60,7 +64,7 @@ export async function sendWelcomeEmail(to: string) {
 
 export async function sendSubscriptionExpiring(to: string, daysLeft: number) {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM, to, subject: `VRBOT - Subscription expiring in ${daysLeft} day${daysLeft > 1 ? "s" : ""}`,
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a1a;color:#e0e0e0;border-radius:12px;overflow:hidden">
@@ -81,7 +85,7 @@ export async function sendSubscriptionExpiring(to: string, daysLeft: number) {
 
 export async function sendAutoRenewLink(to: string, farms: number, amount: string, payUrl: string) {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM, to, subject: "VRBOT - Renew Your Subscription",
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a1a;color:#e0e0e0;border-radius:12px;overflow:hidden">
