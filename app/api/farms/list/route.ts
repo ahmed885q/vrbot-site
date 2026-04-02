@@ -5,9 +5,8 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
 
-// Simple in-memory cache
-let _cache: any = null;
-let _cacheTime = 0;
+// Per-user in-memory cache (keyed by user ID)
+const _cacheMap = new Map<string, { data: any; time: number }>();
 const CACHE_TTL = 10000; // 10 seconds
 
 const HETZNER = () => process.env.HETZNER_IP || "cloud.vrbot.me";
@@ -37,15 +36,17 @@ async function getUser(req: Request) {
 }
 
 export async function GET(req: Request) {
-  // Cache check
-  const now = Date.now()
-  if (_cache && now - _cacheTime < CACHE_TTL) {
-    return NextResponse.json(_cache)
-  }
   try {
     const auth = await getUser(req);
     if (!auth) return NextResponse.json({ farms: [] }, { status: 401 });
     const { user, service } = auth;
+
+    // Per-user cache check
+    const now = Date.now()
+    const cached = _cacheMap.get(user.id);
+    if (cached && now - cached.time < CACHE_TTL) {
+      return NextResponse.json(cached.data)
+    }
 
     // جلب مزارع المستخدم + الحالة الحية بالتوازي (أسرع ~40%)
     const [supabaseResult, hetznerResult] = await Promise.allSettled([
@@ -98,8 +99,11 @@ export async function GET(req: Request) {
     });
 
     const result = { farms: merged, total: merged.length }
-    _cache = result
-    _cacheTime = Date.now()
+    _cacheMap.set(user.id, { data: result, time: Date.now() })
+    // Evict stale entries to prevent memory leak
+    for (const [uid, entry] of _cacheMap) {
+      if (now - entry.time > CACHE_TTL * 6) _cacheMap.delete(uid);
+    }
     return NextResponse.json(result);
   } catch (e: any) {
     console.error("[FARMS-LIST] error:", e?.message);
