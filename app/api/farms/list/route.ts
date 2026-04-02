@@ -9,6 +9,11 @@ import { createClient } from "@supabase/supabase-js";
 const _cacheMap = new Map<string, { data: any; time: number }>();
 const CACHE_TTL = 10000; // 10 seconds
 
+// Allow other routes to invalidate the cache for a user
+export function invalidateUserCache(userId: string) {
+  _cacheMap.delete(userId);
+}
+
 const HETZNER = () => process.env.HETZNER_IP || "cloud.vrbot.me";
 const API_KEY = () => process.env.VRBOT_API_KEY || "vrbot_admin_2026";
 

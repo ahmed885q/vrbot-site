@@ -50,7 +50,7 @@ export async function DELETE(req: Request) {
       body: JSON.stringify({ farm_id: farmName }),
     }).catch(() => {});
 
-    // احذف من Supabase
+    // احذف من cloud_farms
     const { error } = await service
       .from("cloud_farms")
       .delete()
@@ -60,6 +60,20 @@ export async function DELETE(req: Request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // احذف من user_farms أيضاً (إذا موجود)
+    await service
+      .from("user_farms")
+      .delete()
+      .eq("user_id", userData.user.id)
+      .eq("cloud_farm_id", farmName)
+      .catch(() => {});
+
+    // Invalidate the farms list cache for this user
+    try {
+      const { invalidateUserCache } = await import("@/app/api/farms/list/route");
+      invalidateUserCache(userData.user.id);
+    } catch {}
 
     // سجّل الحدث في farm_events
     try {
