@@ -25,7 +25,7 @@ export async function GET(req: Request) {
     } else {
       num = (await resolveFarmNum(farm_id)) ?? 1;
     }
-    const device = `172.17.0.${num + 1}:5555`;
+    const device = `farm_${String(num).padStart(3, "0")}`; // used for logging only — actual IP resolved by screenshot server
 
     // ── Strategy 1: Hetzner screenshot endpoint ──────────────────
     let imageBuffer: ArrayBuffer | null = null;
@@ -33,7 +33,7 @@ export async function GET(req: Request) {
 
     try {
       const res = await fetch(
-        `https://${HETZNER}/api/screenshot/${num}?t=${Date.now()}`,
+        `https://${HETZNER}/screenshot/${num}?t=${Date.now()}`,
         {
           headers: { "X-API-Key": API_KEY },
           signal: AbortSignal.timeout(8000),
@@ -72,7 +72,7 @@ export async function GET(req: Request) {
             },
             body: JSON.stringify({
               farm_id,
-              command: `screencap:${device}`,
+              command: `screencap:${device}:5555`,
             }),
             signal: AbortSignal.timeout(10000),
           }
