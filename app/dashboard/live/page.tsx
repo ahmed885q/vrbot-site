@@ -308,8 +308,16 @@ export default function LivePage() {
 
   function connectLive(farmId) {
     disconnectLive()
-    const num = getFarmNum(farmId)
-    const wsId = num !== null ? String(num).padStart(3,"0") : farmId.replace(/[^0-9]/g,"").padStart(3,"0")
+    // Resolve wsId from container_id (e.g. 'farm_001' → '001') or farm number
+    const farm = farms.find(f => f.id === farmId || f.farm_name === farmId)
+    let wsId: string
+    if (farm?.container_id) {
+      const m = String(farm.container_id).match(/(\d+)/)
+      wsId = m ? m[1].padStart(3, '0') : '001'
+    } else {
+      const num = getFarmNum(farmId)
+      wsId = num !== null ? String(num).padStart(3, '0') : '001'
+    }
     const ws = new WebSocket("wss://cloud.vrbot.me/ws/live/" + wsId)
     ws.binaryType = "arraybuffer"
     liveRef.current = ws
