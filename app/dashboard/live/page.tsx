@@ -493,15 +493,23 @@ export default function LivePage() {
                     <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                       {(farm.status === 'provisioning' || farm.live_status === 'idle') ? (
                         <button onClick={async e => {
-                          e.stopPropagation(); showMsg(`⏳ جارٍ تفعيل ${farm.farm_name}...`)
+                          e.stopPropagation(); showMsg(`⏳ جارٍ تفعيل البث...`)
                           try {
                             const authHeaders = await getAuthHeaders()
                             const res = await fetch(`/api/farms/activate`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders }, body: JSON.stringify({ farm_name: farm.farm_name }) })
                             const d = await res.json()
-                            showMsg(d.ok ? `✅ تم تفعيل ${farm.farm_name}` : `❌ ${d.error || 'فشل التفعيل'}`)
+                            if (d.ok) {
+                              await launchGameIfNeeded(farm.farm_name)
+                              connectLive(farm.farm_name)
+                              setStreamFarm(farm.farm_name)
+                              setStreaming(true)
+                              showMsg(`✅ البث مباشر شغال`)
+                            } else {
+                              showMsg(`❌ ${d.error || 'فشل التفعيل'}`)
+                            }
                           } catch { showMsg('❌ خطأ في الاتصال') }
                           setTimeout(loadFarms, 3000)
-                        }} style={{ flex: 1, background: '#f0a50018', border: '1px solid #f0a50050', color: '#f0a500', padding: '6px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⚡ تفعيل</button>
+                        }} style={{ flex: 1, background: '#f0a50018', border: '1px solid #f0a50050', color: '#f0a500', padding: '6px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⚡ تفعيل + بث</button>
                       ) : (
                         <button onClick={e => { e.stopPropagation(); runTasks(farm.id, ['Gather Resources', 'Mail Rewards', 'Tribe Tech'], 'start') }} disabled={isRunning}
                           style={{ flex: 1, background: '#3fb95018', border: '1px solid #3fb95050', color: '#3fb950', padding: '6px', borderRadius: 6, cursor: isRunning ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700 }}
