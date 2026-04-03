@@ -295,6 +295,8 @@ export default function LivePage() {
   }
 
   async function launchGameIfNeeded(farmId: string) {
+    const farm = farms.find(f => f.id === farmId || f.farm_name === farmId)
+    if (farm?.status === 'running' || farm?.live_status === 'online') return
     try {
       const authHeaders = await getAuthHeaders()
       await fetch('/api/farms/launch', {
