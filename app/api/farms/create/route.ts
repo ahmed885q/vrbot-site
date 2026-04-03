@@ -114,14 +114,51 @@ export async function POST(req: Request) {
         );
     }
 
-    // ── تحقق من حد المستخدم ──────────────────────────────
+    // ── تحقق من Trial / اشتراك ─────────────────────────────
     const { count: userCount } = await service
       .from("cloud_farms")
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id)
       .neq("status", "deleted");
+
     if ((userCount || 0) >= 50)
       return NextResponse.json({ error: "وصلت للحد الأقصى (50 مزرعة)" }, { status: 403 });
+
+    // Check admin bypass
+    const { data: profile } = await service
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .maybeSingle();
+    const isAdmin = profile?.is_admin === true;
+
+    // If not admin and already has farms, check subscription
+    if (!isAdmin && (userCount || 0) > 0) {
+      // Check if user has active subscription
+      const { data: sub } = await service
+        .from("subscriptions")
+        .select("status")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .maybeSingle();
+
+      // Check if user has paid tokens
+      const { data: tokens } = await service
+        .from("user_tokens")
+        .select("balance")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const hasSubscription = !!sub;
+      const hasTokens = (tokens?.balance || 0) > 0;
+
+      if (!hasSubscription && !hasTokens) {
+        return NextResponse.json(
+          { error: "يجب الاشتراك لإضافة مزارع إضافية", code: "SUBSCRIPTION_REQUIRED" },
+          { status: 403 }
+        );
+      }
+    }
 
     // ── تحقق من سعة السيرفر ──────────────────────────────
     const { data: serverData } = await service
@@ -154,22 +191,32 @@ export async function POST(req: Request) {
       .neq("status", "deleted");
     const position = (queuePos || 0) + 1;
 
+    // ── Trial logic ────────────────────────────────────────
+    const isFirstFarm = (userCount || 0) === 0;
+    const isTrial = isFirstFarm && !isAdmin;
+    const now = new Date();
+    const trialEnds = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 days
+
     // ── أنشئ المزرعة مع container_id مخصص ───────────────
     const { data: farm, error: insertError } = await service
       .from("cloud_farms")
       .insert({
-        user_id:        user.id,
-        farm_name:      name,
-        server_id:      "server-01",
-        container_id:   container_id,   // FIX 3: لم يعد null
-        adb_port:       adb_port,       // FIX 3: لم يعد null
-        game_account:   igg_email         || "",
-        igg_password:   encryptedPassword || "",
-        game_password:  encryptedPassword || "",
-        status:         "running",
-        queue_position: position,
-        cycle_count:    0,
-        tasks_config:   {},
+        user_id:          user.id,
+        farm_name:        name,
+        server_id:        "server-01",
+        container_id:     container_id,
+        adb_port:         adb_port,
+        game_account:     igg_email         || "",
+        igg_password:     encryptedPassword || "",
+        game_password:    encryptedPassword || "",
+        status:           "running",
+        queue_position:   position,
+        cycle_count:      0,
+        tasks_config:     {},
+        is_trial:         isTrial,
+        trial_started_at: isTrial ? now.toISOString() : null,
+        trial_ends_at:    isTrial ? trialEnds.toISOString() : null,
+        trial_used:       isTrial,
       })
       .select("id, farm_name, status, container_id, adb_port, created_at, queue_position")
       .single();

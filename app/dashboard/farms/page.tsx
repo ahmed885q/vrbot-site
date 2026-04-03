@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
+import TrialBanner from '@/components/TrialBanner'
 
 type Farm = {
   id?: string
@@ -159,6 +160,7 @@ export default function FarmsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0d1117', color: '#e6edf3', fontFamily: 'sans-serif' }}>
+      <TrialBanner />
 
       {/* Header */}
       <div style={{ padding: '16px 24px', background: '#161b22', borderBottom: '1px solid #21262d', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
